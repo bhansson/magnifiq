@@ -6,6 +6,8 @@ use App\Livewire\ManagePartners;
 use App\Models\Team;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -90,5 +92,27 @@ class ManagePartnersTest extends TestCase
         $this->assertDatabaseMissing('teams', [
             'id' => $partner->id,
         ]);
+    }
+
+    public function test_can_upload_partner_logo(): void
+    {
+        Storage::fake('public');
+
+        $admin = User::factory()->create();
+        $this->actingAs($admin);
+
+        $logo = UploadedFile::fake()->image('logo.png', 200, 200);
+
+        Livewire::test(ManagePartners::class)
+            ->set('name', 'Logo Partner')
+            ->set('partner_slug', 'logopartner')
+            ->set('logo', $logo)
+            ->call('createPartner')
+            ->assertHasNoErrors();
+
+        $partner = Team::query()->where('name', 'Logo Partner')->first();
+
+        $this->assertNotNull($partner->logo_path);
+        Storage::disk('public')->assertExists($partner->logo_path);
     }
 }

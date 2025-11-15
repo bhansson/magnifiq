@@ -107,6 +107,18 @@
                         @error('partner_share_percent') <span class="text-red-500 text-sm">{{ $message }}</span> @enderror
                     </div>
 
+                    <div class="mb-4">
+                        <label for="logo" class="block text-sm font-medium text-gray-700">Logo (optional)</label>
+                        <input
+                            type="file"
+                            id="logo"
+                            wire:model="logo"
+                            accept="image/*"
+                            class="mt-1 block w-full"
+                        />
+                        @error('logo') <span class="text-red-500 text-sm">{{ $message }}</span> @enderror
+                    </div>
+
                     <div class="flex justify-end gap-2">
                         <button
                             type="button"
