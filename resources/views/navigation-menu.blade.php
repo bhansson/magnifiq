@@ -27,6 +27,12 @@
                     <x-nav-link href="{{ route('photo-studio.index') }}" :active="request()->routeIs('photo-studio.index')">
                         {{ __('Photo Studio') }}
                     </x-nav-link>
+                    <x-nav-link href="{{ route('admin.partners') }}" :active="request()->routeIs('admin.partners')">
+                        {{ __('Partners') }}
+                    </x-nav-link>
+                    <x-nav-link href="{{ route('admin.revenue') }}" :active="request()->routeIs('admin.revenue')">
+                        {{ __('Revenue') }}
+                    </x-nav-link>
                 </div>
             </div>
 
