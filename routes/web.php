@@ -42,4 +42,13 @@ Route::middleware([
 
     Route::get('/photo-studio/gallery/{generation}/download', DownloadPhotoStudioGenerationController::class)
         ->name('photo-studio.gallery.download');
+
+    // Partner admin routes
+    Route::get('/admin/partners', function () {
+        return view('admin.partners');
+    })->name('admin.partners');
+
+    Route::get('/admin/revenue', function () {
+        return view('admin.revenue');
+    })->name('admin.revenue');
 });
