@@ -27,6 +27,7 @@ class Team extends JetstreamTeam
         'parent_team_id',
         'logo_path',
         'partner_slug',
+        'user_id',
     ];
 
     /**
