@@ -89,6 +89,37 @@ docker compose exec octane php artisan octane:reload
 
 The application uses team-based multi-tenancy through Jetstream. All product-related data (`ProductFeed`, `Product`, `PhotoStudioGeneration`, `ProductAiJob`, `ProductAiTemplate`) is scoped to a `team_id`. Users can belong to multiple teams and switch between them via Jetstream's built-in team switcher.
 
+### Partner Whitelabel System
+
+The platform supports partner (whitelabel) functionality allowing partners to own and manage multiple customer teams, earn revenue share, and provide custom branding.
+
+**Architecture:**
+- Teams have a `type` column: `'customer'` (default) or `'partner'`
+- Partners can own multiple customer teams via the `parent_team_id` foreign key
+- Partner branding includes:
+  - `logo_path`: Custom logo stored in `storage/partners/logos/`
+  - `partner_slug`: Unique URL-friendly identifier for branded auth pages
+
+**Key Components:**
+- **ManagePartners** (`app/Livewire/ManagePartners.php`): Admin UI for creating/managing partners, uploading logos
+- **PartnerRevenueDashboard** (`app/Livewire/PartnerRevenueDashboard.php`): Revenue tracking and reporting dashboard
+- **PartnerRevenue** model: Tracks revenue allocation between partners and customers
+- **DetectPartnerContext** middleware: Detects `?partner=slug` query parameter and shares partner branding with views
+
+**Access Control:**
+- `TeamPolicy` updated to grant partners view/update access to owned customer teams
+- Partners can view all teams they own via the `ownedTeams` relationship
+- Customer teams can access their parent partner via the `parentTeam` relationship
+
+**Whitelabel Branding:**
+- Auth pages (login/register) display partner logos when accessed with `?partner=slug` query parameter
+- Partner detection handled by `DetectPartnerContext` middleware
+- Logo fallback to default app logo when no partner context detected
+
+**Admin Routes:**
+- `/admin/partners`: Partner management (create, edit, delete partners)
+- `/admin/revenue`: Revenue dashboard and reporting
+
 ### Product Feed System
 
 The product feed architecture centers around two models:
