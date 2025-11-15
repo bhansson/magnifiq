@@ -108,4 +108,14 @@ class Team extends JetstreamTeam
     {
         return $this->hasMany(Team::class, 'parent_team_id');
     }
+
+    public function revenueRecords()
+    {
+        return $this->hasMany(PartnerRevenue::class, 'partner_team_id');
+    }
+
+    public function revenueAsCustomer()
+    {
+        return $this->hasMany(PartnerRevenue::class, 'customer_team_id');
+    }
 }
