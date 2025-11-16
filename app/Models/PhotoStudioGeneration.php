@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class PhotoStudioGeneration extends Model
 {
@@ -31,6 +32,7 @@ class PhotoStudioGeneration extends Model
         'response_model',
         'response_metadata',
         'product_ai_job_id',
+        'parent_generation_id',
     ];
 
     /**
@@ -58,5 +60,20 @@ class PhotoStudioGeneration extends Model
     public function job(): BelongsTo
     {
         return $this->belongsTo(ProductAiJob::class, 'product_ai_job_id');
+    }
+
+    public function parent(): BelongsTo
+    {
+        return $this->belongsTo(PhotoStudioGeneration::class, 'parent_generation_id');
+    }
+
+    public function edits(): HasMany
+    {
+        return $this->hasMany(PhotoStudioGeneration::class, 'parent_generation_id');
+    }
+
+    public function isEdit(): bool
+    {
+        return $this->parent_generation_id !== null;
     }
 }
