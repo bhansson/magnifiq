@@ -9,7 +9,7 @@ services:
     image: magnifiq/octane:local
     container_name: magnifiq-octane
     ports:
-      - "${OCTANE_PORT:-8000}:8000"
+      - "80:8000"
     environment:
       APP_ENV: ${APP_ENV:-local}
       APP_DEBUG: ${APP_DEBUG:-true}
