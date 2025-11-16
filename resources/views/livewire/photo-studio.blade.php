@@ -1002,7 +1002,7 @@
             }"
             x-show="show"
             x-transition.opacity
-            class="fixed inset-0 z-50 flex items-center justify-center px-4 py-8 sm:px-6"
+            class="fixed inset-0 z-50 flex items-center justify-center px-2 py-4"
             role="dialog"
             aria-modal="true"
             @keydown.escape.window="$wire.closeEditModal()"
@@ -1011,7 +1011,7 @@
             <div class="absolute inset-0 bg-gray-900/70" @click="$wire.closeEditModal()" aria-hidden="true"></div>
 
         <div
-            class="relative z-10 flex max-h-[90vh] w-full max-w-[95vw] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
+            class="relative z-10 flex max-h-[95vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
             @click.stop
         >
             <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4">
