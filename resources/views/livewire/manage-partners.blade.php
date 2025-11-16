@@ -186,7 +186,7 @@
                         <label class="block text-sm font-medium text-gray-700 mb-2">Current Logo</label>
                         @if ($existingLogoPath)
                             <div class="flex items-center gap-3 mb-2">
-                                <img src="{{ Storage::disk('public')->url($existingLogoPath) }}" class="h-16 w-auto border rounded" alt="Current logo">
+                                <img src="{{ asset('storage/' . $existingLogoPath) }}" class="h-16 w-auto border rounded" alt="Current logo">
                                 <button
                                     type="button"
                                     wire:click="removeLogo"
