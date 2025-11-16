@@ -47,6 +47,8 @@ class GeneratePhotoStudioImage implements ShouldQueue
         public ?string $imageInput,
         public string $sourceType,
         public ?string $sourceReference = null,
+        public ?int $parentId = null,
+        public ?string $editInstruction = null,
     ) {
         //
     }
@@ -96,12 +98,14 @@ class GeneratePhotoStudioImage implements ShouldQueue
 
             $generation = PhotoStudioGeneration::create([
                 'team_id' => $this->teamId,
+                'parent_id' => $this->parentId,
                 'user_id' => $this->userId,
                 'product_id' => $this->productId,
                 'product_ai_job_id' => $jobRecord->id,
                 'source_type' => $this->sourceType,
                 'source_reference' => $this->sourceReference,
                 'prompt' => $this->prompt,
+                'edit_instruction' => $this->editInstruction,
                 'model' => $this->model,
                 'storage_disk' => $this->disk,
                 'storage_path' => $path,
