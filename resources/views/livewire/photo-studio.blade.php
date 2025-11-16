@@ -939,7 +939,7 @@
                                     </div>
                                 </div>
                                 <div class="space-y-1">
-                                    <p class="text-xs font-semibold text-indigo-900">Current Version</p>
+                                    <p class="text-xs font-semibold text-indigo-900" x-text="'Version ' + ((selectedEntry && selectedEntry.ancestors ? selectedEntry.ancestors.length : 0) + 1)"></p>
                                     <p class="text-xs text-indigo-700" x-text="selectedEntry ? selectedEntry.created_at_human : ''"></p>
                                     <p class="text-xs text-indigo-800 line-clamp-2" x-show="selectedEntry && selectedEntry.edit_instruction" x-text="selectedEntry ? selectedEntry.edit_instruction : ''"></p>
                                 </div>
@@ -964,7 +964,7 @@
                                         class="w-full h-32 rounded object-cover mb-2"
                                     />
                                     <div class="space-y-1">
-                                        <p class="text-xs font-medium text-emerald-800" x-text="'Based on this'"></p>
+                                        <p class="text-xs font-medium text-emerald-800" x-text="'Version ' + ((selectedEntry && selectedEntry.ancestors ? selectedEntry.ancestors.length : 0) + index + 2)"></p>
                                         <p class="text-xs text-emerald-600" x-text="descendant.created_at_human"></p>
                                         <p class="text-xs text-emerald-700 line-clamp-2" x-show="descendant.edit_instruction" x-text="descendant.edit_instruction"></p>
                                     </div>
