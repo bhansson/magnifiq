@@ -97,6 +97,12 @@ class PhotoStudio extends Component
 
     public ?string $editSuccessMessage = null;
 
+    public bool $editGenerating = false;
+
+    public ?int $editPendingGenerationId = null;
+
+    public ?int $editNewGenerationId = null;
+
     public function mount(): void
     {
         $team = Auth::user()?->currentTeam;
@@ -433,7 +439,36 @@ class PhotoStudio extends Component
         $this->editInstruction = '';
         $this->editSubmitting = false;
         $this->editSuccessMessage = null;
+        $this->editGenerating = false;
+        $this->editPendingGenerationId = null;
+        $this->editNewGenerationId = null;
         $this->resetErrorBag();
+    }
+
+    public function pollEditGeneration(): void
+    {
+        if (! $this->editGenerating || ! $this->editPendingGenerationId) {
+            return;
+        }
+
+        $team = Auth::user()?->currentTeam;
+
+        if (! $team) {
+            return;
+        }
+
+        $newGeneration = PhotoStudioGeneration::query()
+            ->where('team_id', $team->id)
+            ->where('parent_id', $this->editingGenerationId)
+            ->where('id', '>', $this->editPendingGenerationId)
+            ->latest()
+            ->first();
+
+        if ($newGeneration) {
+            $this->editNewGenerationId = $newGeneration->id;
+            $this->editGenerating = false;
+            $this->refreshProductGallery();
+        }
     }
 
     public function submitEdit(): void
@@ -511,9 +546,11 @@ class PhotoStudio extends Component
             );
 
             $this->editSubmitting = false;
-            $this->editSuccessMessage = 'Edit queued successfully! The modified image will appear in the gallery shortly.';
+            $this->editSuccessMessage = null;
+            $this->editInstruction = '';
+            $this->editGenerating = true;
+            $this->editPendingGenerationId = $jobRecord->id;
             $this->generationStatus = 'Edit queued. The modified image will appear in the gallery shortly.';
-            $this->refreshProductGallery();
         } catch (Throwable $exception) {
             Log::error('Photo Studio edit generation failed', [
                 'user_id' => Auth::id(),

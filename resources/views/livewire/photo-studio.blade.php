@@ -993,142 +993,260 @@
     {{-- Edit Modal --}}
     @if ($showEditModal)
         <div
-            x-data="{ show: true }"
+            x-data="{
+                show: true,
+                countdown: 10,
+                countdownInterval: null,
+                startCountdown() {
+                    this.countdown = 10;
+                    if (this.countdownInterval) clearInterval(this.countdownInterval);
+                    this.countdownInterval = setInterval(() => {
+                        if (this.countdown > 0) {
+                            this.countdown--;
+                        }
+                    }, 1000);
+                },
+                stopCountdown() {
+                    if (this.countdownInterval) {
+                        clearInterval(this.countdownInterval);
+                        this.countdownInterval = null;
+                    }
+                }
+            }"
             x-show="show"
             x-transition.opacity
             class="fixed inset-0 z-50 flex items-center justify-center px-4 py-8 sm:px-6"
             role="dialog"
             aria-modal="true"
             @keydown.escape.window="$wire.closeEditModal()"
+            x-init="$watch('$wire.editGenerating', value => { if (value) startCountdown(); else stopCountdown(); })"
         >
             <div class="absolute inset-0 bg-gray-900/70" @click="$wire.closeEditModal()" aria-hidden="true"></div>
 
         <div
-            class="relative z-10 w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-2xl"
+            class="relative z-10 flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
             @click.stop
         >
-            <div class="p-6">
-                <div class="flex items-start justify-between">
-                    <h3 class="text-lg font-semibold text-gray-900">Edit Image</h3>
-                    <button
-                        type="button"
-                        class="inline-flex size-8 items-center justify-center rounded-full text-gray-400 transition hover:bg-gray-100 hover:text-gray-600"
-                        wire:click="closeEditModal"
-                    >
-                        <span class="sr-only">Close</span>
-                        <svg class="h-5 w-5" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-                            <path d="m6 6 8 8m0-8-8 8" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
-                        </svg>
-                    </button>
-                </div>
+            <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+                <h3 class="text-lg font-semibold text-gray-900">Edit Image</h3>
+                <button
+                    type="button"
+                    class="inline-flex size-8 items-center justify-center rounded-full text-gray-400 transition hover:bg-gray-100 hover:text-gray-600"
+                    wire:click="closeEditModal"
+                >
+                    <span class="sr-only">Close</span>
+                    <svg class="h-5 w-5" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                        <path d="m6 6 8 8m0-8-8 8" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                </button>
+            </div>
 
+            <div class="flex-1 overflow-y-auto p-6">
                 @if ($editingGenerationId)
                     @php
                         $editingGeneration = collect($productGallery)->firstWhere('id', $editingGenerationId);
+                        $newGeneration = $editNewGenerationId ? collect($productGallery)->firstWhere('id', $editNewGenerationId) : null;
                     @endphp
 
                     @if ($editingGeneration)
-                        @if ($editSuccessMessage)
-                            <div class="mt-4 space-y-5">
-                                <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-6 text-center">
-                                    <div class="flex justify-center">
-                                        <div class="flex size-12 items-center justify-center rounded-full bg-emerald-100">
-                                            <svg class="h-6 w-6 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
-                                            </svg>
+                        {{-- Top: Image Preview Row --}}
+                        <div class="mb-6">
+                            <p class="mb-3 text-sm font-semibold text-gray-700">Editing</p>
+                            <div class="flex items-start gap-8">
+                                {{-- Current Image Being Edited --}}
+                                <div class="flex-shrink-0">
+                                    <div class="w-96 overflow-hidden rounded-2xl border-4 border-white bg-white shadow-2xl">
+                                        <img
+                                            src="{{ $editingGeneration['url'] }}"
+                                            alt="Current version"
+                                            class="h-96 w-full object-contain bg-gray-900/5"
+                                        />
+                                        <div class="bg-white px-5 py-4">
+                                            <p class="line-clamp-2 text-sm font-semibold text-gray-700">{{ $editingGeneration['edit_instruction'] ?? 'Original' }}</p>
                                         </div>
                                     </div>
-                                    <h4 class="mt-3 text-lg font-semibold text-emerald-900">{{ $editSuccessMessage }}</h4>
-                                    <p class="mt-2 text-sm text-emerald-700">
-                                        Your edited version is being generated. Check the gallery in a few moments.
-                                    </p>
                                 </div>
 
-                                <div class="flex items-center justify-center border-t border-gray-100 pt-4">
-                                    <button
-                                        type="button"
-                                        wire:click="closeEditModal"
-                                        class="rounded-lg bg-indigo-600 px-6 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500"
-                                    >
-                                        Close
-                                    </button>
-                                </div>
-                            </div>
-                        @else
-                            <div class="mt-4 space-y-5">
-                                <div class="rounded-xl border border-gray-200 bg-gray-50 p-4">
-                                    <p class="text-sm font-semibold text-gray-700">Original Image</p>
-                                    <img
-                                        src="{{ $editingGeneration['url'] }}"
-                                        alt="Original image to edit"
-                                        class="mt-3 h-64 w-full rounded-lg object-contain"
-                                    />
-                                    @if (!empty($editingGeneration['prompt']))
-                                        <div class="mt-3">
-                                            <p class="text-xs font-medium text-gray-500">Original Prompt</p>
-                                            <p class="mt-1 text-sm text-gray-700">{{ Str::limit($editingGeneration['prompt'], 200) }}</p>
-                                        </div>
-                                    @endif
-                                </div>
-
-                                <div>
-                                    <label for="edit-instruction" class="block text-sm font-medium text-gray-700">
-                                        What would you like to change? <span class="text-red-500">*</span>
-                                    </label>
-                                    <textarea
-                                        id="edit-instruction"
-                                        wire:model.defer="editInstruction"
-                                        rows="4"
-                                        {{ $editSubmitting ? 'disabled' : '' }}
-                                        class="mt-2 block w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500"
-                                        placeholder="Example: Change the background to a sunset scene, add warmer lighting..."
-                                    ></textarea>
-                                    <p class="mt-2 text-xs text-gray-500">
-                                        Describe what you want to change about the image. Be specific for best results.
-                                    </p>
-
-                                    @error('editInstruction')
-                                        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
-                                    @enderror
-                                </div>
-
-                                @if ($editSubmitting)
-                                    <div class="rounded-lg border border-indigo-200 bg-indigo-50 p-4">
-                                        <div class="flex items-center gap-3">
-                                            <x-loading-spinner class="size-5 text-indigo-600" />
-                                            <div>
-                                                <p class="font-semibold text-indigo-900">Queuing your edit...</p>
-                                                <p class="text-sm text-indigo-700">This will take just a moment.</p>
-                                            </div>
+                                {{-- History Stack (Horizontal) --}}
+                                @if (!empty($editingGeneration['ancestors']))
+                                    <div class="flex-1">
+                                        <div
+                                            class="relative"
+                                            style="height: 450px;"
+                                            x-data="{
+                                                hoveredIndex: null,
+                                                history: @js($editingGeneration['ancestors'] ?? [])
+                                            }"
+                                        >
+                                            <template x-for="(item, index) in history" :key="item.id">
+                                                <div
+                                                    class="absolute top-0 w-96 cursor-pointer overflow-hidden rounded-2xl border-4 border-white bg-white shadow-2xl transition-all duration-200"
+                                                    :style="`
+                                                        left: ${index * 80}px;
+                                                        z-index: ${hoveredIndex === index ? 100 : index + 1};
+                                                        transform: ${hoveredIndex === index ? 'translateY(-16px) scale(1.1)' : 'translateY(0)'};
+                                                    `"
+                                                    @mouseenter="hoveredIndex = index"
+                                                    @mouseleave="hoveredIndex = null"
+                                                >
+                                                    <img
+                                                        :src="item.url"
+                                                        :alt="'Version ' + (index + 1)"
+                                                        class="h-96 w-full object-contain bg-gray-50"
+                                                    />
+                                                    <div class="bg-white px-5 py-4">
+                                                        <p class="line-clamp-2 text-sm font-semibold text-gray-700" x-text="item.edit_instruction || 'Original'"></p>
+                                                    </div>
+                                                </div>
+                                            </template>
                                         </div>
                                     </div>
                                 @endif
-
-                                <div class="flex items-center justify-end gap-3 border-t border-gray-100 pt-4">
-                                    <button
-                                        type="button"
-                                        wire:click="closeEditModal"
-                                        {{ $editSubmitting ? 'disabled' : '' }}
-                                        class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        type="button"
-                                        wire:click="submitEdit"
-                                        {{ $editSubmitting ? 'disabled' : '' }}
-                                        class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
-                                    >
-                                        @if ($editSubmitting)
-                                            <x-loading-spinner class="size-4" />
-                                            <span>Queuing Edit...</span>
-                                        @else
-                                            <span>Generate Edited Version</span>
-                                        @endif
-                                    </button>
-                                </div>
                             </div>
-                        @endif
+                        </div>
+
+                        {{-- Bottom: Form or Generation Preview --}}
+                        <div>
+                            @if ($editGenerating)
+                                <p class="mb-3 text-sm font-semibold text-gray-700">Generating New Version</p>
+                                <div
+                                    class="flex h-[400px] flex-col items-center justify-center rounded-xl border-2 border-indigo-200 bg-indigo-50 p-6"
+                                    wire:poll.2s="pollEditGeneration"
+                                >
+                                        <div class="relative">
+                                            {{-- Spinning ring --}}
+                                            <svg class="h-24 w-24 animate-spin text-indigo-600" viewBox="0 0 100 100">
+                                                <circle
+                                                    class="stroke-current opacity-25"
+                                                    cx="50"
+                                                    cy="50"
+                                                    r="40"
+                                                    stroke-width="8"
+                                                    fill="none"
+                                                />
+                                                <circle
+                                                    class="stroke-current"
+                                                    cx="50"
+                                                    cy="50"
+                                                    r="40"
+                                                    stroke-width="8"
+                                                    fill="none"
+                                                    stroke-dasharray="60 200"
+                                                    stroke-linecap="round"
+                                                />
+                                            </svg>
+                                            {{-- Countdown number --}}
+                                            <div class="absolute inset-0 flex items-center justify-center">
+                                                <span
+                                                    x-show="countdown > 0"
+                                                    x-text="countdown"
+                                                    class="text-3xl font-bold text-indigo-600"
+                                                ></span>
+                                                <span
+                                                    x-show="countdown === 0"
+                                                    class="text-lg font-semibold text-indigo-600"
+                                                >...</span>
+                                            </div>
+                                        </div>
+                                        <p class="mt-6 text-center text-sm font-semibold text-indigo-900">
+                                            <span x-show="countdown > 0">Generating your edit...</span>
+                                            <span x-show="countdown === 0">Finalizing...</span>
+                                        </p>
+                                        <p class="mt-2 text-center text-xs text-indigo-700">
+                                            This usually takes 5-15 seconds
+                                    </p>
+                                </div>
+                            @elseif ($newGeneration)
+                                <p class="mb-3 text-sm font-semibold text-emerald-700">✓ New Version Ready!</p>
+                                <div class="space-y-4">
+                                        <div class="overflow-hidden rounded-xl border-2 border-emerald-300 bg-emerald-50">
+                                            <img
+                                                src="{{ $newGeneration['url'] }}"
+                                                alt="New edited version"
+                                                class="h-64 w-full object-contain bg-white"
+                                            />
+                                            <div class="border-t border-emerald-200 bg-white px-4 py-3">
+                                                <p class="text-sm font-semibold text-emerald-900">Your Edited Version</p>
+                                                @if (!empty($newGeneration['edit_instruction']))
+                                                    <p class="mt-1 text-xs text-emerald-700">Edit: {{ $newGeneration['edit_instruction'] }}</p>
+                                                @endif
+                                            </div>
+                                        </div>
+                                        <div class="flex gap-3">
+                                            <button
+                                                type="button"
+                                                wire:click="closeEditModal"
+                                                class="flex-1 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-500"
+                                            >
+                                                Done
+                                            </button>
+                                            <button
+                                                type="button"
+                                                wire:click="openEditModal({{ $newGeneration['id'] }})"
+                                                class="flex-1 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
+                                            >
+                                                Edit Again
+                                        </button>
+                                    </div>
+                                </div>
+                            @else
+                                <p class="mb-3 text-sm font-semibold text-gray-700">What would you like to change?</p>
+                                <div class="space-y-4">
+                                    <div>
+                                        <textarea
+                                            wire:model.defer="editInstruction"
+                                            rows="8"
+                                            {{ $editSubmitting ? 'disabled' : '' }}
+                                            class="block w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500"
+                                            placeholder="Example: Change the background to a sunset scene, add warmer lighting, move the product to the left..."
+                                        ></textarea>
+                                        <p class="mt-2 text-xs text-gray-500">
+                                            Be specific for best results. Describe lighting, background, position, or style changes.
+                                        </p>
+
+                                        @error('editInstruction')
+                                            <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                                        @enderror
+                                    </div>
+
+                                    @if ($editSubmitting)
+                                        <div class="rounded-lg border border-indigo-200 bg-indigo-50 p-4">
+                                            <div class="flex items-center gap-3">
+                                                <x-loading-spinner class="size-5 text-indigo-600" />
+                                                <div>
+                                                    <p class="font-semibold text-indigo-900">Queuing your edit...</p>
+                                                    <p class="text-sm text-indigo-700">This will take just a moment.</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    @endif
+
+                                    <div class="flex items-center justify-end gap-3 border-t border-gray-100 pt-4">
+                                        <button
+                                            type="button"
+                                            wire:click="closeEditModal"
+                                            {{ $editSubmitting ? 'disabled' : '' }}
+                                            class="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            type="button"
+                                            wire:click="submitEdit"
+                                            {{ $editSubmitting ? 'disabled' : '' }}
+                                            class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
+                                        >
+                                            @if ($editSubmitting)
+                                                <x-loading-spinner class="size-4" />
+                                                <span>Queuing...</span>
+                                            @else
+                                                <span>Generate Edit</span>
+                                            @endif
+                                        </button>
+                                    </div>
+                                </div>
+                            @endif
+                        </div>
                     @endif
                 @endif
             </div>
