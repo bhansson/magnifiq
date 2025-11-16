@@ -22,7 +22,7 @@ services:
       - composer-cache:/tmp/composer
     depends_on:
       - redis
-      - supabase-db
+      - postgres
 
   queue:
     build:
@@ -86,24 +86,21 @@ services:
     volumes:
       - redis-data:/data
 
-  supabase-db:
-    image: supabase/postgres:15.8.1.085
-    container_name: magnifiq-supabase-db
+  postgres:
+    image: postgres:15-alpine
+    container_name: magnifiq-postgres
     restart: unless-stopped
     ports:
-      - "${SUPABASE_DB_PORT:-54322}:5432"
+      - "${DB_PORT:-5432}:5432"
     environment:
-      POSTGRES_PASSWORD: ${SUPABASE_DB_PASSWORD:-supabase}
-      POSTGRES_DB: ${SUPABASE_DB_NAME:-postgres}
-      POSTGRES_USER: ${SUPABASE_DB_USER:-postgres}
-      PGPORT: 5432
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${DB_DATABASE:-magnifiq}
+      POSTGRES_USER: ${DB_USERNAME:-postgres}
     volumes:
-      - supabase-data:/var/lib/postgresql/data
+      - postgres-data:/var/lib/postgresql/data
 
 volumes:
   composer-cache:
   node_modules:
   redis-data:
-  supabase-data:
-    external: true
-    name: vrba_supabase-data
+  postgres-data:
