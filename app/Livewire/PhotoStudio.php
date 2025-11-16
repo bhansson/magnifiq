@@ -87,6 +87,12 @@ class PhotoStudio extends Component
 
     public int $productResultsLimit = self::PRODUCT_SEARCH_LIMIT;
 
+    public bool $editModalOpen = false;
+
+    public ?array $editingGeneration = null;
+
+    public string $editPrompt = '';
+
     public function mount(): void
     {
         $team = Auth::user()?->currentTeam;
@@ -393,6 +399,52 @@ class PhotoStudio extends Component
         }
 
         $this->refreshProductGallery();
+    }
+
+    public function openEditModal(int $generationId): void
+    {
+        $team = Auth::user()?->currentTeam;
+
+        if (! $team) {
+            return;
+        }
+
+        $generation = PhotoStudioGeneration::query()
+            ->where('team_id', $team->id)
+            ->with(['product:id,title,sku,brand'])
+            ->find($generationId);
+
+        if (! $generation) {
+            return;
+        }
+
+        $product = $generation->product;
+
+        $this->editingGeneration = [
+            'id' => $generation->id,
+            'url' => $this->resolveDiskUrl($generation->storage_disk, $generation->storage_path),
+            'prompt' => $generation->prompt,
+            'model' => $generation->model,
+            'product_id' => $generation->product_id,
+            'storage_disk' => $generation->storage_disk,
+            'storage_path' => $generation->storage_path,
+            'product' => $product ? [
+                'id' => $product->id,
+                'title' => $product->title,
+                'sku' => $product->sku,
+                'brand' => $product->brand,
+            ] : null,
+        ];
+
+        $this->editPrompt = '';
+        $this->editModalOpen = true;
+    }
+
+    public function closeEditModal(): void
+    {
+        $this->editModalOpen = false;
+        $this->editingGeneration = null;
+        $this->editPrompt = '';
     }
 
     public function render(): View
