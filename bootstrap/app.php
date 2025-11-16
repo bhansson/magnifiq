@@ -16,6 +16,11 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->web(append: [
             \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,
+            \App\Http\Middleware\DetectPartnerContext::class,
+        ]);
+
+        $middleware->alias([
+            'superadmin' => \App\Http\Middleware\EnsureSuperAdmin::class,
         ]);
     })
     ->withSchedule(function (Schedule $schedule): void {

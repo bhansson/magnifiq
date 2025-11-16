@@ -23,7 +23,20 @@ class TeamPolicy
      */
     public function view(User $user, Team $team): bool
     {
-        return $user->belongsToTeam($team);
+        // Original logic: user is member
+        if ($user->belongsToTeam($team)) {
+            return true;
+        }
+
+        // NEW: Check if user belongs to parent partner team
+        if ($team->parent_team_id) {
+            $parentTeam = $team->parentTeam;
+            if ($parentTeam && $user->belongsToTeam($parentTeam)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -39,7 +52,20 @@ class TeamPolicy
      */
     public function update(User $user, Team $team): bool
     {
-        return $user->ownsTeam($team);
+        // Original logic: user owns team
+        if ($user->ownsTeam($team)) {
+            return true;
+        }
+
+        // NEW: Check if user owns parent partner team
+        if ($team->parent_team_id) {
+            $parentTeam = $team->parentTeam;
+            if ($parentTeam && $user->ownsTeam($parentTeam)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -72,5 +98,19 @@ class TeamPolicy
     public function delete(User $user, Team $team): bool
     {
         return $user->ownsTeam($team);
+    }
+
+    /**
+     * Check if user belongs to parent partner team.
+     */
+    protected function userBelongsToParentPartner(User $user, Team $team): bool
+    {
+        if (! $team->parent_team_id) {
+            return false;
+        }
+
+        $parentTeam = $team->parentTeam;
+
+        return $parentTeam && $user->belongsToTeam($parentTeam);
     }
 }

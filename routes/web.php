@@ -43,3 +43,19 @@ Route::middleware([
     Route::get('/photo-studio/gallery/{generation}/download', DownloadPhotoStudioGenerationController::class)
         ->name('photo-studio.gallery.download');
 });
+
+// Partner admin routes (superadmin only)
+Route::middleware([
+    'auth:sanctum',
+    config('jetstream.auth_session'),
+    'verified',
+    'superadmin',
+])->group(function () {
+    Route::get('/admin/partners', function () {
+        return view('admin.partners');
+    })->name('admin.partners');
+
+    Route::get('/admin/revenue', function () {
+        return view('admin.revenue');
+    })->name('admin.revenue');
+});

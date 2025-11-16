@@ -23,6 +23,20 @@ class Team extends JetstreamTeam
         'name',
         'public_hash',
         'personal_team',
+        'type',
+        'parent_team_id',
+        'logo_path',
+        'partner_slug',
+        'user_id',
+    ];
+
+    /**
+     * The model's default values for attributes.
+     *
+     * @var array<string, mixed>
+     */
+    protected $attributes = [
+        'type' => 'customer',
     ];
 
     /**
@@ -74,5 +88,35 @@ class Team extends JetstreamTeam
     public function products()
     {
         return $this->hasMany(Product::class);
+    }
+
+    public function isPartner(): bool
+    {
+        return $this->type === 'partner';
+    }
+
+    public function isCustomer(): bool
+    {
+        return $this->type === 'customer';
+    }
+
+    public function parentTeam()
+    {
+        return $this->belongsTo(Team::class, 'parent_team_id');
+    }
+
+    public function ownedTeams()
+    {
+        return $this->hasMany(Team::class, 'parent_team_id');
+    }
+
+    public function revenueRecords()
+    {
+        return $this->hasMany(PartnerRevenue::class, 'partner_team_id');
+    }
+
+    public function revenueAsCustomer()
+    {
+        return $this->hasMany(PartnerRevenue::class, 'customer_team_id');
     }
 }

@@ -27,6 +27,15 @@
                     <x-nav-link href="{{ route('photo-studio.index') }}" :active="request()->routeIs('photo-studio.index')">
                         {{ __('Photo Studio') }}
                     </x-nav-link>
+
+                    @if (Auth::user()->isSuperAdmin())
+                        <x-nav-link href="{{ route('admin.partners') }}" :active="request()->routeIs('admin.partners')">
+                            {{ __('Partners') }}
+                        </x-nav-link>
+                        <x-nav-link href="{{ route('admin.revenue') }}" :active="request()->routeIs('admin.revenue')">
+                            {{ __('Revenue') }}
+                        </x-nav-link>
+                    @endif
                 </div>
             </div>
 
@@ -166,6 +175,15 @@
             <x-responsive-nav-link href="{{ route('photo-studio.index') }}" :active="request()->routeIs('photo-studio.index')">
                 {{ __('Photo Studio') }}
             </x-responsive-nav-link>
+
+            @if (Auth::user()->isSuperAdmin())
+                <x-responsive-nav-link href="{{ route('admin.partners') }}" :active="request()->routeIs('admin.partners')">
+                    {{ __('Partners') }}
+                </x-responsive-nav-link>
+                <x-responsive-nav-link href="{{ route('admin.revenue') }}" :active="request()->routeIs('admin.revenue')">
+                    {{ __('Revenue') }}
+                </x-responsive-nav-link>
+            @endif
         </div>
 
         <!-- Responsive Settings Options -->
