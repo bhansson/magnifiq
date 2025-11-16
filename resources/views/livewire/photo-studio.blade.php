@@ -813,7 +813,7 @@
                                 <svg class="mt-0.5 h-4 w-4 shrink-0 text-amber-600" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
                                 </svg>
-                                <p class="text-sm text-amber-900" x-text="selectedEntry.edit_instruction"></p>
+                                <p class="text-sm text-amber-900" x-text="selectedEntry ? selectedEntry.edit_instruction : ''"></p>
                             </div>
                         </div>
                     </div>
@@ -1024,7 +1024,7 @@
             <div class="absolute inset-0 bg-gray-900/70" @click="$wire.closeEditModal()" aria-hidden="true"></div>
 
         <div
-            class="relative z-10 flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
+            class="relative z-10 flex max-h-[90vh] w-full max-w-[95vw] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
             @click.stop
         >
             <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4">
@@ -1045,46 +1045,85 @@
                 @if ($editingGenerationId)
                     @php
                         $editingGeneration = collect($productGallery)->firstWhere('id', $editingGenerationId);
-                        $newGeneration = $editNewGenerationId ? collect($productGallery)->firstWhere('id', $editNewGenerationId) : null;
+
+                        // Build history stack - include current generation when generating
+                        $historyStack = $editingGeneration['ancestors'] ?? [];
+                        if ($editGenerating) {
+                            $historyStack[] = [
+                                'id' => $editingGeneration['id'],
+                                'url' => $editingGeneration['url'],
+                                'edit_instruction' => $editingGeneration['edit_instruction'] ?? 'Original',
+                            ];
+                        }
+
+                        // Show only the 5 most recent history items
+                        $historyStack = array_slice($historyStack, -5);
                     @endphp
 
                     @if ($editingGeneration)
                         {{-- Top: Image Preview Row --}}
                         <div class="mb-6">
-                            <p class="mb-3 text-sm font-semibold text-gray-700">Editing</p>
                             <div class="flex items-start gap-8">
-                                {{-- Current Image Being Edited --}}
+                                {{-- Main Photo Area (Current/Countdown) --}}
                                 <div class="flex-shrink-0">
-                                    <div class="w-96 overflow-hidden rounded-2xl border-4 border-white bg-white shadow-2xl">
-                                        <img
-                                            src="{{ $editingGeneration['url'] }}"
-                                            alt="Current version"
-                                            class="h-96 w-full object-contain bg-gray-900/5"
-                                        />
-                                        <div class="bg-white px-5 py-4">
-                                            <p class="line-clamp-2 text-sm font-semibold text-gray-700">{{ $editingGeneration['edit_instruction'] ?? 'Original' }}</p>
+                                    @if ($editGenerating)
+                                        {{-- Countdown Spinner --}}
+                                        <div class="w-96 overflow-hidden rounded-2xl border-4 border-indigo-300 bg-white shadow-2xl" wire:poll.2s="pollEditGeneration">
+                                            <div class="flex h-96 flex-col items-center justify-center bg-indigo-50 p-6">
+                                                <div class="relative">
+                                                    <svg class="h-24 w-24 animate-spin text-indigo-600" viewBox="0 0 100 100">
+                                                        <circle class="stroke-current opacity-25" cx="50" cy="50" r="40" stroke-width="8" fill="none" />
+                                                        <circle class="stroke-current" cx="50" cy="50" r="40" stroke-width="8" fill="none" stroke-dasharray="60 200" stroke-linecap="round" />
+                                                    </svg>
+                                                    <div class="absolute inset-0 flex items-center justify-center">
+                                                        <span x-show="countdown > 0" x-text="countdown" class="text-3xl font-bold text-indigo-600"></span>
+                                                        <span x-show="countdown === 0" class="text-lg font-semibold text-indigo-600">...</span>
+                                                    </div>
+                                                </div>
+                                                <p class="mt-6 text-center text-sm font-semibold text-indigo-900">
+                                                    <span x-show="countdown > 0">Generating your edit...</span>
+                                                    <span x-show="countdown === 0">Finalizing...</span>
+                                                </p>
+                                                <p class="mt-2 text-center text-xs text-indigo-700">This usually takes 5-15 seconds</p>
+                                            </div>
+                                            <div class="bg-white px-5 py-4">
+                                                <p class="line-clamp-2 text-sm font-semibold text-indigo-700">Generating...</p>
+                                            </div>
                                         </div>
-                                    </div>
+                                    @else
+                                        {{-- Current Image Being Edited --}}
+                                        <div class="w-96 overflow-hidden rounded-2xl border-4 border-white bg-white shadow-2xl">
+                                            <img
+                                                src="{{ $editingGeneration['url'] }}"
+                                                alt="Current version"
+                                                class="h-96 w-full object-contain bg-gray-900/5"
+                                            />
+                                            <div class="bg-white px-5 py-4">
+                                                <p class="line-clamp-2 text-sm font-semibold text-gray-700">{{ $editingGeneration['edit_instruction'] ?? 'Original' }}</p>
+                                            </div>
+                                        </div>
+                                    @endif
                                 </div>
 
                                 {{-- History Stack (Horizontal) --}}
-                                @if (!empty($editingGeneration['ancestors']))
+                                @if (!empty($historyStack))
                                     <div class="flex-1">
+                                        <p class="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500">History</p>
                                         <div
                                             class="relative"
                                             style="height: 450px;"
                                             x-data="{
                                                 hoveredIndex: null,
-                                                history: @js($editingGeneration['ancestors'] ?? [])
+                                                history: @js($historyStack)
                                             }"
                                         >
                                             <template x-for="(item, index) in history" :key="item.id">
                                                 <div
-                                                    class="absolute top-0 w-96 cursor-pointer overflow-hidden rounded-2xl border-4 border-white bg-white shadow-2xl transition-all duration-200"
+                                                    class="absolute top-0 w-80 cursor-pointer overflow-hidden rounded-2xl border-4 border-white bg-white shadow-2xl transition-all duration-200"
                                                     :style="`
-                                                        left: ${index * 80}px;
+                                                        left: ${index * 70}px;
                                                         z-index: ${hoveredIndex === index ? 100 : index + 1};
-                                                        transform: ${hoveredIndex === index ? 'translateY(-16px) scale(1.1)' : 'translateY(0)'};
+                                                        transform: ${hoveredIndex === index ? 'translateY(-16px) scale(1.05)' : 'translateY(0)'};
                                                     `"
                                                     @mouseenter="hoveredIndex = index"
                                                     @mouseleave="hoveredIndex = null"
@@ -1092,10 +1131,10 @@
                                                     <img
                                                         :src="item.url"
                                                         :alt="'Version ' + (index + 1)"
-                                                        class="h-96 w-full object-contain bg-gray-50"
+                                                        class="h-80 w-full object-contain bg-gray-50"
                                                     />
-                                                    <div class="bg-white px-5 py-4">
-                                                        <p class="line-clamp-2 text-sm font-semibold text-gray-700" x-text="item.edit_instruction || 'Original'"></p>
+                                                    <div class="bg-white px-4 py-3">
+                                                        <p class="line-clamp-2 text-xs font-semibold text-gray-700" x-text="item.edit_instruction || 'Original'"></p>
                                                     </div>
                                                 </div>
                                             </template>
@@ -1105,147 +1144,66 @@
                             </div>
                         </div>
 
-                        {{-- Bottom: Form or Generation Preview --}}
-                        <div>
-                            @if ($editGenerating)
-                                <p class="mb-3 text-sm font-semibold text-gray-700">Generating New Version</p>
-                                <div
-                                    class="flex h-[400px] flex-col items-center justify-center rounded-xl border-2 border-indigo-200 bg-indigo-50 p-6"
-                                    wire:poll.2s="pollEditGeneration"
-                                >
-                                        <div class="relative">
-                                            {{-- Spinning ring --}}
-                                            <svg class="h-24 w-24 animate-spin text-indigo-600" viewBox="0 0 100 100">
-                                                <circle
-                                                    class="stroke-current opacity-25"
-                                                    cx="50"
-                                                    cy="50"
-                                                    r="40"
-                                                    stroke-width="8"
-                                                    fill="none"
-                                                />
-                                                <circle
-                                                    class="stroke-current"
-                                                    cx="50"
-                                                    cy="50"
-                                                    r="40"
-                                                    stroke-width="8"
-                                                    fill="none"
-                                                    stroke-dasharray="60 200"
-                                                    stroke-linecap="round"
-                                                />
-                                            </svg>
-                                            {{-- Countdown number --}}
-                                            <div class="absolute inset-0 flex items-center justify-center">
-                                                <span
-                                                    x-show="countdown > 0"
-                                                    x-text="countdown"
-                                                    class="text-3xl font-bold text-indigo-600"
-                                                ></span>
-                                                <span
-                                                    x-show="countdown === 0"
-                                                    class="text-lg font-semibold text-indigo-600"
-                                                >...</span>
-                                            </div>
-                                        </div>
-                                        <p class="mt-6 text-center text-sm font-semibold text-indigo-900">
-                                            <span x-show="countdown > 0">Generating your edit...</span>
-                                            <span x-show="countdown === 0">Finalizing...</span>
-                                        </p>
-                                        <p class="mt-2 text-center text-xs text-indigo-700">
-                                            This usually takes 5-15 seconds
+                        {{-- Bottom: Edit Form (Always Visible) --}}
+                        <div class="border-t border-gray-200 pt-6">
+                            <p class="mb-3 text-sm font-semibold text-gray-700">What would you like to change?</p>
+                            <div class="space-y-4">
+                                <div>
+                                    <textarea
+                                        wire:model.defer="editInstruction"
+                                        rows="6"
+                                        {{ ($editSubmitting || $editGenerating) ? 'disabled' : '' }}
+                                        class="block w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500"
+                                        placeholder="Example: Change the background to a sunset scene, add warmer lighting, remove the..."
+                                    ></textarea>
+                                    <p class="mt-2 text-xs text-gray-500">
+                                        Keep in mind that every edit can decrease the quality of the details.
                                     </p>
+
+                                    @error('editInstruction')
+                                        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                                    @enderror
                                 </div>
-                            @elseif ($newGeneration)
-                                <p class="mb-3 text-sm font-semibold text-emerald-700">✓ New Version Ready!</p>
-                                <div class="space-y-4">
-                                        <div class="overflow-hidden rounded-xl border-2 border-emerald-300 bg-emerald-50">
-                                            <img
-                                                src="{{ $newGeneration['url'] }}"
-                                                alt="New edited version"
-                                                class="h-64 w-full object-contain bg-white"
-                                            />
-                                            <div class="border-t border-emerald-200 bg-white px-4 py-3">
-                                                <p class="text-sm font-semibold text-emerald-900">Your Edited Version</p>
-                                                @if (!empty($newGeneration['edit_instruction']))
-                                                    <p class="mt-1 text-xs text-emerald-700">Edit: {{ $newGeneration['edit_instruction'] }}</p>
-                                                @endif
+
+                                @if ($editSubmitting)
+                                    <div class="rounded-lg border border-indigo-200 bg-indigo-50 p-4">
+                                        <div class="flex items-center gap-3">
+                                            <x-loading-spinner class="size-5 text-indigo-600" />
+                                            <div>
+                                                <p class="font-semibold text-indigo-900">Queuing your edit...</p>
+                                                <p class="text-sm text-indigo-700">This will take just a moment.</p>
                                             </div>
                                         </div>
-                                        <div class="flex gap-3">
-                                            <button
-                                                type="button"
-                                                wire:click="closeEditModal"
-                                                class="flex-1 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-500"
-                                            >
-                                                Done
-                                            </button>
-                                            <button
-                                                type="button"
-                                                wire:click="openEditModal({{ $newGeneration['id'] }})"
-                                                class="flex-1 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
-                                            >
-                                                Edit Again
-                                        </button>
                                     </div>
+                                @endif
+
+                                <div class="flex items-center justify-between gap-3 border-t border-gray-100 pt-4">
+                                    <button
+                                        type="button"
+                                        wire:click="closeEditModal"
+                                        {{ ($editSubmitting || $editGenerating) ? 'disabled' : '' }}
+                                        class="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                        Close
+                                    </button>
+                                    <button
+                                        type="button"
+                                        wire:click="submitEdit"
+                                        {{ ($editSubmitting || $editGenerating) ? 'disabled' : '' }}
+                                        class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                        @if ($editSubmitting)
+                                            <x-loading-spinner class="size-4" />
+                                            <span>Queuing...</span>
+                                        @elseif ($editGenerating)
+                                            <x-loading-spinner class="size-4" />
+                                            <span>Generating...</span>
+                                        @else
+                                            <span>Generate Edit</span>
+                                        @endif
+                                    </button>
                                 </div>
-                            @else
-                                <p class="mb-3 text-sm font-semibold text-gray-700">What would you like to change?</p>
-                                <div class="space-y-4">
-                                    <div>
-                                        <textarea
-                                            wire:model.defer="editInstruction"
-                                            rows="8"
-                                            {{ $editSubmitting ? 'disabled' : '' }}
-                                            class="block w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500"
-                                            placeholder="Example: Change the background to a sunset scene, add warmer lighting, move the product to the left..."
-                                        ></textarea>
-                                        <p class="mt-2 text-xs text-gray-500">
-                                            Be specific for best results. Describe lighting, background, position, or style changes.
-                                        </p>
-
-                                        @error('editInstruction')
-                                            <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
-                                        @enderror
-                                    </div>
-
-                                    @if ($editSubmitting)
-                                        <div class="rounded-lg border border-indigo-200 bg-indigo-50 p-4">
-                                            <div class="flex items-center gap-3">
-                                                <x-loading-spinner class="size-5 text-indigo-600" />
-                                                <div>
-                                                    <p class="font-semibold text-indigo-900">Queuing your edit...</p>
-                                                    <p class="text-sm text-indigo-700">This will take just a moment.</p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    @endif
-
-                                    <div class="flex items-center justify-end gap-3 border-t border-gray-100 pt-4">
-                                        <button
-                                            type="button"
-                                            wire:click="closeEditModal"
-                                            {{ $editSubmitting ? 'disabled' : '' }}
-                                            class="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
-                                        >
-                                            Cancel
-                                        </button>
-                                        <button
-                                            type="button"
-                                            wire:click="submitEdit"
-                                            {{ $editSubmitting ? 'disabled' : '' }}
-                                            class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
-                                        >
-                                            @if ($editSubmitting)
-                                                <x-loading-spinner class="size-4" />
-                                                <span>Queuing...</span>
-                                            @else
-                                                <span>Generate Edit</span>
-                                            @endif
-                                        </button>
-                                    </div>
-                                </div>
-                            @endif
+                            </div>
                         </div>
                     @endif
                 @endif

@@ -4,8 +4,8 @@ namespace App\Livewire;
 
 use App\Jobs\GeneratePhotoStudioImage;
 use App\Models\PhotoStudioGeneration;
-use App\Models\ProductAiJob;
 use App\Models\Product;
+use App\Models\ProductAiJob;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Arr;
@@ -99,7 +99,7 @@ class PhotoStudio extends Component
 
     public bool $editGenerating = false;
 
-    public ?int $editPendingGenerationId = null;
+    public ?int $editBaselineGenerationId = null;
 
     public ?int $editNewGenerationId = null;
 
@@ -440,14 +440,14 @@ class PhotoStudio extends Component
         $this->editSubmitting = false;
         $this->editSuccessMessage = null;
         $this->editGenerating = false;
-        $this->editPendingGenerationId = null;
+        $this->editBaselineGenerationId = null;
         $this->editNewGenerationId = null;
         $this->resetErrorBag();
     }
 
     public function pollEditGeneration(): void
     {
-        if (! $this->editGenerating || ! $this->editPendingGenerationId) {
+        if (! $this->editGenerating) {
             return;
         }
 
@@ -457,17 +457,23 @@ class PhotoStudio extends Component
             return;
         }
 
+        $baseline = $this->editBaselineGenerationId ?? 0;
+
         $newGeneration = PhotoStudioGeneration::query()
             ->where('team_id', $team->id)
             ->where('parent_id', $this->editingGenerationId)
-            ->where('id', '>', $this->editPendingGenerationId)
+            ->where('id', '>', $baseline)
             ->latest()
             ->first();
 
         if ($newGeneration) {
-            $this->editNewGenerationId = $newGeneration->id;
             $this->editGenerating = false;
             $this->refreshProductGallery();
+
+            // Automatically switch to editing the new generation
+            $this->editingGenerationId = $newGeneration->id;
+            $this->editNewGenerationId = null;
+            $this->editInstruction = '';
         }
     }
 
@@ -494,12 +500,14 @@ class PhotoStudio extends Component
         if (! $parentGeneration) {
             $this->editSubmitting = false;
             $this->addError('editInstruction', 'The selected image is no longer available.');
+
             return;
         }
 
         if (! config('laravel-openrouter.api_key')) {
             $this->editSubmitting = false;
             $this->addError('editInstruction', 'Configure an OpenRouter API key before generating images.');
+
             return;
         }
 
@@ -507,9 +515,15 @@ class PhotoStudio extends Component
         $model = config('services.photo_studio.image_model', 'google/gemini-2.5-flash-image');
 
         try {
+            // Establish baseline generation ID for polling
+            $previousGenerationId = PhotoStudioGeneration::query()
+                ->where('team_id', $team->id)
+                ->where('parent_id', $parentGeneration->id)
+                ->max('id');
+
             $imageUrl = Storage::disk($parentGeneration->storage_disk)->url($parentGeneration->storage_path);
 
-            $newPrompt = $parentGeneration->prompt . "\n\nModification requested: " . $this->editInstruction;
+            $newPrompt = $parentGeneration->prompt."\n\nModification requested: ".$this->editInstruction;
 
             $jobRecord = ProductAiJob::create([
                 'team_id' => $team->id,
@@ -549,7 +563,7 @@ class PhotoStudio extends Component
             $this->editSuccessMessage = null;
             $this->editInstruction = '';
             $this->editGenerating = true;
-            $this->editPendingGenerationId = $jobRecord->id;
+            $this->editBaselineGenerationId = $previousGenerationId ?? 0;
             $this->generationStatus = 'Edit queued. The modified image will appear in the gallery shortly.';
         } catch (Throwable $exception) {
             Log::error('Photo Studio edit generation failed', [
@@ -639,8 +653,6 @@ class PhotoStudio extends Component
     }
 
     /**
-     * @param  string  $imageUrl
-     * @param  Product|null  $product
      * @return MessageData[]
      */
     private function buildMessages(string $imageUrl, ?Product $product): array
