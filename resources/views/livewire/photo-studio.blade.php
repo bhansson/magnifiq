@@ -69,14 +69,14 @@
                         <label for="photo-studio-gallery-search" class="block text-sm font-medium text-gray-700">
                             Search photos
                         </label>
-                        <div class="mt-1 flex items-center gap-2">
-                            <div class="relative flex-1">
+                        <div class="mt-1">
+                            <div class="relative">
                                 <input
                                     type="search"
                                     id="photo-studio-gallery-search"
                                     wire:model.live.debounce.400ms="gallerySearch"
                                     placeholder="By prompt, title, or SKU..."
-                                    class="block w-full rounded-lg border border-gray-300 py-2 pl-3 pr-10 text-sm text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                    class="block w-full rounded-lg border border-gray-300 py-2 pl-3 pr-4 text-sm text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                                 />
                                 <div class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-gray-400">
                                     <svg class="h-4.5 w-4.5" viewBox="0 0 20 20" fill="none" aria-hidden="true">
@@ -85,15 +85,6 @@
                                     </svg>
                                 </div>
                             </div>
-                            @if ($hasGallerySearch)
-                                <button
-                                    type="button"
-                                    wire:click="$set('gallerySearch', '')"
-                                    class="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-600 transition hover:border-gray-300 hover:text-gray-900"
-                                >
-                                    Clear
-                                </button>
-                            @endif
                         </div>
                     </div>
                 </div>
@@ -435,25 +426,13 @@
                                     @input="handleInput()"
                                     @keydown.escape.stop="hideList()"
                                     placeholder="Search by title, SKU, or brand"
-                                    class="block w-full rounded-md border border-gray-300 py-2 pl-3 pr-10 text-sm text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                    class="block w-full rounded-md border border-gray-300 py-2 pl-3 pr-4 text-sm text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                                     role="combobox"
                                     :aria-expanded="open.toString()"
                                     aria-controls="photo-studio-product-options"
                                     autocomplete="off"
                                 />
-                                <div class="absolute inset-y-0 right-3 flex items-center gap-1 text-gray-400">
-                                    <button
-                                        type="button"
-                                        x-show="search.length"
-                                        x-cloak
-                                        @click="clearSearch()"
-                                        class="rounded-full p-1 text-gray-400 transition hover:text-gray-600"
-                                        aria-label="Clear product search"
-                                    >
-                                        <svg class="h-3.5 w-3.5" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-                                            <path d="m3 3 8 8M11 3l-8 8" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
-                                        </svg>
-                                    </button>
+                                <div class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-gray-400">
                                     <svg class="h-4.5 w-4.5" viewBox="0 0 20 20" fill="none" aria-hidden="true">
                                         <path d="m14.5 14.5 3 3" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
                                         <circle cx="9.5" cy="9" r="5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
@@ -617,7 +596,7 @@
                     class="flex items-center gap-2 whitespace-nowrap"
                 >
                     <span wire:loading.remove wire:target="extractPrompt,productId,image">
-                        Extract prompt
+                        Craft prompt
                     </span>
                     <span wire:loading.flex wire:target="extractPrompt" class="flex items-center gap-2">
                         <x-loading-spinner class="size-4" />
@@ -657,7 +636,7 @@
                             </svg>
                             <div>
                                 <p class="font-semibold">No prompt yet.</p>
-                                <p class="text-amber-900/80">Run Extract prompt above or paste your own copy into the workspace.</p>
+                                <p class="text-amber-900/80">Run craft prompt above or paste your own copy into the workspace.</p>
                             </div>
                         @endif
                     </div>
