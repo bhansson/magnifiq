@@ -1,3 +1,5 @@
+@use('Illuminate\Support\Facades\Storage')
+
 <div>
     <div class="mb-6 flex justify-between items-center">
         <h2 class="text-2xl font-semibold text-gray-800">Partners</h2>
@@ -41,7 +43,13 @@
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                             {{ $partner->created_at->format('Y-m-d') }}
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-3">
+                            <button
+                                wire:click="openEditModal({{ $partner->id }})"
+                                class="text-indigo-600 hover:text-indigo-900"
+                            >
+                                Edit
+                            </button>
                             <button
                                 wire:click="deletePartner({{ $partner->id }})"
                                 wire:confirm="Are you sure you want to delete this partner?"
@@ -117,6 +125,12 @@
                             class="mt-1 block w-full"
                         />
                         @error('logo') <span class="text-red-500 text-sm">{{ $message }}</span> @enderror
+
+                        @if ($logo && in_array($logo->getClientOriginalExtension(), ['jpg', 'jpeg', 'png', 'gif', 'webp']))
+                            <div class="mt-2">
+                                <img src="{{ $logo->temporaryUrl() }}" class="h-20 w-auto" alt="Logo preview">
+                            </div>
+                        @endif
                     </div>
 
                     <div class="flex justify-end gap-2">
@@ -132,6 +146,92 @@
                             class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
                         >
                             Create
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    @endif
+
+    <!-- Edit Partner Modal -->
+    @if ($showEditModal)
+        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
+            <div class="bg-white rounded-lg shadow-xl p-6 max-w-md w-full">
+                <h3 class="text-lg font-semibold mb-4">Edit Partner</h3>
+
+                <form wire:submit="updatePartner">
+                    <div class="mb-4">
+                        <label for="edit_name" class="block text-sm font-medium text-gray-700">Partner Name</label>
+                        <input
+                            type="text"
+                            id="edit_name"
+                            wire:model="name"
+                            class="mt-1 block w-full border-gray-300 rounded-md shadow-sm"
+                        />
+                        @error('name') <span class="text-red-500 text-sm">{{ $message }}</span> @enderror
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="edit_partner_slug" class="block text-sm font-medium text-gray-700">Slug (optional)</label>
+                        <input
+                            type="text"
+                            id="edit_partner_slug"
+                            wire:model="partner_slug"
+                            class="mt-1 block w-full border-gray-300 rounded-md shadow-sm"
+                        />
+                        @error('partner_slug') <span class="text-red-500 text-sm">{{ $message }}</span> @enderror
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Current Logo</label>
+                        @if ($existingLogoPath)
+                            <div class="flex items-center gap-3 mb-2">
+                                <img src="{{ Storage::disk('public')->url($existingLogoPath) }}" class="h-16 w-auto border rounded" alt="Current logo">
+                                <button
+                                    type="button"
+                                    wire:click="removeLogo"
+                                    wire:confirm="Remove this logo?"
+                                    class="text-sm text-red-600 hover:text-red-800"
+                                >
+                                    Remove Logo
+                                </button>
+                            </div>
+                        @else
+                            <p class="text-sm text-gray-500 mb-2">No logo uploaded</p>
+                        @endif
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="edit_logo" class="block text-sm font-medium text-gray-700">Upload New Logo (optional)</label>
+                        <input
+                            type="file"
+                            id="edit_logo"
+                            wire:model="logo"
+                            accept="image/*"
+                            class="mt-1 block w-full"
+                        />
+                        @error('logo') <span class="text-red-500 text-sm">{{ $message }}</span> @enderror
+
+                        @if ($logo && in_array($logo->getClientOriginalExtension(), ['jpg', 'jpeg', 'png', 'gif', 'webp']))
+                            <div class="mt-2">
+                                <img src="{{ $logo->temporaryUrl() }}" class="h-20 w-auto" alt="Logo preview">
+                            </div>
+                        @endif
+                    </div>
+
+                    <div class="flex justify-end gap-2">
+                        <button
+                            type="button"
+                            wire:click="$set('showEditModal', false)"
+                            class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            type="submit"
+                            class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
+                        >
+                            Update
                         </button>
                     </div>
                 </form>

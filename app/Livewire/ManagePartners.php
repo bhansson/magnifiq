@@ -17,7 +17,7 @@ class ManagePartners extends Component
     #[Validate('required|string|max:255')]
     public string $name = '';
 
-    #[Validate('nullable|string|max:50|unique:teams,partner_slug')]
+    #[Validate('nullable|string|max:50')]
     public string $partner_slug = '';
 
     #[Validate('nullable|numeric|min:0|max:100')]
@@ -27,10 +27,18 @@ class ManagePartners extends Component
     public $logo = null;
 
     public bool $showCreateModal = false;
+    public bool $showEditModal = false;
+    public ?int $editingPartnerId = null;
+    public ?string $existingLogoPath = null;
 
     public function createPartner(): void
     {
-        $this->validate();
+        $this->validate([
+            'name' => 'required|string|max:255',
+            'partner_slug' => 'nullable|string|max:50|unique:teams,partner_slug',
+            'partner_share_percent' => 'nullable|numeric|min:0|max:100',
+            'logo' => 'nullable|image|max:2048',
+        ]);
 
         $logoPath = null;
         if ($this->logo) {
@@ -58,9 +66,79 @@ class ManagePartners extends Component
             ->where('type', 'partner')
             ->findOrFail($partnerId);
 
+        // Delete logo if exists
+        if ($partner->logo_path) {
+            Storage::disk('public')->delete($partner->logo_path);
+        }
+
         $partner->delete();
 
         session()->flash('message', 'Partner deleted successfully.');
+    }
+
+    public function openEditModal(int $partnerId): void
+    {
+        $partner = Team::query()
+            ->where('type', 'partner')
+            ->findOrFail($partnerId);
+
+        $this->editingPartnerId = $partner->id;
+        $this->name = $partner->name;
+        $this->partner_slug = $partner->partner_slug ?? '';
+        $this->existingLogoPath = $partner->logo_path;
+        $this->logo = null;
+        $this->showEditModal = true;
+    }
+
+    public function updatePartner(): void
+    {
+        $partner = Team::query()
+            ->where('type', 'partner')
+            ->findOrFail($this->editingPartnerId);
+
+        $this->validate([
+            'name' => 'required|string|max:255',
+            'partner_slug' => 'nullable|string|max:50|unique:teams,partner_slug,'.$this->editingPartnerId,
+            'partner_share_percent' => 'nullable|numeric|min:0|max:100',
+            'logo' => 'nullable|image|max:2048',
+        ]);
+
+        $logoPath = $partner->logo_path;
+
+        // Handle logo upload
+        if ($this->logo) {
+            // Delete old logo if exists
+            if ($partner->logo_path) {
+                Storage::disk('public')->delete($partner->logo_path);
+            }
+            $logoPath = $this->logo->store('partners/logos', 'public');
+        }
+
+        $partner->update([
+            'name' => $this->name,
+            'partner_slug' => $this->partner_slug ?: null,
+            'logo_path' => $logoPath,
+        ]);
+
+        $this->reset(['name', 'partner_slug', 'partner_share_percent', 'logo', 'showEditModal', 'editingPartnerId', 'existingLogoPath']);
+
+        session()->flash('message', 'Partner updated successfully.');
+    }
+
+    public function removeLogo(): void
+    {
+        if ($this->editingPartnerId) {
+            $partner = Team::query()
+                ->where('type', 'partner')
+                ->findOrFail($this->editingPartnerId);
+
+            if ($partner->logo_path) {
+                Storage::disk('public')->delete($partner->logo_path);
+                $partner->update(['logo_path' => null]);
+                $this->existingLogoPath = null;
+                session()->flash('message', 'Logo removed successfully.');
+            }
+        }
     }
 
     public function render()
