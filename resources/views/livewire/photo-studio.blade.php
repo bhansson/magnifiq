@@ -761,12 +761,12 @@
         <div class="absolute inset-0 bg-gray-900/70" @click="closeOverlay()" aria-hidden="true"></div>
 
         <div
-            class="relative z-10 w-full max-w-4xl overflow-hidden rounded-2xl bg-white shadow-2xl"
+            class="relative z-10 flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
             @click.stop
         >
             <button
                 type="button"
-                class="absolute right-4 top-4 inline-flex size-9 items-center justify-center rounded-full bg-white/90 text-gray-700 shadow ring-1 ring-black/10 transition hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
+                class="absolute right-4 top-4 z-10 inline-flex size-9 items-center justify-center rounded-full bg-white/90 text-gray-700 shadow ring-1 ring-black/10 transition hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
                 @click="closeOverlay()"
             >
                 <span class="sr-only">Close gallery details</span>
@@ -775,15 +775,15 @@
                 </svg>
             </button>
 
-            <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
-                <div class="bg-gray-100">
+            <div class="grid min-h-0 flex-1 gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
+                <div class="bg-gray-100 min-h-0 flex items-center justify-center">
                     <img
                         :src="selectedEntry ? selectedEntry.url : ''"
                         :alt="selectedEntry ? 'Generated render' : ''"
-                        class="h-full w-full object-contain bg-gray-900/5"
+                        class="max-h-full w-full object-contain bg-gray-900/5"
                     />
                 </div>
-                <div class="space-y-5 p-6">
+                <div class="overflow-y-auto space-y-5 p-6">
                     <div>
                         <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Image details</p>
                         <p class="text-xs text-gray-500" x-text="selectedEntry && selectedEntry.created_at ? selectedEntry.created_at : ''"></p>
@@ -806,8 +806,19 @@
                             </template>
                         </p>
                     </div>
+                    <div x-show="selectedEntry && selectedEntry.edit_instruction">
+                        <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Edit Instruction</p>
+                        <div class="mt-2 rounded-lg border border-amber-200 bg-amber-50 p-3">
+                            <div class="flex items-start gap-2">
+                                <svg class="mt-0.5 h-4 w-4 shrink-0 text-amber-600" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+                                </svg>
+                                <p class="text-sm text-amber-900" x-text="selectedEntry.edit_instruction"></p>
+                            </div>
+                        </div>
+                    </div>
                     <div>
-                        <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Prompt</p>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Original Prompt</p>
                         <p
                             class="mt-2 max-h-48 whitespace-pre-line overflow-y-auto rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm text-gray-800"
                             x-text="selectedEntry && selectedEntry.prompt ? selectedEntry.prompt : 'Prompt unavailable for this render.'"
@@ -817,7 +828,123 @@
                         <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Model</p>
                         <p class="mt-2 text-sm text-gray-900" x-text="selectedEntry && selectedEntry.model ? selectedEntry.model : 'Unknown model'"></p>
                     </div>
+
+                    <div x-show="selectedEntry && selectedEntry.has_history">
+
+                        <div class="mt-3 space-y-3">
+                            {{-- Ancestors (Past Edits) --}}
+                            <div x-show="selectedEntry && selectedEntry.ancestors && selectedEntry.ancestors.length > 0">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <svg class="h-3.5 w-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    <p class="text-xs font-semibold text-gray-600">Previous Versions</p>
+                                </div>
+                                <div class="space-y-2 border-l-2 border-gray-200 pl-3">
+                                    <template x-for="(ancestor, index) in (selectedEntry ? selectedEntry.ancestors : [])" :key="ancestor.id">
+                                        <button
+                                            type="button"
+                                            @click="
+                                                const gallery = @js($productGallery);
+                                                const foundEntry = gallery.find(g => g.id === ancestor.id);
+                                                if (foundEntry) {
+                                                    selectedEntry = foundEntry;
+                                                }
+                                            "
+                                            class="w-full rounded-lg border p-2 text-left transition hover:border-gray-300 hover:bg-gray-50"
+                                        >
+                                            <div class="flex items-start gap-2">
+                                                <img
+                                                    :src="ancestor.url"
+                                                    :alt="'Ancestor version'"
+                                                    class="h-10 w-10 rounded object-cover opacity-60"
+                                                />
+                                                <div class="flex-1 text-xs">
+                                                    <p class="font-medium text-gray-600" x-text="'Version ' + (index + 1)"></p>
+                                                    <p class="text-gray-500" x-text="ancestor.created_at_human"></p>
+                                                    <p class="mt-1 text-gray-600" x-show="ancestor.edit_instruction" x-text="'Edit: ' + ancestor.edit_instruction"></p>
+                                                </div>
+                                            </div>
+                                        </button>
+                                    </template>
+                                </div>
+                            </div>
+
+                            {{-- Current Version --}}
+                            <div class="rounded-lg border-2 border-indigo-300 bg-indigo-50 p-3">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <svg class="h-4 w-4 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    </svg>
+                                    <p class="text-sm font-semibold text-indigo-900">Currently Viewing</p>
+                                </div>
+                                <div class="flex items-start gap-2">
+                                    <img
+                                        :src="selectedEntry ? selectedEntry.url : ''"
+                                        alt="Current version"
+                                        class="h-12 w-12 rounded object-cover ring-2 ring-indigo-400"
+                                    />
+                                    <div class="flex-1 text-xs">
+                                        <p class="font-semibold text-indigo-900">This Version</p>
+                                        <p class="text-indigo-700" x-text="selectedEntry ? selectedEntry.created_at_human : ''"></p>
+                                        <p class="mt-1 text-indigo-800" x-show="selectedEntry && selectedEntry.edit_instruction" x-text="selectedEntry ? 'Edit: ' + selectedEntry.edit_instruction : ''"></p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {{-- Descendants (Future Edits) --}}
+                            <div x-show="selectedEntry && selectedEntry.descendants && selectedEntry.descendants.length > 0">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <svg class="h-3.5 w-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 7.5L7.5 3m0 0L12 7.5M7.5 3v13.5m13.5 0L16.5 21m0 0L12 16.5m4.5 4.5V7.5" />
+                                    </svg>
+                                    <p class="text-xs font-semibold text-gray-600">Versions Based on This</p>
+                                </div>
+                                <div class="space-y-2 border-l-2 border-emerald-200 pl-3">
+                                    <template x-for="(descendant, index) in (selectedEntry ? selectedEntry.descendants : [])" :key="descendant.id">
+                                        <button
+                                            type="button"
+                                            @click="
+                                                const gallery = @js($productGallery);
+                                                const foundEntry = gallery.find(g => g.id === descendant.id);
+                                                if (foundEntry) {
+                                                    selectedEntry = foundEntry;
+                                                }
+                                            "
+                                            class="w-full rounded-lg border border-emerald-200 bg-emerald-50/50 p-2 text-left transition hover:border-emerald-300 hover:bg-emerald-50"
+                                        >
+                                            <div class="flex items-start gap-2">
+                                                <img
+                                                    :src="descendant.url"
+                                                    :alt="'Future version'"
+                                                    class="h-10 w-10 rounded object-cover"
+                                                />
+                                                <div class="flex-1 text-xs">
+                                                    <p class="font-medium text-emerald-800" x-text="'Future Edit ' + (index + 1)"></p>
+                                                    <p class="text-emerald-600" x-text="descendant.created_at_human"></p>
+                                                    <p class="mt-1 text-emerald-700" x-show="descendant.edit_instruction" x-text="'Edit: ' + descendant.edit_instruction"></p>
+                                                </div>
+                                            </div>
+                                        </button>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="flex flex-wrap gap-3 pt-1">
+                        <button
+                            type="button"
+                            class="inline-flex size-10 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-700 shadow-sm transition hover:border-gray-300 hover:text-gray-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
+                            x-on:click.prevent="if (!selectedEntry) { return; } $wire.openEditModal(selectedEntry.id); closeOverlay();"
+                            title="Edit this image"
+                        >
+                            <span class="sr-only">Edit image</span>
+                            <svg class="h-5 w-5" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                                <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+                            </svg>
+                        </button>
                         <a
                             :href="selectedEntry ? selectedEntry.url : '#'"
                             target="_blank"
@@ -862,4 +989,150 @@
             </div>
         </div>
     </div>
+
+    {{-- Edit Modal --}}
+    @if ($showEditModal)
+        <div
+            x-data="{ show: true }"
+            x-show="show"
+            x-transition.opacity
+            class="fixed inset-0 z-50 flex items-center justify-center px-4 py-8 sm:px-6"
+            role="dialog"
+            aria-modal="true"
+            @keydown.escape.window="$wire.closeEditModal()"
+        >
+            <div class="absolute inset-0 bg-gray-900/70" @click="$wire.closeEditModal()" aria-hidden="true"></div>
+
+        <div
+            class="relative z-10 w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-2xl"
+            @click.stop
+        >
+            <div class="p-6">
+                <div class="flex items-start justify-between">
+                    <h3 class="text-lg font-semibold text-gray-900">Edit Image</h3>
+                    <button
+                        type="button"
+                        class="inline-flex size-8 items-center justify-center rounded-full text-gray-400 transition hover:bg-gray-100 hover:text-gray-600"
+                        wire:click="closeEditModal"
+                    >
+                        <span class="sr-only">Close</span>
+                        <svg class="h-5 w-5" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                            <path d="m6 6 8 8m0-8-8 8" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                    </button>
+                </div>
+
+                @if ($editingGenerationId)
+                    @php
+                        $editingGeneration = collect($productGallery)->firstWhere('id', $editingGenerationId);
+                    @endphp
+
+                    @if ($editingGeneration)
+                        @if ($editSuccessMessage)
+                            <div class="mt-4 space-y-5">
+                                <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-6 text-center">
+                                    <div class="flex justify-center">
+                                        <div class="flex size-12 items-center justify-center rounded-full bg-emerald-100">
+                                            <svg class="h-6 w-6 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                                            </svg>
+                                        </div>
+                                    </div>
+                                    <h4 class="mt-3 text-lg font-semibold text-emerald-900">{{ $editSuccessMessage }}</h4>
+                                    <p class="mt-2 text-sm text-emerald-700">
+                                        Your edited version is being generated. Check the gallery in a few moments.
+                                    </p>
+                                </div>
+
+                                <div class="flex items-center justify-center border-t border-gray-100 pt-4">
+                                    <button
+                                        type="button"
+                                        wire:click="closeEditModal"
+                                        class="rounded-lg bg-indigo-600 px-6 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500"
+                                    >
+                                        Close
+                                    </button>
+                                </div>
+                            </div>
+                        @else
+                            <div class="mt-4 space-y-5">
+                                <div class="rounded-xl border border-gray-200 bg-gray-50 p-4">
+                                    <p class="text-sm font-semibold text-gray-700">Original Image</p>
+                                    <img
+                                        src="{{ $editingGeneration['url'] }}"
+                                        alt="Original image to edit"
+                                        class="mt-3 h-64 w-full rounded-lg object-contain"
+                                    />
+                                    @if (!empty($editingGeneration['prompt']))
+                                        <div class="mt-3">
+                                            <p class="text-xs font-medium text-gray-500">Original Prompt</p>
+                                            <p class="mt-1 text-sm text-gray-700">{{ Str::limit($editingGeneration['prompt'], 200) }}</p>
+                                        </div>
+                                    @endif
+                                </div>
+
+                                <div>
+                                    <label for="edit-instruction" class="block text-sm font-medium text-gray-700">
+                                        What would you like to change? <span class="text-red-500">*</span>
+                                    </label>
+                                    <textarea
+                                        id="edit-instruction"
+                                        wire:model.defer="editInstruction"
+                                        rows="4"
+                                        {{ $editSubmitting ? 'disabled' : '' }}
+                                        class="mt-2 block w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500"
+                                        placeholder="Example: Change the background to a sunset scene, add warmer lighting..."
+                                    ></textarea>
+                                    <p class="mt-2 text-xs text-gray-500">
+                                        Describe what you want to change about the image. Be specific for best results.
+                                    </p>
+
+                                    @error('editInstruction')
+                                        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                                    @enderror
+                                </div>
+
+                                @if ($editSubmitting)
+                                    <div class="rounded-lg border border-indigo-200 bg-indigo-50 p-4">
+                                        <div class="flex items-center gap-3">
+                                            <x-loading-spinner class="size-5 text-indigo-600" />
+                                            <div>
+                                                <p class="font-semibold text-indigo-900">Queuing your edit...</p>
+                                                <p class="text-sm text-indigo-700">This will take just a moment.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                @endif
+
+                                <div class="flex items-center justify-end gap-3 border-t border-gray-100 pt-4">
+                                    <button
+                                        type="button"
+                                        wire:click="closeEditModal"
+                                        {{ $editSubmitting ? 'disabled' : '' }}
+                                        class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        type="button"
+                                        wire:click="submitEdit"
+                                        {{ $editSubmitting ? 'disabled' : '' }}
+                                        class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                        @if ($editSubmitting)
+                                            <x-loading-spinner class="size-4" />
+                                            <span>Queuing Edit...</span>
+                                        @else
+                                            <span>Generate Edited Version</span>
+                                        @endif
+                                    </button>
+                                </div>
+                            </div>
+                        @endif
+                    @endif
+                @endif
+            </div>
+        </div>
+        </div>
+    @endif
 </div>

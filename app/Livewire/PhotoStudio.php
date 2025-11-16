@@ -87,6 +87,16 @@ class PhotoStudio extends Component
 
     public int $productResultsLimit = self::PRODUCT_SEARCH_LIMIT;
 
+    public ?int $editingGenerationId = null;
+
+    public string $editInstruction = '';
+
+    public bool $showEditModal = false;
+
+    public bool $editSubmitting = false;
+
+    public ?string $editSuccessMessage = null;
+
     public function mount(): void
     {
         $team = Auth::user()?->currentTeam;
@@ -395,6 +405,127 @@ class PhotoStudio extends Component
         $this->refreshProductGallery();
     }
 
+    public function openEditModal(int $generationId): void
+    {
+        $team = Auth::user()?->currentTeam;
+
+        if (! $team) {
+            abort(403, 'Join or create a team to access the Photo Studio.');
+        }
+
+        $generation = PhotoStudioGeneration::query()
+            ->where('team_id', $team->id)
+            ->find($generationId);
+
+        if (! $generation) {
+            return;
+        }
+
+        $this->editingGenerationId = $generationId;
+        $this->editInstruction = '';
+        $this->showEditModal = true;
+    }
+
+    public function closeEditModal(): void
+    {
+        $this->showEditModal = false;
+        $this->editingGenerationId = null;
+        $this->editInstruction = '';
+        $this->editSubmitting = false;
+        $this->editSuccessMessage = null;
+        $this->resetErrorBag();
+    }
+
+    public function submitEdit(): void
+    {
+        $this->resetErrorBag();
+        $this->editSubmitting = true;
+        $this->editSuccessMessage = null;
+
+        $this->validate([
+            'editInstruction' => ['required', 'string', 'min:3', 'max:1000'],
+        ]);
+
+        $team = Auth::user()?->currentTeam;
+
+        if (! $team) {
+            abort(403, 'Join or create a team to access the Photo Studio.');
+        }
+
+        $parentGeneration = PhotoStudioGeneration::query()
+            ->where('team_id', $team->id)
+            ->find($this->editingGenerationId);
+
+        if (! $parentGeneration) {
+            $this->editSubmitting = false;
+            $this->addError('editInstruction', 'The selected image is no longer available.');
+            return;
+        }
+
+        if (! config('laravel-openrouter.api_key')) {
+            $this->editSubmitting = false;
+            $this->addError('editInstruction', 'Configure an OpenRouter API key before generating images.');
+            return;
+        }
+
+        $disk = config('services.photo_studio.generation_disk', 's3');
+        $model = config('services.photo_studio.image_model', 'google/gemini-2.5-flash-image');
+
+        try {
+            $imageUrl = Storage::disk($parentGeneration->storage_disk)->url($parentGeneration->storage_path);
+
+            $newPrompt = $parentGeneration->prompt . "\n\nModification requested: " . $this->editInstruction;
+
+            $jobRecord = ProductAiJob::create([
+                'team_id' => $team->id,
+                'product_id' => $parentGeneration->product_id,
+                'sku' => $parentGeneration->product?->sku,
+                'product_ai_template_id' => null,
+                'job_type' => ProductAiJob::TYPE_PHOTO_STUDIO,
+                'status' => ProductAiJob::STATUS_QUEUED,
+                'progress' => 0,
+                'queued_at' => now(),
+                'meta' => array_filter([
+                    'source_type' => 'edited_generation',
+                    'source_reference' => $parentGeneration->storage_path,
+                    'parent_generation_id' => $parentGeneration->id,
+                    'edit_instruction' => $this->editInstruction,
+                    'prompt' => $newPrompt,
+                    'model' => $model,
+                ]),
+            ]);
+
+            GeneratePhotoStudioImage::dispatch(
+                productAiJobId: $jobRecord->id,
+                teamId: $team->id,
+                userId: Auth::id(),
+                productId: $parentGeneration->product_id,
+                prompt: $newPrompt,
+                model: $model,
+                disk: $disk,
+                imageInput: $imageUrl,
+                sourceType: 'edited_generation',
+                sourceReference: $parentGeneration->storage_path,
+                parentId: $parentGeneration->id,
+                editInstruction: $this->editInstruction,
+            );
+
+            $this->editSubmitting = false;
+            $this->editSuccessMessage = 'Edit queued successfully! The modified image will appear in the gallery shortly.';
+            $this->generationStatus = 'Edit queued. The modified image will appear in the gallery shortly.';
+            $this->refreshProductGallery();
+        } catch (Throwable $exception) {
+            Log::error('Photo Studio edit generation failed', [
+                'user_id' => Auth::id(),
+                'parent_generation_id' => $parentGeneration->id,
+                'exception' => $exception,
+            ]);
+
+            $this->editSubmitting = false;
+            $this->addError('editInstruction', 'Unable to edit the image right now. Please try again in a moment.');
+        }
+    }
+
     public function render(): View
     {
         return view('livewire.photo-studio');
@@ -614,7 +745,7 @@ TEXT;
         }
 
         $generations = $query
-            ->with(['product:id,title,sku,brand'])
+            ->with(['product:id,title,sku,brand', 'parent', 'children'])
             ->latest()
             ->get();
 
@@ -630,12 +761,34 @@ TEXT;
                     $productMeta = empty($metaParts) ? null : implode(' • ', $metaParts);
                 }
 
+                // Build complete generation tree (ancestors, current, descendants)
+                $tree = $generation->fullTree();
+
+                $ancestors = $tree['ancestors']->map(function ($gen) {
+                    return [
+                        'id' => $gen->id,
+                        'url' => $this->resolveDiskUrl($gen->storage_disk, $gen->storage_path),
+                        'edit_instruction' => $gen->edit_instruction,
+                        'created_at_human' => optional($gen->created_at)->diffForHumans(),
+                    ];
+                })->toArray();
+
+                $descendants = $tree['descendants']->map(function ($gen) {
+                    return [
+                        'id' => $gen->id,
+                        'url' => $this->resolveDiskUrl($gen->storage_disk, $gen->storage_path),
+                        'edit_instruction' => $gen->edit_instruction,
+                        'created_at_human' => optional($gen->created_at)->diffForHumans(),
+                    ];
+                })->toArray();
+
                 return [
                     'id' => $generation->id,
                     'url' => $this->resolveDiskUrl($generation->storage_disk, $generation->storage_path),
                     'disk' => $generation->storage_disk,
                     'path' => $generation->storage_path,
                     'prompt' => $generation->prompt,
+                    'edit_instruction' => $generation->edit_instruction,
                     'model' => $generation->model,
                     'download_url' => route('photo-studio.gallery.download', $generation),
                     'created_at' => optional($generation->created_at)->toDateTimeString(),
@@ -650,6 +803,11 @@ TEXT;
                     'product_meta' => $productMeta,
                     'product_brand' => $product?->brand,
                     'product_sku' => $product?->sku,
+                    'parent_id' => $generation->parent_id,
+                    'children_count' => $generation->children()->count(),
+                    'ancestors' => $ancestors,
+                    'descendants' => $descendants,
+                    'has_history' => count($ancestors) > 0 || count($descendants) > 0,
                 ];
             })
             ->toArray();
