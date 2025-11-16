@@ -14,25 +14,25 @@ class PartnerSeeder extends Seeder
      */
     public function run(): void
     {
-        // Create superadmin user
-        $admin = User::factory()->create([
+        // Create superadmin user with personal team
+        $admin = User::factory()->withPersonalTeam()->create([
             'name' => 'Super Admin',
             'email' => 'admin@magnifiq.com',
             'role' => 'superadmin',
         ]);
 
-        // Create partner users
-        $partnerOwner1 = User::factory()->create([
+        // Create partner users with personal teams
+        $partnerOwner1 = User::factory()->withPersonalTeam()->create([
             'name' => 'Acme Partner Owner',
             'email' => 'owner@acme.com',
         ]);
 
-        $partnerOwner2 = User::factory()->create([
+        $partnerOwner2 = User::factory()->withPersonalTeam()->create([
             'name' => 'Beta Solutions Owner',
             'email' => 'owner@beta.com',
         ]);
 
-        $partnerOwner3 = User::factory()->create([
+        $partnerOwner3 = User::factory()->withPersonalTeam()->create([
             'name' => 'Gamma Agency Owner',
             'email' => 'owner@gamma.com',
         ]);
