@@ -178,6 +178,12 @@ Key components:
 - Storage paths follow pattern: `photo-studio/{team_id}/{Y/m/d}/{uuid}.{ext}`
 - All generated images have public visibility for easy URL access
 
+**Laravel Cloud Storage Configuration:**
+- The Photo Studio S3/R2 bucket **MUST** be created with "Public" visibility in the Laravel Cloud dashboard
+- Laravel Cloud enforces bucket-level visibility - file-level visibility settings in code don't override this
+- Without public bucket visibility, images will return `Authorization` errors even though code sets `visibility => 'public'`
+- The bucket is dedicated to Photo Studio generations (all public content), so public visibility is safe
+
 ### Authentication and Authorization
 
 - Jetstream with Sanctum for API token auth

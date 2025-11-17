@@ -158,8 +158,7 @@ class ManageProductFeeds extends Component
                     ]),
                 ])->save();
 
-                $feed->products()->delete();
-
+                // Use upsert to preserve existing product IDs and relationships
                 $chunks = $parsed['items']->chunk(100);
                 $type = $parsed['type'];
                 $namespaces = $parsed['namespaces'];
@@ -199,7 +198,12 @@ class ManageProductFeeds extends Component
                     }
 
                     if (! empty($payload)) {
-                        Product::insert($payload);
+                        // Upsert based on the unique constraint: team_id + sku + product_feed_id
+                        Product::upsert(
+                            $payload,
+                            ['team_id', 'sku', 'product_feed_id'],
+                            ['gtin', 'title', 'brand', 'description', 'url', 'image_link', 'additional_image_link', 'updated_at']
+                        );
                     }
                 }
 
@@ -332,8 +336,7 @@ class ManageProductFeeds extends Component
                     'field_mappings' => $this->mapping,
                 ])->save();
 
-                $feed->products()->delete();
-
+                // Use upsert to preserve existing product IDs and relationships
                 $chunks = $items->chunk(100);
                 $seenSkus = [];
 
@@ -371,7 +374,12 @@ class ManageProductFeeds extends Component
                     }
 
                     if (! empty($payload)) {
-                        Product::insert($payload);
+                        // Upsert based on the unique constraint: team_id + sku + product_feed_id
+                        Product::upsert(
+                            $payload,
+                            ['team_id', 'sku', 'product_feed_id'],
+                            ['gtin', 'title', 'brand', 'description', 'url', 'image_link', 'additional_image_link', 'updated_at']
+                        );
                     }
                 }
             });
