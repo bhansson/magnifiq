@@ -1,30 +1,195 @@
 <section class="relative min-h-[120vh] overflow-hidden bg-[#0a0a0a]">
-    <!-- Animated Background Glow -->
-    <div class="absolute inset-0 overflow-hidden">
-        <!-- Top edge red glow lines -->
-        <div class="absolute top-0 left-1/4 w-px h-48 bg-gradient-to-b from-red-500/60 via-red-500/20 to-transparent"></div>
-        <div class="absolute top-0 right-1/4 w-px h-64 bg-gradient-to-b from-red-500/40 via-red-500/10 to-transparent"></div>
-        <div class="absolute top-0 left-1/3 w-px h-32 bg-gradient-to-b from-orange-500/50 via-orange-500/10 to-transparent"></div>
-        <div class="absolute top-0 right-1/3 w-px h-40 bg-gradient-to-b from-orange-500/30 via-orange-500/5 to-transparent"></div>
-
-        <!-- Central orb glow -->
-        <div class="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px]">
-            <div class="absolute inset-0 bg-gradient-to-b from-red-600/30 via-orange-500/10 to-transparent blur-3xl"></div>
+    <!-- Neural Network Background -->
+    <div class="absolute inset-0 overflow-hidden neural-container">
+        <!-- Ambient brain glow -->
+        <div class="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[1000px] h-[800px]">
+            <div class="absolute inset-0 bg-gradient-radial from-blue-500/15 via-sky-600/5 to-transparent blur-3xl"></div>
         </div>
 
-        <!-- The glowing orb/eclipse effect -->
-        <div class="absolute top-20 left-1/2 -translate-x-1/2 orb-container">
-            <div class="relative w-64 h-64 md:w-80 md:h-80">
-                <!-- Outer glow ring -->
-                <div class="absolute inset-0 rounded-full bg-gradient-to-b from-amber-500/40 via-orange-600/20 to-red-700/10 blur-2xl animate-pulse-slow"></div>
-                <!-- Eclipse core -->
-                <div class="absolute inset-4 rounded-full bg-black shadow-[0_0_100px_40px_rgba(251,146,60,0.3)]"></div>
-                <!-- Top corona glow -->
-                <div class="absolute -top-4 left-1/2 -translate-x-1/2 w-48 h-24 bg-gradient-to-b from-amber-400/60 via-orange-500/30 to-transparent blur-xl rounded-full"></div>
-                <!-- Bottom subtle glow -->
-                <div class="absolute -bottom-8 left-1/2 -translate-x-1/2 w-64 h-16 bg-gradient-to-t from-red-900/20 to-transparent blur-xl"></div>
-            </div>
-        </div>
+        <!-- SVG Neural Network -->
+        <svg class="absolute inset-0 w-full h-full" viewBox="0 0 1200 900" preserveAspectRatio="xMidYMid slice">
+            <defs>
+                <!-- Gradient for neural connections -->
+                <linearGradient id="synapseGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" style="stop-color:rgb(251,191,36);stop-opacity:0" />
+                    <stop offset="50%" style="stop-color:rgb(251,191,36);stop-opacity:0.6" />
+                    <stop offset="100%" style="stop-color:rgb(251,191,36);stop-opacity:0" />
+                </linearGradient>
+
+                <!-- Glow filter for neurons -->
+                <filter id="neuronGlow" x="-50%" y="-50%" width="200%" height="200%">
+                    <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                    <feMerge>
+                        <feMergeNode in="coloredBlur"/>
+                        <feMergeNode in="SourceGraphic"/>
+                    </feMerge>
+                </filter>
+
+                <!-- Stronger glow for firing neurons -->
+                <filter id="firingGlow" x="-100%" y="-100%" width="300%" height="300%">
+                    <feGaussianBlur stdDeviation="6" result="coloredBlur"/>
+                    <feMerge>
+                        <feMergeNode in="coloredBlur"/>
+                        <feMergeNode in="coloredBlur"/>
+                        <feMergeNode in="SourceGraphic"/>
+                    </feMerge>
+                </filter>
+
+                <!-- Pulse animation for signals traveling along axons (slow, contemplative) -->
+                <linearGradient id="pulseGradient1" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" style="stop-color:rgb(255,255,255);stop-opacity:0">
+                        <animate attributeName="offset" values="-0.3;1" dur="5s" repeatCount="indefinite"/>
+                    </stop>
+                    <stop offset="10%" style="stop-color:rgb(255,255,255);stop-opacity:0.8">
+                        <animate attributeName="offset" values="-0.2;1.1" dur="5s" repeatCount="indefinite"/>
+                    </stop>
+                    <stop offset="20%" style="stop-color:rgb(255,255,255);stop-opacity:0">
+                        <animate attributeName="offset" values="-0.1;1.2" dur="5s" repeatCount="indefinite"/>
+                    </stop>
+                </linearGradient>
+
+                <linearGradient id="pulseGradient2" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" style="stop-color:rgb(56,189,248);stop-opacity:0">
+                        <animate attributeName="offset" values="-0.3;1" dur="6s" repeatCount="indefinite"/>
+                    </stop>
+                    <stop offset="10%" style="stop-color:rgb(125,211,252);stop-opacity:0.7">
+                        <animate attributeName="offset" values="-0.2;1.1" dur="6s" repeatCount="indefinite"/>
+                    </stop>
+                    <stop offset="20%" style="stop-color:rgb(56,189,248);stop-opacity:0">
+                        <animate attributeName="offset" values="-0.1;1.2" dur="6s" repeatCount="indefinite"/>
+                    </stop>
+                </linearGradient>
+
+                <linearGradient id="pulseGradient3" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" style="stop-color:rgb(59,130,246);stop-opacity:0">
+                        <animate attributeName="offset" values="-0.3;1" dur="4.5s" repeatCount="indefinite"/>
+                    </stop>
+                    <stop offset="15%" style="stop-color:rgb(147,197,253);stop-opacity:0.9">
+                        <animate attributeName="offset" values="-0.15;1.15" dur="4.5s" repeatCount="indefinite"/>
+                    </stop>
+                    <stop offset="30%" style="stop-color:rgb(59,130,246);stop-opacity:0">
+                        <animate attributeName="offset" values="0;1.3" dur="4.5s" repeatCount="indefinite"/>
+                    </stop>
+                </linearGradient>
+
+                <linearGradient id="pulseGradient4" x1="100%" y1="0%" x2="0%" y2="0%">
+                    <stop offset="0%" style="stop-color:rgb(186,230,253);stop-opacity:0">
+                        <animate attributeName="offset" values="-0.3;1" dur="7s" repeatCount="indefinite"/>
+                    </stop>
+                    <stop offset="12%" style="stop-color:rgb(240,249,255);stop-opacity:0.6">
+                        <animate attributeName="offset" values="-0.18;1.12" dur="7s" repeatCount="indefinite"/>
+                    </stop>
+                    <stop offset="24%" style="stop-color:rgb(186,230,253);stop-opacity:0">
+                        <animate attributeName="offset" values="-0.06;1.24" dur="7s" repeatCount="indefinite"/>
+                    </stop>
+                </linearGradient>
+
+                <linearGradient id="pulseGradient5" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" style="stop-color:rgb(14,165,233);stop-opacity:0">
+                        <animate attributeName="offset" values="-0.3;1" dur="5.5s" repeatCount="indefinite"/>
+                    </stop>
+                    <stop offset="8%" style="stop-color:rgb(56,189,248);stop-opacity:0.75">
+                        <animate attributeName="offset" values="-0.22;1.08" dur="5.5s" repeatCount="indefinite"/>
+                    </stop>
+                    <stop offset="16%" style="stop-color:rgb(14,165,233);stop-opacity:0">
+                        <animate attributeName="offset" values="-0.14;1.16" dur="5.5s" repeatCount="indefinite"/>
+                    </stop>
+                </linearGradient>
+            </defs>
+
+            <!-- Neural connections (axons/dendrites) - organic curved paths -->
+            <g class="neural-connections" stroke-width="1.5" fill="none" opacity="0.4">
+                <!-- Primary network connections -->
+                <path d="M200,300 Q350,250 450,350" stroke="url(#pulseGradient1)" stroke-width="2"/>
+                <path d="M450,350 Q550,400 650,320" stroke="url(#pulseGradient2)" stroke-width="1.5"/>
+                <path d="M650,320 Q750,280 850,350" stroke="url(#pulseGradient3)" stroke-width="2"/>
+                <path d="M850,350 Q950,420 1000,380" stroke="url(#pulseGradient1)" stroke-width="1.5"/>
+
+                <!-- Secondary branches -->
+                <path d="M450,350 Q480,450 550,500" stroke="url(#pulseGradient4)" stroke-width="1.5"/>
+                <path d="M550,500 Q620,550 700,520" stroke="url(#pulseGradient2)" stroke-width="2"/>
+                <path d="M700,520 Q800,490 850,350" stroke="url(#pulseGradient5)" stroke-width="1.5"/>
+
+                <!-- Upper network -->
+                <path d="M300,150 Q400,180 500,200" stroke="url(#pulseGradient3)" stroke-width="1.5"/>
+                <path d="M500,200 Q580,220 650,320" stroke="url(#pulseGradient1)" stroke-width="2"/>
+                <path d="M650,320 Q700,250 800,200" stroke="url(#pulseGradient4)" stroke-width="1.5"/>
+                <path d="M800,200 Q900,180 950,220" stroke="url(#pulseGradient2)" stroke-width="1.5"/>
+
+                <!-- Lower network -->
+                <path d="M250,550 Q350,580 450,550" stroke="url(#pulseGradient5)" stroke-width="1.5"/>
+                <path d="M450,550 Q500,520 550,500" stroke="url(#pulseGradient1)" stroke-width="2"/>
+                <path d="M700,520 Q780,560 850,600" stroke="url(#pulseGradient3)" stroke-width="1.5"/>
+                <path d="M850,600 Q920,620 1000,580" stroke="url(#pulseGradient2)" stroke-width="1.5"/>
+
+                <!-- Cross connections -->
+                <path d="M500,200 Q520,280 450,350" stroke="url(#pulseGradient4)" stroke-width="1"/>
+                <path d="M800,200 Q820,270 850,350" stroke="url(#pulseGradient5)" stroke-width="1"/>
+                <path d="M450,550 Q400,450 450,350" stroke="url(#pulseGradient1)" stroke-width="1"/>
+                <path d="M850,600 Q880,500 850,350" stroke="url(#pulseGradient2)" stroke-width="1"/>
+
+                <!-- Distant fine connections -->
+                <path d="M150,400 Q200,350 200,300" stroke="url(#pulseGradient3)" stroke-width="1" opacity="0.5"/>
+                <path d="M100,500 Q180,520 250,550" stroke="url(#pulseGradient4)" stroke-width="1" opacity="0.5"/>
+                <path d="M1050,300 Q1020,340 1000,380" stroke="url(#pulseGradient1)" stroke-width="1" opacity="0.5"/>
+                <path d="M1100,500 Q1050,540 1000,580" stroke="url(#pulseGradient5)" stroke-width="1" opacity="0.5"/>
+            </g>
+
+            <!-- Static connection lines (dimmer, background structure) - with IDs for motion paths -->
+            <g class="neural-structure" stroke="rgba(148,197,253,0.15)" stroke-width="1" fill="none">
+                <path id="path-1" d="M200,300 Q350,250 450,350"/>
+                <path id="path-2" d="M450,350 Q550,400 650,320"/>
+                <path id="path-3" d="M650,320 Q750,280 850,350"/>
+                <path id="path-4" d="M850,350 Q950,420 1000,380"/>
+                <path id="path-5" d="M450,350 Q480,450 550,500"/>
+                <path id="path-6" d="M550,500 Q620,550 700,520"/>
+                <path id="path-7" d="M700,520 Q800,490 850,350"/>
+                <path id="path-8" d="M300,150 Q400,180 500,200"/>
+                <path id="path-9" d="M500,200 Q580,220 650,320"/>
+                <path id="path-10" d="M650,320 Q700,250 800,200"/>
+                <path id="path-11" d="M800,200 Q900,180 950,220"/>
+                <path id="path-12" d="M250,550 Q350,580 450,550"/>
+                <path id="path-13" d="M450,550 Q500,520 550,500"/>
+                <path id="path-14" d="M700,520 Q780,560 850,600"/>
+                <path id="path-15" d="M850,600 Q920,620 1000,580"/>
+                <path id="path-16" d="M500,200 Q520,280 450,350"/>
+                <path id="path-17" d="M800,200 Q820,270 850,350"/>
+                <path id="path-18" d="M450,550 Q400,450 450,350"/>
+                <path id="path-19" d="M850,600 Q880,500 850,350"/>
+            </g>
+
+            <!-- Neuron cell bodies (subtle static nodes) -->
+            <g class="neurons" opacity="0.4">
+                <!-- Central hub neurons -->
+                <circle cx="450" cy="350" r="4" fill="rgb(255,255,255)" filter="url(#neuronGlow)"/>
+                <circle cx="650" cy="320" r="4.5" fill="rgb(186,230,253)" filter="url(#neuronGlow)"/>
+                <circle cx="850" cy="350" r="3.5" fill="rgb(125,211,252)" filter="url(#neuronGlow)"/>
+                <circle cx="550" cy="500" r="3.5" fill="rgb(56,189,248)" filter="url(#neuronGlow)"/>
+                <circle cx="700" cy="520" r="3" fill="rgb(186,230,253)" filter="url(#neuronGlow)"/>
+
+                <!-- Secondary neurons -->
+                <circle cx="200" cy="300" r="2.5" fill="rgb(147,197,253)"/>
+                <circle cx="500" cy="200" r="2.5" fill="rgb(186,230,253)"/>
+                <circle cx="800" cy="200" r="2.5" fill="rgb(255,255,255)"/>
+                <circle cx="1000" cy="380" r="2.5" fill="rgb(125,211,252)"/>
+                <circle cx="450" cy="550" r="2.5" fill="rgb(56,189,248)"/>
+                <circle cx="850" cy="600" r="2.5" fill="rgb(59,130,246)"/>
+
+                <!-- Peripheral neurons -->
+                <circle cx="300" cy="150" r="2" fill="rgb(186,230,253)" opacity="0.6"/>
+                <circle cx="950" cy="220" r="2" fill="rgb(147,197,253)" opacity="0.6"/>
+                <circle cx="250" cy="550" r="2" fill="rgb(125,211,252)" opacity="0.6"/>
+                <circle cx="1000" cy="580" r="2" fill="rgb(56,189,248)" opacity="0.6"/>
+
+                <!-- Edge neurons -->
+                <circle cx="150" cy="400" r="1.5" fill="rgb(186,230,253)" opacity="0.4"/>
+                <circle cx="100" cy="500" r="1.5" fill="rgb(147,197,253)" opacity="0.3"/>
+                <circle cx="1050" cy="300" r="1.5" fill="rgb(125,211,252)" opacity="0.4"/>
+                <circle cx="1100" cy="500" r="1.5" fill="rgb(59,130,246)" opacity="0.3"/>
+            </g>
+
+        </svg>
+
     </div>
 
     <!-- Content -->
@@ -284,13 +449,11 @@
 </section>
 
 <style>
-    @keyframes pulse-slow {
-        0%, 100% { opacity: 0.4; transform: scale(1); }
-        50% { opacity: 0.7; transform: scale(1.05); }
+    /* Radial gradient utility (Tailwind doesn't have this by default) */
+    .bg-gradient-radial {
+        background: radial-gradient(circle, var(--tw-gradient-stops));
     }
-    .animate-pulse-slow {
-        animation: pulse-slow 4s ease-in-out infinite;
-    }
+
 
     /* 3D Perspective Container */
     .perspective-container {
