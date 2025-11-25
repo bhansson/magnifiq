@@ -135,7 +135,7 @@
                             </thead>
                             <tbody class="divide-y divide-gray-200">
                                 @foreach ($feeds as $feed)
-                                    <tr>
+                                    <tr class="group hover:bg-gray-50/50 transition-colors">
                                         <td class="px-4 py-2 font-medium text-gray-900">
                                             {{ $feed->name }}
                                         </td>
@@ -161,24 +161,57 @@
                                         <td class="px-4 py-2 text-gray-700">
                                             {{ $feed->updated_at->diffForHumans() }}
                                         </td>
-                                        <td class="px-4 py-2 text-right space-x-2">
-                                            <button type="button"
-                                                wire:click="refreshFeed({{ $feed->id }})"
-                                                wire:loading.attr="disabled"
-                                                wire:target="refreshFeed({{ $feed->id }})"
-                                                class="inline-flex items-center px-4 py-1.5 border border-gray-300 rounded-md text-xs font-medium text-gray-700 bg-white hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
-                                                <span wire:loading.remove wire:target="refreshFeed({{ $feed->id }})">Refresh</span>
-                                                <span wire:loading wire:target="refreshFeed({{ $feed->id }})">Refreshing…</span>
-                                            </button>
-                                            <button type="button"
-                                                x-data
-                                                x-on:click.prevent="window.confirm('Delete this feed? All imported products from this feed will be removed.') && $wire.deleteFeed({{ $feed->id }})"
-                                                wire:loading.attr="disabled"
-                                                wire:target="deleteFeed({{ $feed->id }})"
-                                                class="inline-flex items-center px-3 py-1.5 border border-red-500 rounded-md text-xs font-medium text-red-600 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2">
-                                                <span wire:loading.remove wire:target="deleteFeed({{ $feed->id }})">Delete</span>
-                                                <span wire:loading wire:target="deleteFeed({{ $feed->id }})">Deleting…</span>
-                                            </button>
+                                        <td class="px-4 py-2 text-right">
+                                            <div class="relative inline-block text-left" x-data="{ open: false }" @click.away="open = false">
+                                                <button
+                                                    type="button"
+                                                    @click="open = !open"
+                                                    class="inline-flex items-center justify-center w-8 h-8 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100/80 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all opacity-0 group-hover:opacity-100"
+                                                    :class="{ 'opacity-100 text-gray-600 bg-gray-100': open }">
+                                                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                                        <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z"></path>
+                                                    </svg>
+                                                </button>
+
+                                                <div
+                                                    x-show="open"
+                                                    x-transition:enter="transition ease-out duration-100"
+                                                    x-transition:enter-start="transform opacity-0 scale-95"
+                                                    x-transition:enter-end="transform opacity-100 scale-100"
+                                                    x-transition:leave="transition ease-in duration-75"
+                                                    x-transition:leave-start="transform opacity-100 scale-100"
+                                                    x-transition:leave-end="transform opacity-0 scale-95"
+                                                    class="absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-lg bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none"
+                                                    style="display: none;">
+                                                    <div class="py-1">
+                                                        <button
+                                                            type="button"
+                                                            wire:click="refreshFeed({{ $feed->id }})"
+                                                            wire:loading.attr="disabled"
+                                                            wire:target="refreshFeed({{ $feed->id }})"
+                                                            @click="open = false"
+                                                            class="group flex items-center w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 transition-colors disabled:opacity-50">
+                                                            <svg class="w-4 h-4 mr-3 text-gray-400 group-hover:text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                                                            </svg>
+                                                            <span wire:loading.remove wire:target="refreshFeed({{ $feed->id }})">Refresh Feed</span>
+                                                            <span wire:loading wire:target="refreshFeed({{ $feed->id }})">Refreshing…</span>
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            x-on:click.prevent="if(window.confirm('Delete this feed? All imported products from this feed will be removed.')) { $wire.deleteFeed({{ $feed->id }}); open = false; }"
+                                                            wire:loading.attr="disabled"
+                                                            wire:target="deleteFeed({{ $feed->id }})"
+                                                            class="group flex items-center w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-red-50 hover:text-red-700 transition-colors disabled:opacity-50">
+                                                            <svg class="w-4 h-4 mr-3 text-gray-400 group-hover:text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                                            </svg>
+                                                            <span wire:loading.remove wire:target="deleteFeed({{ $feed->id }})">Delete Feed</span>
+                                                            <span wire:loading wire:target="deleteFeed({{ $feed->id }})">Deleting…</span>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </td>
                                     </tr>
                                 @endforeach
