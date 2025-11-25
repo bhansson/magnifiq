@@ -1,4 +1,4 @@
-<section class="relative min-h-screen overflow-hidden bg-[#0a0a0a]">
+<section class="relative min-h-[120vh] overflow-hidden bg-[#0a0a0a]">
     <!-- Animated Background Glow -->
     <div class="absolute inset-0 overflow-hidden">
         <!-- Top edge red glow lines -->
@@ -301,14 +301,14 @@
     /* Dashboard with 3D transform - tilted and skewed by default */
     .dashboard-3d {
         transform-style: preserve-3d;
-        transform: rotateX(8deg) rotateY(18deg) rotateZ(-10deg) scale(0.95);
+        transform: rotateX(8deg) rotateY(18deg) rotateZ(-10deg) scale(0.95) translateX(8%);
         transition: transform 1.2s cubic-bezier(0.23, 1, 0.32, 1);
         transform-origin: 30% 50%;
     }
 
     /* On hover, flatten to front view */
     .dashboard-3d:hover {
-        transform: rotateX(0deg) rotateY(0deg) scale(1);
+        transform: rotateX(0deg) rotateY(0deg) scale(1) translateX(0);
     }
 
     /* Fade effect adjusts on hover */
