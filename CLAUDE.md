@@ -259,6 +259,14 @@ Key variables beyond standard Laravel config:
 **Storage:**
 - `PHOTO_STUDIO_GENERATION_DISK`: Storage disk for generated images (default: `s3`)
 
+**Email (Mailgun):**
+- `MAIL_MAILER`: Email driver (default: `mailgun`)
+- `MAIL_FROM_ADDRESS`: Default sender email address (required)
+- `MAIL_FROM_NAME`: Default sender name (required)
+- `MAILGUN_DOMAIN`: Your Mailgun domain (required for Mailgun)
+- `MAILGUN_SECRET`: Your Mailgun API key (required for Mailgun)
+- `MAILGUN_ENDPOINT`: Mailgun API endpoint (default: `https://api.eu.mailgun.net` for EU server)
+
 **Database (Supabase):**
 - `SUPABASE_DB_USER`: Postgres username (default: `postgres`)
 - `SUPABASE_DB_PASSWORD`: Postgres password (default: `supabase`)
