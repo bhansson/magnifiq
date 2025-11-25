@@ -3,11 +3,11 @@
     <div class="absolute inset-0 overflow-hidden neural-container">
         <!-- Ambient brain glow -->
         <div class="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[1000px] h-[800px]">
-            <div class="absolute inset-0 bg-gradient-radial from-blue-500/15 via-sky-600/5 to-transparent blur-3xl"></div>
+            <div class="absolute inset-0 bg-gradient-radial from-blue-500/10 via-sky-600/3 to-transparent blur-3xl"></div>
         </div>
 
         <!-- SVG Neural Network -->
-        <svg class="absolute inset-0 w-full h-full" viewBox="0 0 1200 900" preserveAspectRatio="xMidYMid slice">
+        <svg class="absolute inset-0 w-full h-full blur-[2px]" viewBox="0 0 1200 900" preserveAspectRatio="xMidYMid slice">
             <defs>
                 <!-- Gradient for neural connections -->
                 <linearGradient id="synapseGradient" x1="0%" y1="0%" x2="100%" y2="0%">
@@ -98,7 +98,7 @@
             </defs>
 
             <!-- Neural connections (axons/dendrites) - organic curved paths -->
-            <g class="neural-connections" stroke-width="1.5" fill="none" opacity="0.4">
+            <g class="neural-connections" stroke-width="1" fill="none" opacity="0.25">
                 <!-- Primary network connections -->
                 <path d="M200,300 Q350,250 450,350" stroke="url(#pulseGradient1)" stroke-width="2"/>
                 <path d="M450,350 Q550,400 650,320" stroke="url(#pulseGradient2)" stroke-width="1.5"/>
@@ -136,7 +136,7 @@
             </g>
 
             <!-- Static connection lines (dimmer, background structure) - with IDs for motion paths -->
-            <g class="neural-structure" stroke="rgba(148,197,253,0.15)" stroke-width="1" fill="none">
+            <g class="neural-structure" stroke="rgba(148,197,253,0.08)" stroke-width="1" fill="none">
                 <path id="path-1" d="M200,300 Q350,250 450,350"/>
                 <path id="path-2" d="M450,350 Q550,400 650,320"/>
                 <path id="path-3" d="M650,320 Q750,280 850,350"/>
@@ -159,7 +159,7 @@
             </g>
 
             <!-- Neuron cell bodies (subtle static nodes) -->
-            <g class="neurons" opacity="0.4">
+            <g class="neurons" opacity="0.25">
                 <!-- Central hub neurons -->
                 <circle cx="450" cy="350" r="4" fill="rgb(255,255,255)" filter="url(#neuronGlow)"/>
                 <circle cx="650" cy="320" r="4.5" fill="rgb(186,230,253)" filter="url(#neuronGlow)"/>
