@@ -1,12 +1,31 @@
-<nav x-data="{ open: false }" class="bg-white border-b border-gray-100">
+<nav x-data="{ open: false }" class="bg-white dark:bg-zinc-900/80 dark:backdrop-blur-xl border-b border-gray-100 dark:border-zinc-800 transition-colors duration-200">
     <!-- Primary Navigation Menu -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between h-16">
             <div class="flex">
                 <!-- Logo -->
                 <div class="shrink-0 flex items-center">
-                    <a href="{{ route('dashboard') }}">
-                        <x-application-mark class="block h-9 w-auto" />
+                    <a href="{{ route('dashboard') }}" class="flex items-center gap-3 group">
+                        <div class="relative">
+                            <svg class="w-9 h-9" viewBox="0 0 32 32" fill="none">
+                                <defs>
+                                    <linearGradient id="appBrandGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                        <stop offset="0%" style="stop-color:#FBBF24"/>
+                                        <stop offset="100%" style="stop-color:#F97316"/>
+                                    </linearGradient>
+                                </defs>
+                                <rect x="2" y="2" width="28" height="28" rx="6" ry="6" fill="url(#appBrandGradient)"/>
+                                <path d="M8 22V12l4 6 4-6v10" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                                <circle cx="22" cy="10" r="1.5" fill="white"/>
+                                <path d="M22 7v6M19 10h6" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+                                <circle cx="22" cy="18" r="1" fill="rgba(255,255,255,0.7)"/>
+                                <circle cx="22" cy="22" r="1" fill="rgba(255,255,255,0.5)"/>
+                            </svg>
+                            <div class="absolute inset-0 rounded-lg bg-gradient-to-br from-amber-400 to-orange-500 blur-lg opacity-0 group-hover:opacity-50 transition-opacity"></div>
+                        </div>
+                        <span class="text-lg font-semibold text-gray-900 dark:text-white tracking-tight hidden sm:block">
+                            Magnifiq
+                        </span>
                     </a>
                 </div>
 
@@ -19,10 +38,10 @@
                         {{ __('Products') }}
                     </x-nav-link>
                     <x-nav-link href="{{ route('ai-jobs.index') }}" :active="request()->routeIs('ai-jobs.index')">
-                        {{ __('AI Jobs') }}
+                        {{ __('Jobs') }}
                     </x-nav-link>
                     <x-nav-link href="{{ route('ai-templates.index') }}" :active="request()->routeIs('ai-templates.index')">
-                        {{ __('AI Templates') }}
+                        {{ __('Templates') }}
                     </x-nav-link>
                     <x-nav-link href="{{ route('photo-studio.index') }}" :active="request()->routeIs('photo-studio.index')">
                         {{ __('Photo Studio') }}
@@ -40,13 +59,15 @@
             </div>
 
             <div class="hidden sm:flex sm:items-center sm:ms-6">
+                <!-- Theme Toggle -->
+                <x-theme-toggle />
                 <!-- Teams Dropdown -->
                 @if (Laravel\Jetstream\Jetstream::hasTeamFeatures())
                     <div class="ms-3 relative">
                         <x-dropdown align="right" width="60">
                             <x-slot name="trigger">
                                 <span class="inline-flex rounded-md">
-                                    <button type="button" class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-gray-500 bg-white hover:text-gray-700 focus:outline-none focus:bg-gray-50 active:bg-gray-50 transition ease-in-out duration-150">
+                                    <button type="button" class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-lg text-gray-600 dark:text-zinc-400 bg-transparent hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-amber-500/50 transition ease-in-out duration-150">
                                         {{ Auth::user()->currentTeam->name }}
 
                                         <svg class="ms-2 -me-0.5 size-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
@@ -59,7 +80,7 @@
                             <x-slot name="content">
                                 <div class="w-60">
                                     <!-- Team Management -->
-                                    <div class="block px-4 py-2 text-xs text-gray-400">
+                                    <div class="block px-4 py-2 text-xs text-gray-400 dark:text-zinc-500 uppercase tracking-wider">
                                         {{ __('Manage Team') }}
                                     </div>
 
@@ -76,9 +97,9 @@
 
                                     <!-- Team Switcher -->
                                     @if (Auth::user()->allTeams()->count() > 1)
-                                        <div class="border-t border-gray-200"></div>
+                                        <div class="border-t border-gray-200 dark:border-zinc-700"></div>
 
-                                        <div class="block px-4 py-2 text-xs text-gray-400">
+                                        <div class="block px-4 py-2 text-xs text-gray-400 dark:text-zinc-500 uppercase tracking-wider">
                                             {{ __('Switch Teams') }}
                                         </div>
 
@@ -97,12 +118,12 @@
                     <x-dropdown align="right" width="48">
                         <x-slot name="trigger">
                             @if (Laravel\Jetstream\Jetstream::managesProfilePhotos())
-                                <button class="flex text-sm border-2 border-transparent rounded-full focus:outline-none focus:border-gray-300 transition">
+                                <button class="flex text-sm border-2 border-transparent rounded-full focus:outline-none focus:ring-2 focus:ring-amber-500/50 transition">
                                     <img class="size-8 rounded-full object-cover" src="{{ Auth::user()->profile_photo_url }}" alt="{{ Auth::user()->name }}" />
                                 </button>
                             @else
                                 <span class="inline-flex rounded-md">
-                                    <button type="button" class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-gray-500 bg-white hover:text-gray-700 focus:outline-none focus:bg-gray-50 active:bg-gray-50 transition ease-in-out duration-150">
+                                    <button type="button" class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-lg text-gray-600 dark:text-zinc-400 bg-transparent hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-amber-500/50 transition ease-in-out duration-150">
                                         {{ Auth::user()->name }}
 
                                         <svg class="ms-2 -me-0.5 size-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
@@ -115,7 +136,7 @@
 
                         <x-slot name="content">
                             <!-- Account Management -->
-                            <div class="block px-4 py-2 text-xs text-gray-400">
+                            <div class="block px-4 py-2 text-xs text-gray-400 dark:text-zinc-500 uppercase tracking-wider">
                                 {{ __('Manage Account') }}
                             </div>
 
@@ -129,7 +150,7 @@
                                 </x-dropdown-link>
                             @endif
 
-                            <div class="border-t border-gray-200"></div>
+                            <div class="border-t border-gray-200 dark:border-zinc-700"></div>
 
                             <!-- Authentication -->
                             <form method="POST" action="{{ route('logout') }}" x-data>
@@ -147,7 +168,10 @@
 
             <!-- Hamburger -->
             <div class="-me-2 flex items-center sm:hidden">
-                <button @click="open = ! open" class="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 focus:text-gray-500 transition duration-150 ease-in-out">
+                <!-- Mobile Theme Toggle -->
+                <x-theme-toggle />
+
+                <button @click="open = ! open" class="inline-flex items-center justify-center p-2 rounded-lg text-gray-400 dark:text-zinc-400 hover:text-gray-500 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-amber-500/50 transition duration-150 ease-in-out">
                     <svg class="size-6" stroke="currentColor" fill="none" viewBox="0 0 24 24">
                         <path :class="{'hidden': open, 'inline-flex': ! open }" class="inline-flex" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
                         <path :class="{'hidden': ! open, 'inline-flex': open }" class="hidden" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -167,10 +191,10 @@
                 {{ __('Products') }}
             </x-responsive-nav-link>
             <x-responsive-nav-link href="{{ route('ai-jobs.index') }}" :active="request()->routeIs('ai-jobs.index')">
-                {{ __('AI Jobs') }}
+                {{ __('Jobs') }}
             </x-responsive-nav-link>
             <x-responsive-nav-link href="{{ route('ai-templates.index') }}" :active="request()->routeIs('ai-templates.index')">
-                {{ __('AI Templates') }}
+                {{ __('Templates') }}
             </x-responsive-nav-link>
             <x-responsive-nav-link href="{{ route('photo-studio.index') }}" :active="request()->routeIs('photo-studio.index')">
                 {{ __('Photo Studio') }}
@@ -187,7 +211,7 @@
         </div>
 
         <!-- Responsive Settings Options -->
-        <div class="pt-4 pb-1 border-t border-gray-200">
+        <div class="pt-4 pb-1 border-t border-gray-200 dark:border-zinc-800">
             <div class="flex items-center px-4">
                 @if (Laravel\Jetstream\Jetstream::managesProfilePhotos())
                     <div class="shrink-0 me-3">
@@ -196,8 +220,8 @@
                 @endif
 
                 <div>
-                    <div class="font-medium text-base text-gray-800">{{ Auth::user()->name }}</div>
-                    <div class="font-medium text-sm text-gray-500">{{ Auth::user()->email }}</div>
+                    <div class="font-medium text-base text-gray-800 dark:text-zinc-100">{{ Auth::user()->name }}</div>
+                    <div class="font-medium text-sm text-gray-500 dark:text-zinc-400">{{ Auth::user()->email }}</div>
                 </div>
             </div>
 
@@ -225,9 +249,9 @@
 
                 <!-- Team Management -->
                 @if (Laravel\Jetstream\Jetstream::hasTeamFeatures())
-                    <div class="border-t border-gray-200"></div>
+                    <div class="border-t border-gray-200 dark:border-zinc-800"></div>
 
-                    <div class="block px-4 py-2 text-xs text-gray-400">
+                    <div class="block px-4 py-2 text-xs text-gray-400 dark:text-zinc-500 uppercase tracking-wider">
                         {{ __('Manage Team') }}
                     </div>
 
@@ -244,9 +268,9 @@
 
                     <!-- Team Switcher -->
                     @if (Auth::user()->allTeams()->count() > 1)
-                        <div class="border-t border-gray-200"></div>
+                        <div class="border-t border-gray-200 dark:border-zinc-800"></div>
 
-                        <div class="block px-4 py-2 text-xs text-gray-400">
+                        <div class="block px-4 py-2 text-xs text-gray-400 dark:text-zinc-500 uppercase tracking-wider">
                             {{ __('Switch Teams') }}
                         </div>
 

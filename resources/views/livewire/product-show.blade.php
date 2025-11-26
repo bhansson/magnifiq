@@ -21,15 +21,15 @@
 
 <div>
     <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
-        <div class="bg-white shadow-sm sm:rounded-lg">
+        <div class="bg-white dark:bg-zinc-900/50 shadow-sm dark:shadow-none dark:ring-1 dark:ring-zinc-800 sm:rounded-xl">
             <div class="px-6 py-6">
                 <div class="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
                     <div class="flex-1 space-y-4">
                         <div>
-                            <h1 class="text-2xl font-semibold text-gray-900">
+                            <h1 class="text-2xl font-semibold text-gray-900 dark:text-white">
                                 {{ $product->title ?: 'Untitled product' }}
                             </h1>
-                            <div class="mt-2 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-gray-500">
+                            <div class="mt-2 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-gray-500 dark:text-zinc-500">
                                 <span>Brand: {{ $product->brand ?: '—' }}</span>
                                 <span>SKU: {{ $product->sku ?: '—' }}</span>
                                 <span>GTIN: {{ $product->gtin ?: '—' }}</span>
@@ -39,17 +39,17 @@
                         </div>
 
                         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                            <div class="text-sm text-gray-600 space-y-1">
+                            <div class="text-sm text-gray-600 dark:text-zinc-400 space-y-1">
                                 <div>
-                                    <span class="font-medium text-gray-700">Brand:</span>
+                                    <span class="font-medium text-gray-700 dark:text-zinc-300">Brand:</span>
                                     <span>{{ $product->brand ?: '—' }}</span>
                                 </div>
                                 <div>
-                                    <span class="font-medium text-gray-700">Feed:</span>
+                                    <span class="font-medium text-gray-700 dark:text-zinc-300">Feed:</span>
                                     <span>{{ $product->feed?->name ?: '—' }}</span>
                                 </div>
                                 <div>
-                                    <span class="font-medium text-gray-700">Language:</span>
+                                    <span class="font-medium text-gray-700 dark:text-zinc-300">Language:</span>
                                     @php
                                         $feedLanguageCode = $product->feed?->language;
                                         $feedLanguageLabel = $feedLanguageCode ? ($languageLabels[$feedLanguageCode] ?? Str::upper($feedLanguageCode)) : null;
@@ -60,7 +60,7 @@
                             <div class="flex flex-wrap gap-3">
                                 @if ($product->url)
                                     <a href="{{ $product->url }}" target="_blank" rel="noopener noreferrer"
-                                       class="inline-flex items-center px-4 py-2 border border-indigo-200 rounded-md text-sm font-medium text-indigo-600 hover:text-indigo-800 hover:border-indigo-300">
+                                       class="inline-flex items-center px-4 py-2 border border-amber-200 dark:border-amber-500/30 rounded-full text-sm font-medium text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300 hover:border-amber-300 dark:hover:border-amber-500/50">
                                         Visit product page
                                         <svg class="ml-2 size-4" xmlns="http://www.w3.org/2000/svg" fill="none"
                                              viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
@@ -71,7 +71,7 @@
                                 @endif
                                 @if ($product->feed?->feed_url)
                                     <a href="{{ $product->feed->feed_url }}" target="_blank" rel="noopener noreferrer"
-                                       class="inline-flex items-center px-4 py-2 border border-gray-200 rounded-md text-sm font-medium text-gray-600 hover:text-gray-800 hover:border-gray-300">
+                                       class="inline-flex items-center px-4 py-2 border border-gray-200 dark:border-zinc-700 rounded-full text-sm font-medium text-gray-600 dark:text-zinc-400 hover:text-gray-800 dark:hover:text-zinc-200 hover:border-gray-300 dark:hover:border-zinc-600">
                                         Open feed source
                                         <svg class="ml-2 size-4" xmlns="http://www.w3.org/2000/svg" fill="none"
                                              viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
@@ -100,43 +100,43 @@
 
         <div class="grid gap-8 lg:grid-cols-3">
             <div class="lg:col-span-2 space-y-8">
-                <div class="bg-white shadow-sm sm:rounded-lg">
-                    <div class="px-6 py-5 border-b border-gray-200">
-                        <h2 class="text-lg font-semibold text-gray-900">Product Information</h2>
-                        <p class="mt-1 text-sm text-gray-600">
+                <div class="bg-white dark:bg-zinc-900/50 shadow-sm dark:shadow-none dark:ring-1 dark:ring-zinc-800 sm:rounded-xl">
+                    <div class="px-6 py-5 border-b border-gray-200 dark:border-zinc-800">
+                        <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Product Information</h2>
+                        <p class="mt-1 text-sm text-gray-600 dark:text-zinc-400">
                             Key attributes pulled from your product feed.
                         </p>
                     </div>
-                    <div class="px-6 py-6 space-y-6 text-sm text-gray-700">
+                    <div class="px-6 py-6 space-y-6 text-sm text-gray-700 dark:text-zinc-300">
                         <dl class="grid gap-4 sm:grid-cols-2">
                             <div>
-                                <dt class="text-xs uppercase tracking-wide text-gray-500">SKU</dt>
-                                <dd class="mt-1 text-sm text-gray-900">{{ $product->sku ?: '—' }}</dd>
+                                <dt class="text-xs uppercase tracking-wide text-gray-500 dark:text-zinc-500">SKU</dt>
+                                <dd class="mt-1 text-sm text-gray-900 dark:text-white">{{ $product->sku ?: '—' }}</dd>
                             </div>
                             <div>
-                                <dt class="text-xs uppercase tracking-wide text-gray-500">Brand</dt>
-                                <dd class="mt-1 text-sm text-gray-900">{{ $product->brand ?: '—' }}</dd>
+                                <dt class="text-xs uppercase tracking-wide text-gray-500 dark:text-zinc-500">Brand</dt>
+                                <dd class="mt-1 text-sm text-gray-900 dark:text-white">{{ $product->brand ?: '—' }}</dd>
                             </div>
                             <div>
-                                <dt class="text-xs uppercase tracking-wide text-gray-500">GTIN</dt>
-                                <dd class="mt-1 text-sm text-gray-900">{{ $product->gtin ?: '—' }}</dd>
+                                <dt class="text-xs uppercase tracking-wide text-gray-500 dark:text-zinc-500">GTIN</dt>
+                                <dd class="mt-1 text-sm text-gray-900 dark:text-white">{{ $product->gtin ?: '—' }}</dd>
                             </div>
                             <div>
-                                <dt class="text-xs uppercase tracking-wide text-gray-500">Product URL</dt>
-                                <dd class="mt-1 text-sm text-indigo-600">
+                                <dt class="text-xs uppercase tracking-wide text-gray-500 dark:text-zinc-500">Product URL</dt>
+                                <dd class="mt-1 text-sm text-amber-600 dark:text-amber-400">
                                     @if ($product->url)
                                         <a href="{{ $product->url }}" target="_blank" rel="noopener noreferrer"
-                                           class="hover:text-indigo-800 break-all">{{ $product->url }}</a>
+                                           class="hover:text-amber-800 dark:hover:text-amber-300 break-all">{{ $product->url }}</a>
                                     @else
-                                        <span class="text-gray-900">—</span>
+                                        <span class="text-gray-900 dark:text-white">—</span>
                                     @endif
                                 </dd>
                             </div>
                         </dl>
 
                         <div>
-                            <h3 class="text-sm font-medium text-gray-900">Original description</h3>
-                            <p class="mt-2 text-gray-700">
+                            <h3 class="text-sm font-medium text-gray-900 dark:text-white">Original description</h3>
+                            <p class="mt-2 text-gray-700 dark:text-zinc-300">
                                 {{ $product->description ?: 'No description provided.' }}
                             </p>
                         </div>
@@ -144,17 +144,17 @@
                 </div>
 
                 @if ($templateItems->isNotEmpty())
-                    <div class="bg-white shadow-sm sm:rounded-lg">
-                        <div class="px-6 py-5 border-b border-gray-200">
-                            <h2 class="text-lg font-semibold text-gray-900">AI Generated Content</h2>
-                            <p class="mt-1 text-sm text-gray-600">
+                    <div class="bg-white dark:bg-zinc-900/50 shadow-sm dark:shadow-none dark:ring-1 dark:ring-zinc-800 sm:rounded-xl">
+                        <div class="px-6 py-5 border-b border-gray-200 dark:border-zinc-800">
+                            <h2 class="text-lg font-semibold text-gray-900 dark:text-white">AI Generated Content</h2>
+                            <p class="mt-1 text-sm text-gray-600 dark:text-zinc-400">
                                 Latest outputs created for this product.
                                 @if ($latestGenerationUpdatedText)
                                     Last updated {{ $latestGenerationUpdatedText }}.
                                 @endif
                             </p>
                         </div>
-                        <div class="px-6 py-6 text-sm text-gray-700"
+                        <div class="px-6 py-6 text-sm text-gray-700 dark:text-zinc-300"
                              x-data="{
                                 activeKey: '{{ $templateItems->first()['key'] ?? '' }}',
                                 selectKey(event) {
@@ -163,10 +163,10 @@
                              }">
                             <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                 <div>
-                                    <label for="template-selection" class="block text-xs font-semibold uppercase tracking-wide text-gray-500">Selected template</label>
+                                    <label for="template-selection" class="block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-zinc-500">Selected template</label>
                                     <select id="template-selection"
                                             x-model="activeKey"
-                                            class="mt-1 w-64 rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                            class="mt-1 w-64 rounded-xl border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-800/50 text-gray-900 dark:text-zinc-100 text-sm shadow-sm focus:border-amber-500 dark:focus:border-amber-500 focus:ring-amber-500/20">
                                         @foreach ($templateItems as $item)
                                             @php
                                                 $template = $item['template'];
@@ -197,7 +197,7 @@
                                             @php
                                                 $templateDescription = trim((string) $template->description);
                                             @endphp
-                                            <p class="text-sm text-gray-700">
+                                            <p class="text-sm text-gray-700 dark:text-zinc-300">
                                                 {{ $templateDescription !== '' ? $templateDescription : 'No description available for this template.' }}
                                             </p>
                                             <div class="space-y-2">
@@ -211,22 +211,22 @@
                                                 </x-button>
 
                                                 @if ($isLoading)
-                                                    <p class="text-xs text-gray-500">Processing request…</p>
+                                                    <p class="text-xs text-gray-500 dark:text-zinc-500">Processing request…</p>
                                                 @endif
 
                                                 @if ($error)
-                                                    <p class="text-sm text-red-600" aria-live="polite">{{ $error }}</p>
+                                                    <p class="text-sm text-red-600 dark:text-red-400" aria-live="polite">{{ $error }}</p>
                                                 @endif
 
                                                 @if ($status)
-                                                    <p class="text-sm text-indigo-600"
+                                                    <p class="text-sm text-amber-600 dark:text-amber-400"
                                                        aria-live="polite">{{ $status }}</p>
                                                 @endif
                                             </div>
                                         </div>
 
                                         <div class="space-y-3">
-                                            <h4 class="text-sm font-semibold text-gray-900">Published</h4>
+                                            <h4 class="text-sm font-semibold text-gray-900 dark:text-white">Published</h4>
                                             @switch($contentType)
                                                 @case('usps')
                                                     @php
@@ -245,13 +245,13 @@
                                                         <ul class="grid gap-2">
                                                             @foreach ($uspItems as $usp)
                                                                 <li class="flex items-start gap-2">
-                                                                    <span class="mt-1 size-1.5 rounded-full bg-indigo-500"></span>
-                                                                    <span class="text-gray-700">{{ $usp }}</span>
+                                                                    <span class="mt-1 size-1.5 rounded-full bg-amber-500"></span>
+                                                                    <span class="text-gray-700 dark:text-zinc-300">{{ $usp }}</span>
                                                                 </li>
                                                             @endforeach
                                                         </ul>
                                                     @else
-                                                        <p class="text-gray-500">No unique selling points generated yet. Use the button above to queue AI jobs.</p>
+                                                        <p class="text-gray-500 dark:text-zinc-500">No unique selling points generated yet. Use the button above to queue AI jobs.</p>
                                                     @endif
                                                     @break
 
@@ -280,16 +280,16 @@
                                                             ->values();
                                                     @endphp
                                                     @if ($faqEntries->isNotEmpty())
-                                                        <div class="space-y-4 text-gray-700">
+                                                        <div class="space-y-4 text-gray-700 dark:text-zinc-300">
                                                             @foreach ($faqEntries as $faq)
                                                                 <div class="space-y-1">
-                                                                    <p class="font-medium text-gray-900">Q: {{ $faq['question'] }}</p>
+                                                                    <p class="font-medium text-gray-900 dark:text-white">Q: {{ $faq['question'] }}</p>
                                                                     <p>A: {{ $faq['answer'] }}</p>
                                                                 </div>
                                                             @endforeach
                                                         </div>
                                                     @else
-                                                        <p class="text-gray-500">No FAQ entries generated yet. Use the button above to queue AI jobs.</p>
+                                                        <p class="text-gray-500 dark:text-zinc-500">No FAQ entries generated yet. Use the button above to queue AI jobs.</p>
                                                     @endif
                                                     @break
 
@@ -298,15 +298,15 @@
                                                         $textContent = trim(is_string($latestContent) ? $latestContent : '');
                                                     @endphp
                                                     @if ($textContent !== '')
-                                                        <p class="text-gray-700">{{ $textContent }}</p>
+                                                        <p class="text-gray-700 dark:text-zinc-300">{{ $textContent }}</p>
                                                     @else
-                                                        <p class="text-gray-500">No content generated yet. Use the button above
+                                                        <p class="text-gray-500 dark:text-zinc-500">No content generated yet. Use the button above
                                                             to queue AI jobs.</p>
                                                     @endif
                                             @endswitch
                                         </div>
 
-                                        <p class="text-xs text-gray-500">
+                                        <p class="text-xs text-gray-500 dark:text-zinc-500">
                                             @if ($latestTimestamp)
                                                 Generated {{ $latestTimestamp->diffForHumans() }}
                                             @else
@@ -319,7 +319,7 @@
 
                                         @if ($historyItems->isNotEmpty())
                                             <div class="space-y-3">
-                                                <h4 class="text-sm font-semibold text-gray-900">History</h4>
+                                                <h4 class="text-sm font-semibold text-gray-900 dark:text-white">History</h4>
                                                 <div class="space-y-3">
                                                     @foreach ($historyItems as $history)
                                                         @php
@@ -363,10 +363,10 @@
                                                             $historyModel = data_get($history->meta, 'model');
                                                             $historyTimestamp = $history->updated_at ?? $history->created_at;
                                                         @endphp
-                                                        <article class="rounded-lg border border-gray-200 p-4 space-y-3"
+                                                        <article class="rounded-xl border border-gray-200 dark:border-zinc-700 p-4 space-y-3"
                                                                  x-data="{ isExpanded: false }">
                                                             <div class="flex flex-wrap items-center justify-between gap-3">
-                                                                <span class="text-xs text-gray-500">
+                                                                <span class="text-xs text-gray-500 dark:text-zinc-500">
                                                                     {{ $historyTimestamp ? $historyTimestamp->format('M j, Y H:i') : 'Unknown' }}
                                                                 </span>
                                                                 <button
@@ -374,14 +374,14 @@
                                                                     wire:click="promoteGeneration({{ $history->id }})"
                                                                     wire:loading.attr="disabled"
                                                                     wire:target="promoteGeneration"
-                                                                    class="inline-flex items-center gap-1 border border-gray-200 bg-white px-3 py-1 text-xs font-medium text-gray-500 transition hover:border-gray-300 hover:text-gray-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-indigo-200 disabled:opacity-50"
+                                                                    class="inline-flex items-center gap-1 border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 rounded-full px-3 py-1 text-xs font-medium text-gray-500 dark:text-zinc-400 transition hover:border-gray-300 dark:hover:border-zinc-600 hover:text-gray-700 dark:hover:text-zinc-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-amber-500/20 disabled:opacity-50"
                                                                 >
                                                                     <span wire:loading.remove wire:target="promoteGeneration">Publish</span>
                                                                     <span wire:loading wire:target="promoteGeneration">Publising…</span>
                                                                 </button>
                                                             </div>
                                                             <div class="space-y-2">
-                                                                <p class="text-xs text-gray-500">
+                                                                <p class="text-xs text-gray-500 dark:text-zinc-500">
                                                                     @if ($historyTimestamp)
                                                                         Generated {{ $historyTimestamp->diffForHumans() }}
                                                                     @else
@@ -391,15 +391,15 @@
                                                                         ({{ Str::upper($historyModel) }})
                                                                     @endif
                                                                 </p>
-                                                                <p class="text-gray-700" x-show="!isExpanded">
+                                                                <p class="text-gray-700 dark:text-zinc-300" x-show="!isExpanded">
                                                                     {{ $hasMoreContent ? Str::of($truncatedContent)->trim()->append('…') : $historyContent }}
                                                                 </p>
                                                                 @if ($hasMoreContent)
                                                                     <template x-if="isExpanded">
-                                                                        <p class="text-gray-700">{{ $historyContent }}</p>
+                                                                        <p class="text-gray-700 dark:text-zinc-300">{{ $historyContent }}</p>
                                                                     </template>
                                                                     <button type="button"
-                                                                            class="text-sm font-medium text-indigo-600 hover:text-indigo-800"
+                                                                            class="text-sm font-medium text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300"
                                                                             @click="isExpanded = !isExpanded">
                                                                         <span x-show="!isExpanded">Show more</span>
                                                                         <span x-show="isExpanded">Show less</span>
@@ -419,24 +419,24 @@
             </div>
 
             <aside class="space-y-8">
-                <div class="bg-white shadow-sm sm:rounded-lg">
-                    <div class="px-6 py-5 border-b border-gray-200">
-                        <h2 class="text-lg font-semibold text-gray-900">Metadata</h2>
+                <div class="bg-white dark:bg-zinc-900/50 shadow-sm dark:shadow-none dark:ring-1 dark:ring-zinc-800 sm:rounded-xl">
+                    <div class="px-6 py-5 border-b border-gray-200 dark:border-zinc-800">
+                        <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Metadata</h2>
                     </div>
-                    <div class="px-6 py-6 space-y-4 text-sm text-gray-700">
+                    <div class="px-6 py-6 space-y-4 text-sm text-gray-700 dark:text-zinc-300">
                         <div class="flex items-center justify-between">
-                            <span class="text-gray-500">Imported from feed</span>
-                            <span class="font-medium">
+                            <span class="text-gray-500 dark:text-zinc-500">Imported from feed</span>
+                            <span class="font-medium dark:text-white">
                                 {{ $product->feed?->name ?: '—' }}
                             </span>
                         </div>
                         <div class="flex items-center justify-between">
-                            <span class="text-gray-500">Created</span>
-                            <span class="font-medium">{{ $product->created_at->format('M j, Y g:i A') }}</span>
+                            <span class="text-gray-500 dark:text-zinc-500">Created</span>
+                            <span class="font-medium dark:text-white">{{ $product->created_at->format('M j, Y g:i A') }}</span>
                         </div>
                         <div class="flex items-center justify-between">
-                            <span class="text-gray-500">Last updated</span>
-                            <span class="font-medium">{{ $product->updated_at->format('M j, Y g:i A') }}</span>
+                            <span class="text-gray-500 dark:text-zinc-500">Last updated</span>
+                            <span class="font-medium dark:text-white">{{ $product->updated_at->format('M j, Y g:i A') }}</span>
                         </div>
                     </div>
                 </div>

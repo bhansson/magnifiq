@@ -231,209 +231,191 @@
                     <!-- Subtle top gradient shine -->
                     <div class="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-zinc-600 to-transparent"></div>
 
-                    <!-- Dashboard content grid -->
+                    <!-- Dashboard content - Marketing showcase layout -->
                     <div class="grid grid-cols-1 lg:grid-cols-12 min-h-[700px]">
-                        <!-- Left sidebar -->
-                        <div class="lg:col-span-3 border-r border-zinc-800/80 p-8">
-                            <!-- Logo area -->
-                            <div class="flex items-center gap-4 mb-10">
-                                <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center">
-                                    <svg class="w-5 h-5 text-black" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-                                    </svg>
+                        <!-- Left panel - Product card showcase -->
+                        <div class="lg:col-span-4 border-r border-zinc-800/80 p-6">
+                            <!-- Product card -->
+                            <div class="bg-zinc-800/40 rounded-xl border border-zinc-700/50 overflow-hidden">
+                                <!-- Product image placeholder -->
+                                <div class="aspect-square bg-gradient-to-br from-zinc-700/50 to-zinc-800/50 relative">
+                                    <div class="absolute inset-0 flex items-center justify-center">
+                                        <div class="w-32 h-32 rounded-2xl bg-gradient-to-br from-amber-400/20 to-orange-500/20 border border-amber-500/30 flex items-center justify-center">
+                                            <svg class="w-12 h-12 text-amber-400/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                                            </svg>
+                                        </div>
+                                    </div>
+                                    <!-- AI generating badge -->
+                                    <div class="absolute top-3 right-3 px-2.5 py-1 bg-amber-500/20 backdrop-blur-sm border border-amber-500/30 rounded-full">
+                                        <span class="flex items-center gap-1.5 text-xs font-medium text-amber-400">
+                                            <span class="w-1.5 h-1.5 bg-amber-400 rounded-full animate-pulse"></span>
+                                            AI Generating
+                                        </span>
+                                    </div>
                                 </div>
-                                <span class="text-white font-semibold text-base">Magnifiq</span>
+                                <!-- Product info -->
+                                <div class="p-4">
+                                    <p class="text-xs text-zinc-500 mb-1">SKU: PRD-2847</p>
+                                    <h3 class="text-white font-medium text-sm mb-3">Premium Wireless Headphones</h3>
+                                    <div class="space-y-2">
+                                        <div class="h-2 bg-zinc-700/50 rounded-full w-full"></div>
+                                        <div class="h-2 bg-zinc-700/50 rounded-full w-4/5"></div>
+                                        <div class="h-2 bg-zinc-700/50 rounded-full w-3/5"></div>
+                                    </div>
+                                </div>
                             </div>
 
-                            <!-- New action button -->
-                            <button class="w-full flex items-center gap-4 px-5 py-4 bg-amber-500/10 border border-amber-500/20 rounded-xl text-amber-400 text-base font-medium mb-8 hover:bg-amber-500/20 transition-colors">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                                </svg>
-                                New Generation
-                                <span class="ml-auto text-sm text-zinc-500 bg-zinc-800 px-2.5 py-1 rounded">C</span>
-                            </button>
-
-                            <!-- Nav items -->
-                            <nav class="space-y-2">
-                                <a href="#" class="flex items-center gap-4 px-5 py-3.5 text-zinc-400 hover:text-white hover:bg-zinc-800/50 rounded-lg transition-colors text-base">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/>
-                                    </svg>
-                                    Products
-                                    <span class="ml-auto text-sm text-zinc-600">24</span>
-                                </a>
-                                <a href="#" class="flex items-center gap-4 px-5 py-3.5 text-zinc-400 hover:text-white hover:bg-zinc-800/50 rounded-lg transition-colors text-base">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                                    </svg>
-                                    Photo Studio
-                                </a>
-                                <a href="#" class="flex items-center gap-4 px-5 py-3.5 text-zinc-400 hover:text-white hover:bg-zinc-800/50 rounded-lg transition-colors text-base">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                                    </svg>
-                                    Templates
-                                </a>
-                            </nav>
-
-                            <!-- Team section -->
-                            <div class="mt-10 pt-8 border-t border-zinc-800/80">
-                                <p class="px-5 text-sm font-medium text-zinc-600 uppercase tracking-wider mb-4">Your Teams</p>
-                                <div class="space-y-2">
-                                    <a href="#" class="flex items-center gap-4 px-5 py-3.5 bg-zinc-800/50 text-white rounded-lg text-base">
-                                        <span class="w-8 h-8 rounded bg-amber-500/20 flex items-center justify-center text-amber-400 text-sm font-bold">M</span>
-                                        Marketing Team
-                                    </a>
-                                    <a href="#" class="flex items-center gap-4 px-5 py-3.5 text-zinc-400 hover:text-white hover:bg-zinc-800/50 rounded-lg transition-colors text-base">
-                                        <span class="w-8 h-8 rounded bg-blue-500/20 flex items-center justify-center text-blue-400 text-sm font-bold">E</span>
-                                        E-commerce
-                                    </a>
+                            <!-- Stats row -->
+                            <div class="mt-4 grid grid-cols-2 gap-3">
+                                <div class="bg-zinc-800/40 rounded-xl p-4 border border-zinc-700/50">
+                                    <p class="text-2xl font-bold text-white">2,847</p>
+                                    <p class="text-xs text-zinc-500">Products</p>
+                                </div>
+                                <div class="bg-zinc-800/40 rounded-xl p-4 border border-zinc-700/50">
+                                    <p class="text-2xl font-bold text-amber-400">94%</p>
+                                    <p class="text-xs text-zinc-500">AI Optimized</p>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Main content area -->
-                        <div class="lg:col-span-5 border-r border-zinc-800/80 p-8">
-                            <!-- Header -->
-                            <div class="flex items-center justify-between mb-8">
-                                <h2 class="text-white font-semibold text-lg">Recent Generations</h2>
-                                <div class="flex items-center gap-3">
-                                    <button class="p-2.5 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors">
-                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/>
+                        <!-- Center panel - AI Content Generation -->
+                        <div class="lg:col-span-4 border-r border-zinc-800/80 p-6 overflow-hidden">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-7 h-7 rounded-lg bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center">
+                                        <svg class="w-3.5 h-3.5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
                                         </svg>
-                                    </button>
-                                    <button class="p-2.5 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors">
-                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/>
-                                        </svg>
-                                    </button>
+                                    </div>
+                                    <span class="text-white font-semibold text-sm">AI Content Engine</span>
                                 </div>
+                                <span class="px-2 py-0.5 bg-green-500/20 text-green-400 text-xs font-medium rounded">Live</span>
                             </div>
 
-                            <!-- Task list -->
-                            <div class="space-y-3">
-                                <!-- Active task -->
-                                <div class="p-5 bg-zinc-800/50 rounded-xl border border-amber-500/30 cursor-pointer">
-                                    <div class="flex items-start gap-4">
-                                        <span class="shrink-0 px-3 py-1.5 bg-amber-500/20 text-amber-400 text-sm font-medium rounded">AI-2491</span>
-                                        <div class="flex-1 min-w-0">
-                                            <span class="text-sm text-amber-400 font-medium">High Priority</span>
-                                            <p class="text-white text-base font-medium mt-1.5 truncate">Generate product descriptions for Spring Collection</p>
-                                            <div class="flex items-center gap-2 mt-3">
-                                                <span class="inline-flex items-center gap-2 text-sm text-amber-400">
-                                                    <span class="w-2 h-2 bg-amber-400 rounded-full animate-pulse"></span>
-                                                    In Progress
-                                                </span>
-                                            </div>
-                                        </div>
-                                        <div class="w-6 h-6 rounded-full border-2 border-amber-500/50"></div>
-                                    </div>
-                                </div>
-
-                                <!-- Completed task -->
-                                <div class="p-5 bg-zinc-800/30 rounded-xl border border-zinc-700/50 cursor-pointer hover:bg-zinc-800/50 transition-colors">
-                                    <div class="flex items-start gap-4">
-                                        <span class="shrink-0 px-3 py-1.5 bg-zinc-700 text-zinc-400 text-sm font-medium rounded">AI-2490</span>
-                                        <div class="flex-1 min-w-0">
-                                            <p class="text-zinc-300 text-base font-medium truncate">Photo studio renders for Homepage Banner</p>
-                                            <div class="flex items-center gap-2 mt-3">
-                                                <span class="inline-flex items-center gap-2 text-sm text-green-400">
-                                                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
-                                                    </svg>
-                                                    Done
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Another task -->
-                                <div class="p-5 bg-zinc-800/30 rounded-xl border border-zinc-700/50 cursor-pointer hover:bg-zinc-800/50 transition-colors">
-                                    <div class="flex items-start gap-4">
-                                        <span class="shrink-0 px-3 py-1.5 bg-zinc-700 text-zinc-400 text-sm font-medium rounded">AI-2489</span>
-                                        <div class="flex-1 min-w-0">
-                                            <p class="text-zinc-300 text-base font-medium truncate">Bulk SEO optimization for Electronics category</p>
-                                            <div class="flex items-center gap-2 mt-3">
-                                                <span class="inline-flex items-center gap-2 text-sm text-zinc-500">
-                                                    <span class="w-2 h-2 bg-zinc-500 rounded-full"></span>
-                                                    Backlog
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Urgent task -->
-                                <div class="p-5 bg-zinc-800/30 rounded-xl border border-zinc-700/50 cursor-pointer hover:bg-zinc-800/50 transition-colors">
-                                    <div class="flex items-start gap-4">
-                                        <span class="shrink-0 px-3 py-1.5 bg-red-500/20 text-red-400 text-sm font-medium rounded">AI-2488</span>
-                                        <div class="flex-1 min-w-0">
-                                            <p class="text-zinc-300 text-base font-medium truncate">Regenerate broken image assets</p>
-                                            <div class="flex items-center gap-2 mt-3">
-                                                <span class="inline-flex items-center gap-2 text-sm text-red-400">
-                                                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                                        <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
-                                                    </svg>
-                                                    Urgent
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Right detail panel -->
-                        <div class="lg:col-span-4 p-8 bg-zinc-900/50">
-                            <!-- Breadcrumb -->
-                            <div class="flex items-center gap-2 text-sm text-zinc-500 mb-5">
-                                <span>Marketing Team</span>
-                                <span>/</span>
-                                <span class="text-zinc-400">AI-2491</span>
-                            </div>
-
-                            <!-- Task detail -->
-                            <h3 class="text-xl font-semibold text-white mb-5">Generate product descriptions for Spring Collection</h3>
-
-                            <div class="flex items-center gap-5 mb-8 text-base">
-                                <div class="flex items-center gap-3">
-                                    <div class="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500"></div>
-                                    <span class="text-zinc-400">Alex Chen</span>
-                                </div>
-                                <div class="flex items-center gap-2 text-amber-400">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            <!-- Generated Description -->
+                            <div class="bg-zinc-800/40 rounded-xl border border-amber-500/30 p-3 mb-3">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h4 class="text-white text-xs font-medium">Description</h4>
+                                    <svg class="w-3.5 h-3.5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
                                     </svg>
-                                    <span>Due in 2 days</span>
                                 </div>
-                            </div>
-
-                            <!-- Description -->
-                            <div class="prose prose-sm prose-invert mb-8">
-                                <p class="text-zinc-400 text-base leading-relaxed">
-                                    Generate compelling product descriptions for the Spring 2025 collection. The AI should analyze product images and existing metadata to create SEO-optimized copy that matches our brand voice.
+                                <p class="text-zinc-400 text-xs leading-relaxed line-clamp-2">
+                                    Experience premium audio with our wireless headphones featuring advanced noise cancellation and 40-hour battery...
                                 </p>
                             </div>
 
-                            <!-- Code preview snippet -->
-                            <div class="bg-black/50 rounded-xl p-5 border border-zinc-800 font-mono text-sm overflow-hidden">
-                                <div class="flex items-center gap-3 text-zinc-500 mb-4">
-                                    <span>template-config.ts</span>
-                                    <span class="ml-auto px-3 py-1 bg-zinc-800 rounded text-zinc-600">TypeScript</span>
+                            <!-- USPs -->
+                            <div class="bg-zinc-800/40 rounded-xl border border-zinc-700/50 p-3 mb-3">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h4 class="text-white text-xs font-medium">Key Selling Points</h4>
+                                    <svg class="w-3.5 h-3.5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                    </svg>
                                 </div>
-                                <pre class="text-zinc-400 overflow-x-auto"><code><span class="text-zinc-600">// Initialize AI template</span>
-<span class="text-purple-400">const</span> <span class="text-blue-400">template</span> = <span class="text-amber-400">createTemplate</span>({
-  <span class="text-green-400">model</span>: <span class="text-amber-300">'gpt-4-vision'</span>,
-  <span class="text-green-400">tone</span>: <span class="text-amber-300">'professional'</span>,
-});
-
-<span class="text-purple-400">await</span> <span class="text-blue-400">template</span>.<span class="text-amber-400">generate</span>({
-  <span class="text-green-400">products</span>: <span class="text-blue-400">collection</span>,
-});</code></pre>
+                                <div class="space-y-1.5">
+                                    <div class="flex items-center gap-2">
+                                        <span class="w-1 h-1 bg-amber-400 rounded-full"></span>
+                                        <span class="text-zinc-300 text-xs">40-hour battery life</span>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <span class="w-1 h-1 bg-amber-400 rounded-full"></span>
+                                        <span class="text-zinc-300 text-xs">Active noise cancellation</span>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <span class="w-1 h-1 bg-amber-400 rounded-full"></span>
+                                        <span class="text-zinc-300 text-xs">Premium memory foam</span>
+                                    </div>
+                                </div>
                             </div>
+
+                            <!-- FAQs -->
+                            <div class="bg-zinc-800/40 rounded-xl border border-zinc-700/50 p-3 mb-3">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h4 class="text-white text-xs font-medium">Product FAQs</h4>
+                                    <svg class="w-3.5 h-3.5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                    </svg>
+                                </div>
+                                <div class="space-y-2">
+                                    <div>
+                                        <p class="text-zinc-300 text-xs font-medium">How long does the battery last?</p>
+                                        <p class="text-zinc-500 text-xs">Up to 40 hours on a single charge...</p>
+                                    </div>
+                                    <div>
+                                        <p class="text-zinc-300 text-xs font-medium">Is it compatible with all devices?</p>
+                                        <p class="text-zinc-500 text-xs">Works with Bluetooth 5.0 and higher...</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Meta Title & SEO -->
+                            <div class="bg-zinc-800/40 rounded-xl border border-zinc-700/50 p-3">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h4 class="text-white text-xs font-medium">SEO Meta</h4>
+                                    <span class="flex items-center gap-1 text-amber-400">
+                                        <span class="w-1.5 h-1.5 bg-amber-400 rounded-full animate-pulse"></span>
+                                        <span class="text-xs">Generating</span>
+                                    </span>
+                                </div>
+                                <div class="space-y-1.5">
+                                    <div class="h-2 bg-zinc-700/50 rounded w-full"></div>
+                                    <div class="h-2 bg-zinc-700/50 rounded w-4/5"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right panel - Photo Studio -->
+                        <div class="lg:col-span-4 p-6 bg-zinc-900/30">
+                            <div class="flex items-center gap-2 mb-5">
+                                <div class="w-8 h-8 rounded-lg bg-zinc-800 border border-zinc-700 flex items-center justify-center">
+                                    <svg class="w-4 h-4 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                    </svg>
+                                </div>
+                                <span class="text-white font-semibold text-sm">Photo Studio</span>
+                            </div>
+
+                            <!-- Generated images grid -->
+                            <div class="grid grid-cols-2 gap-3 mb-4">
+                                <div class="aspect-square bg-gradient-to-br from-amber-500/10 to-orange-500/10 rounded-xl border border-amber-500/20 flex items-center justify-center">
+                                    <svg class="w-8 h-8 text-amber-400/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                    </svg>
+                                </div>
+                                <div class="aspect-square bg-gradient-to-br from-zinc-700/30 to-zinc-800/30 rounded-xl border border-zinc-700/50 flex items-center justify-center">
+                                    <svg class="w-8 h-8 text-zinc-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                    </svg>
+                                </div>
+                                <div class="aspect-square bg-gradient-to-br from-zinc-700/30 to-zinc-800/30 rounded-xl border border-zinc-700/50 flex items-center justify-center">
+                                    <svg class="w-8 h-8 text-zinc-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                    </svg>
+                                </div>
+                                <div class="aspect-square bg-zinc-800/40 rounded-xl border border-dashed border-zinc-700 flex items-center justify-center">
+                                    <svg class="w-6 h-6 text-zinc-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                                    </svg>
+                                </div>
+                            </div>
+
+                            <!-- Generation prompt -->
+                            <div class="bg-zinc-800/40 rounded-xl border border-zinc-700/50 p-4">
+                                <p class="text-xs text-zinc-500 mb-2">AI Prompt</p>
+                                <p class="text-zinc-300 text-xs leading-relaxed italic">
+                                    "Product photography, premium headphones on marble surface, soft studio lighting, minimalist aesthetic..."
+                                </p>
+                            </div>
+
+                            <!-- Generate button -->
+                            <button class="w-full mt-4 flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-amber-400 to-orange-500 text-black text-sm font-semibold rounded-xl">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                                </svg>
+                                Generate Images
+                            </button>
                         </div>
                     </div>
                 </div>

@@ -8,11 +8,20 @@
             <div class="flex items-center gap-3">
                 <a href="/" class="flex items-center gap-3 group">
                     <div class="relative">
-                        <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center">
-                            <svg class="w-5 h-5 text-black" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-                            </svg>
-                        </div>
+                        <svg class="w-9 h-9" viewBox="0 0 32 32" fill="none">
+                            <defs>
+                                <linearGradient id="navBrandGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" style="stop-color:#FBBF24"/>
+                                    <stop offset="100%" style="stop-color:#F97316"/>
+                                </linearGradient>
+                            </defs>
+                            <rect x="2" y="2" width="28" height="28" rx="6" ry="6" fill="url(#navBrandGradient)"/>
+                            <path d="M8 22V12l4 6 4-6v10" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                            <circle cx="22" cy="10" r="1.5" fill="white"/>
+                            <path d="M22 7v6M19 10h6" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+                            <circle cx="22" cy="18" r="1" fill="rgba(255,255,255,0.7)"/>
+                            <circle cx="22" cy="22" r="1" fill="rgba(255,255,255,0.5)"/>
+                        </svg>
                         <div class="absolute inset-0 rounded-lg bg-gradient-to-br from-amber-400 to-orange-500 blur-lg opacity-50 group-hover:opacity-75 transition-opacity"></div>
                     </div>
                     <span class="text-xl font-semibold text-white tracking-tight">

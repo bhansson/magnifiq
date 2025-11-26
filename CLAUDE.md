@@ -48,7 +48,7 @@ docker compose up queue -d
 ```
 
 **View Horizon dashboard:**
-Navigate to `http://localhost:8000/horizon` after starting the Octane service.
+Navigate to `http://magnifiq.test/horizon` after starting the Octane service.
 
 **Run scheduler:**
 ```bash
@@ -282,7 +282,7 @@ Key variables beyond standard Laravel config:
 
 ### Service Configuration
 
-- **Octane**: Runs on port 8000, uses Swoole, file watching enabled by default
+- **Octane**: Runs on port 8000 internally, and 80 externally, uses Swoole, file watching enabled by default
 - **Vite**: Runs on port 5173, hot module replacement for frontend assets
 - **Redis**: Port 6379, used for cache, sessions, and Horizon queue backend
 - **Horizon**: Two supervisors—`supervisor-default` (default queue) and `supervisor-ai` (ai queue with higher resources)
