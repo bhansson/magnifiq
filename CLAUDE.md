@@ -399,3 +399,6 @@ This ensures consistent development experience across the team without IDE lock-
 4. Update `importFeed()` to map new field
 5. Update product display views in `resources/views/products/`
 6. Add corresponding tests
+
+# MCP Setup
+- remember that when using the chrome-devtools mcp or any other request to the test the app, use the specified APP_URL in .env, default port.
