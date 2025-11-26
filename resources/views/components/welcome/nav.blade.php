@@ -1,18 +1,30 @@
 <nav x-data="{ scrolled: false, mobileMenuOpen: false }"
      @scroll.window="scrolled = window.pageYOffset > 50"
-     :class="scrolled ? 'bg-white/95 backdrop-blur-xl shadow-lg' : 'bg-white/50 backdrop-blur-sm'"
-     class="fixed top-0 left-0 right-0 z-50 transition-all duration-300">
+     :class="scrolled ? 'bg-black/80 backdrop-blur-xl border-b border-white/5' : 'bg-transparent'"
+     class="fixed top-0 left-0 right-0 z-50 transition-all duration-500">
     <div class="mx-auto max-w-7xl px-6 lg:px-8">
         <div class="flex items-center justify-between py-5">
-            <!-- Logo with Icon -->
+            <!-- Logo -->
             <div class="flex items-center gap-3">
                 <a href="/" class="flex items-center gap-3 group">
-                    <div class="w-10 h-10 bg-brand-gradient rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
-                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                    <div class="relative">
+                        <svg class="w-9 h-9" viewBox="0 0 32 32" fill="none">
+                            <defs>
+                                <linearGradient id="navBrandGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" style="stop-color:#FBBF24"/>
+                                    <stop offset="100%" style="stop-color:#F97316"/>
+                                </linearGradient>
+                            </defs>
+                            <rect x="2" y="2" width="28" height="28" rx="6" ry="6" fill="url(#navBrandGradient)"/>
+                            <path d="M8 22V12l4 6 4-6v10" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                            <circle cx="22" cy="10" r="1.5" fill="white"/>
+                            <path d="M22 7v6M19 10h6" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+                            <circle cx="22" cy="18" r="1" fill="rgba(255,255,255,0.7)"/>
+                            <circle cx="22" cy="22" r="1" fill="rgba(255,255,255,0.5)"/>
                         </svg>
+                        <div class="absolute inset-0 rounded-lg bg-gradient-to-br from-amber-400 to-orange-500 blur-lg opacity-50 group-hover:opacity-75 transition-opacity"></div>
                     </div>
-                    <span class="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-brand-purple via-brand-blue to-brand-pink">
+                    <span class="text-xl font-semibold text-white tracking-tight">
                         Magnifiq
                     </span>
                 </a>
@@ -20,57 +32,63 @@
 
             <!-- Desktop Navigation -->
             <div class="hidden md:flex items-center gap-8">
-                <a href="#features" class="text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors">
+                <a href="#features" class="text-sm text-zinc-400 hover:text-white transition-colors duration-200">
                     Features
                 </a>
-                <a href="#how-it-works" class="text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors">
+                <a href="#how-it-works" class="text-sm text-zinc-400 hover:text-white transition-colors duration-200">
                     How It Works
                 </a>
-                <a href="#use-cases" class="text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors">
+                <a href="#use-cases" class="text-sm text-zinc-400 hover:text-white transition-colors duration-200">
                     Use Cases
                 </a>
             </div>
 
             <!-- Auth Links -->
-            <div class="flex items-center gap-4">
+            <div class="flex items-center gap-3">
                 @auth
-                    <a href="{{ route('dashboard') }}" class="hidden md:inline-flex items-center px-5 py-2.5 text-sm font-semibold text-white bg-brand-gradient rounded-xl hover:scale-105 hover:shadow-lg transition-all duration-200">
-                        Go to Dashboard
+                    <a href="{{ route('dashboard') }}" class="hidden md:inline-flex items-center px-5 py-2.5 text-sm font-medium text-black bg-gradient-to-r from-amber-400 to-orange-400 rounded-full hover:from-amber-300 hover:to-orange-300 transition-all duration-200 shadow-lg shadow-amber-500/25">
+                        Dashboard
                     </a>
                 @else
-                    <a href="{{ route('login') }}" class="hidden md:block text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors">
-                        Log In
+                    <a href="{{ route('login') }}" class="hidden md:block text-sm text-zinc-400 hover:text-white transition-colors duration-200">
+                        Log in
                     </a>
-                    <a href="{{ route('register') }}" class="inline-flex items-center px-5 py-2.5 text-sm font-semibold text-white bg-brand-gradient rounded-xl hover:scale-105 hover:shadow-lg transition-all duration-200">
-                        Start Free Trial
+                    <a href="{{ route('register') }}" class="inline-flex items-center px-5 py-2.5 text-sm font-medium text-black bg-white rounded-full hover:bg-zinc-100 transition-all duration-200 border border-white/20">
+                        Sign up
                     </a>
                 @endauth
 
                 <!-- Mobile Menu Button -->
-                <button @click="mobileMenuOpen = !mobileMenuOpen" class="md:hidden p-2 text-gray-700 hover:text-gray-900">
+                <button @click="mobileMenuOpen = !mobileMenuOpen" class="md:hidden p-2 text-zinc-400 hover:text-white">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path x-show="!mobileMenuOpen" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
-                        <path x-show="mobileMenuOpen" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        <path x-show="mobileMenuOpen" x-cloak stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                     </svg>
                 </button>
             </div>
         </div>
 
         <!-- Mobile Menu -->
-        <div x-show="mobileMenuOpen" x-cloak x-transition class="md:hidden py-4 border-t border-gray-200">
+        <div x-show="mobileMenuOpen" x-cloak x-transition:enter="transition ease-out duration-200"
+             x-transition:enter-start="opacity-0 -translate-y-2"
+             x-transition:enter-end="opacity-100 translate-y-0"
+             x-transition:leave="transition ease-in duration-150"
+             x-transition:leave-start="opacity-100 translate-y-0"
+             x-transition:leave-end="opacity-0 -translate-y-2"
+             class="md:hidden py-4 border-t border-white/10">
             <div class="flex flex-col gap-4">
-                <a href="#features" @click="mobileMenuOpen = false" class="text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors">
+                <a href="#features" @click="mobileMenuOpen = false" class="text-sm text-zinc-400 hover:text-white transition-colors">
                     Features
                 </a>
-                <a href="#how-it-works" @click="mobileMenuOpen = false" class="text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors">
+                <a href="#how-it-works" @click="mobileMenuOpen = false" class="text-sm text-zinc-400 hover:text-white transition-colors">
                     How It Works
                 </a>
-                <a href="#use-cases" @click="mobileMenuOpen = false" class="text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors">
+                <a href="#use-cases" @click="mobileMenuOpen = false" class="text-sm text-zinc-400 hover:text-white transition-colors">
                     Use Cases
                 </a>
                 @guest
-                    <a href="{{ route('login') }}" class="text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors">
-                        Log In
+                    <a href="{{ route('login') }}" class="text-sm text-zinc-400 hover:text-white transition-colors">
+                        Log in
                     </a>
                 @endguest
             </div>

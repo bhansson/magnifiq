@@ -2,25 +2,25 @@
 
 <div>
     <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="bg-white shadow sm:rounded-lg">
-            <div class="px-6 py-6 border-b border-gray-200">
-                <h2 class="text-lg font-semibold text-gray-800">
+        <div class="bg-white dark:bg-zinc-900/50 shadow dark:shadow-none dark:ring-1 dark:ring-zinc-800 sm:rounded-xl">
+            <div class="px-6 py-6 border-b border-gray-200 dark:border-zinc-800">
+                <h2 class="text-lg font-semibold text-gray-800 dark:text-white">
                     Submit Google Product Feed
                 </h2>
-                <p class="mt-1 text-sm text-gray-600">
+                <p class="mt-1 text-sm text-gray-600 dark:text-zinc-400">
                     Provide a feed URL or upload an XML or CSV file. Once parsed, choose how each attribute maps to your products.
                 </p>
             </div>
 
             <div class="px-6 py-6 space-y-6">
                 @if ($statusMessage)
-                    <div class="rounded-md bg-green-50 p-4 text-sm text-green-700">
+                    <div class="rounded-xl bg-green-50 dark:bg-green-500/10 border border-green-200 dark:border-green-500/20 p-4 text-sm text-green-700 dark:text-green-400">
                         {{ $statusMessage }}
                     </div>
                 @endif
 
                 @if ($errorMessage)
-                    <div class="rounded-md bg-red-50 p-4 text-sm text-red-700">
+                    <div class="rounded-xl bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 p-4 text-sm text-red-700 dark:text-red-400">
                         {{ $errorMessage }}
                     </div>
                 @endif
@@ -40,13 +40,13 @@
 
                     <div class="space-y-2">
                         <x-label for="feedLanguage" value="Language" />
-                        <select id="feedLanguage" wire:model.defer="language" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm">
+                        <select id="feedLanguage" wire:model.defer="language" class="block w-full px-4 py-3 bg-white dark:bg-zinc-800/50 border border-gray-300 dark:border-zinc-700 rounded-xl text-gray-900 dark:text-zinc-100 focus:border-amber-500 dark:focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 dark:focus:ring-amber-500/20 transition-colors duration-200 text-sm">
                             @foreach ($languageOptions as $code => $label)
                                 <option value="{{ $code }}">{{ $label }} ({{ Str::upper($code) }})</option>
                             @endforeach
                         </select>
                         <x-input-error for="language" />
-                        <p class="text-xs text-gray-500">
+                        <p class="text-xs text-gray-500 dark:text-zinc-500">
                             Choose the market language that matches this catalog feed.
                         </p>
                     </div>
@@ -54,9 +54,9 @@
 
                 <div class="space-y-2">
                     <x-label for="feedFile" value="Or Upload XML Feed" />
-                    <input id="feedFile" type="file" wire:model="feedFile" class="block w-full text-sm text-gray-500 file:mr-4 file:rounded-md file:border-0 file:bg-gray-100 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-gray-700 hover:file:bg-gray-200" />
+                    <input id="feedFile" type="file" wire:model="feedFile" class="block w-full text-sm text-gray-500 dark:text-zinc-400 file:mr-4 file:rounded-full file:border-0 file:bg-amber-500/10 dark:file:bg-amber-500/20 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-amber-600 dark:file:text-amber-400 hover:file:bg-amber-500/20 dark:hover:file:bg-amber-500/30 transition-colors" />
                     <x-input-error for="feedFile" />
-                    <p class="text-xs text-gray-500">
+                    <p class="text-xs text-gray-500 dark:text-zinc-500">
                         XML or CSV feeds up to 5MB are supported. If both a URL and file are provided, the uploaded file will be used.
                     </p>
                 </div>
@@ -65,17 +65,17 @@
                     <x-button type="button" wire:click="fetchFields" wire:loading.attr="disabled">
                         Load Feed Fields
                     </x-button>
-                    <span class="text-sm text-gray-500" wire:loading>
+                    <span class="text-sm text-gray-500 dark:text-zinc-400" wire:loading>
                         Loading feed…
                     </span>
                 </div>
 
                 @if ($showMapping)
-                    <div class="border-t border-gray-200 pt-6">
-                        <h3 class="text-base font-semibold text-gray-800">
+                    <div class="border-t border-gray-200 dark:border-zinc-800 pt-6">
+                        <h3 class="text-base font-semibold text-gray-800 dark:text-white">
                             Field Mapping
                         </h3>
-                        <p class="text-sm text-gray-600 mt-1">
+                        <p class="text-sm text-gray-600 dark:text-zinc-400 mt-1">
                             Select which feed element populates each product attribute.
                         </p>
 
@@ -83,7 +83,7 @@
                             @foreach ($mapping as $attribute => $value)
                                 <div class="space-y-2">
                                     <x-label :for="'mapping_'.$attribute" :value="Str::headline($attribute)" />
-                                    <select id="mapping_{{ $attribute }}" wire:model="mapping.{{ $attribute }}" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm">
+                                    <select id="mapping_{{ $attribute }}" wire:model="mapping.{{ $attribute }}" class="block w-full px-4 py-3 bg-white dark:bg-zinc-800/50 border border-gray-300 dark:border-zinc-700 rounded-xl text-gray-900 dark:text-zinc-100 focus:border-amber-500 dark:focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 dark:focus:ring-amber-500/20 transition-colors duration-200 text-sm">
                                         <option value="">-- Select field --</option>
                                         @foreach ($availableFields as $field)
                                             <option value="{{ $field }}">{{ $field }}</option>
@@ -97,7 +97,7 @@
                             <x-button type="button" wire:click="importFeed" wire:loading.attr="disabled">
                                 Import Products
                             </x-button>
-                            <span class="text-sm text-gray-500" wire:loading>
+                            <span class="text-sm text-gray-500 dark:text-zinc-400" wire:loading>
                                 Importing products…
                             </span>
                         </div>
@@ -108,66 +108,66 @@
     </div>
 
     <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 mt-10">
-        <div class="bg-white shadow sm:rounded-lg">
-            <div class="px-6 py-6 border-b border-gray-200">
-                <h2 class="text-lg font-semibold text-gray-800">
+        <div class="bg-white dark:bg-zinc-900/50 shadow dark:shadow-none dark:ring-1 dark:ring-zinc-800 sm:rounded-xl">
+            <div class="px-6 py-6 border-b border-gray-200 dark:border-zinc-800">
+                <h2 class="text-lg font-semibold text-gray-800 dark:text-white">
                     Imported Feeds
                 </h2>
             </div>
 
             <div class="px-6 py-6">
                 @if ($feeds->isEmpty())
-                    <p class="text-sm text-gray-600">
+                    <p class="text-sm text-gray-600 dark:text-zinc-400">
                         No feeds imported yet. Submit a feed above to get started.
                     </p>
                 @else
                     <div class="overflow-x-auto">
-                        <table class="min-w-full divide-y divide-gray-200 text-sm">
-                            <thead class="bg-gray-50">
+                        <table class="min-w-full divide-y divide-gray-200 dark:divide-zinc-800 text-sm">
+                            <thead class="bg-gray-50 dark:bg-zinc-800/50">
                                 <tr>
-                                    <th class="px-4 py-2 text-left font-semibold text-gray-700 uppercase tracking-wider text-xs">Name</th>
-                                    <th class="px-4 py-2 text-left font-semibold text-gray-700 uppercase tracking-wider text-xs">Language</th>
-                                    <th class="px-4 py-2 text-left font-semibold text-gray-700 uppercase tracking-wider text-xs">Products</th>
-                                    <th class="px-4 py-2 text-left font-semibold text-gray-700 uppercase tracking-wider text-xs">Feed URL</th>
-                                    <th class="px-4 py-2 text-left font-semibold text-gray-700 uppercase tracking-wider text-xs">Updated</th>
-                                    <th class="px-4 py-2 text-right font-semibold text-gray-700 uppercase tracking-wider text-xs">Actions</th>
+                                    <th class="px-4 py-3 text-left font-semibold text-gray-700 dark:text-zinc-300 uppercase tracking-wider text-xs">Name</th>
+                                    <th class="px-4 py-3 text-left font-semibold text-gray-700 dark:text-zinc-300 uppercase tracking-wider text-xs">Language</th>
+                                    <th class="px-4 py-3 text-left font-semibold text-gray-700 dark:text-zinc-300 uppercase tracking-wider text-xs">Products</th>
+                                    <th class="px-4 py-3 text-left font-semibold text-gray-700 dark:text-zinc-300 uppercase tracking-wider text-xs">Feed URL</th>
+                                    <th class="px-4 py-3 text-left font-semibold text-gray-700 dark:text-zinc-300 uppercase tracking-wider text-xs">Updated</th>
+                                    <th class="px-4 py-3 text-right font-semibold text-gray-700 dark:text-zinc-300 uppercase tracking-wider text-xs">Actions</th>
                                 </tr>
                             </thead>
-                            <tbody class="divide-y divide-gray-200">
+                            <tbody class="divide-y divide-gray-200 dark:divide-zinc-800">
                                 @foreach ($feeds as $feed)
-                                    <tr class="group hover:bg-gray-50/50 transition-colors">
-                                        <td class="px-4 py-2 font-medium text-gray-900">
+                                    <tr class="group hover:bg-gray-50/50 dark:hover:bg-zinc-800/50 transition-colors">
+                                        <td class="px-4 py-3 font-medium text-gray-900 dark:text-white">
                                             {{ $feed->name }}
                                         </td>
-                                        <td class="px-4 py-2 text-gray-700">
+                                        <td class="px-4 py-3 text-gray-700 dark:text-zinc-300">
                                             @php
                                                 $languageCode = $feed->language;
                                                 $languageLabel = $languageOptions[$languageCode] ?? Str::upper($languageCode);
                                             @endphp
-                                            {{ $languageLabel }} <span class="text-xs uppercase text-gray-400">({{ Str::upper($languageCode) }})</span>
+                                            {{ $languageLabel }} <span class="text-xs uppercase text-gray-400 dark:text-zinc-500">({{ Str::upper($languageCode) }})</span>
                                         </td>
-                                        <td class="px-4 py-2 text-gray-700">
+                                        <td class="px-4 py-3 text-gray-700 dark:text-zinc-300">
                                             {{ $feed->products_count }}
                                         </td>
-                                        <td class="px-4 py-2 text-gray-700">
+                                        <td class="px-4 py-3 text-gray-700 dark:text-zinc-300">
                                             @if ($feed->feed_url)
-                                                <a href="{{ $feed->feed_url }}" target="_blank" class="text-indigo-600 hover:text-indigo-800 underline">
+                                                <a href="{{ $feed->feed_url }}" target="_blank" class="text-amber-600 dark:text-amber-400 hover:text-amber-500 dark:hover:text-amber-300">
                                                     {{ Str::limit($feed->feed_url, 60) }}
                                                 </a>
                                             @else
-                                                <span class="text-gray-500">Uploaded file</span>
+                                                <span class="text-gray-500 dark:text-zinc-500">Uploaded file</span>
                                             @endif
                                         </td>
-                                        <td class="px-4 py-2 text-gray-700">
+                                        <td class="px-4 py-3 text-gray-700 dark:text-zinc-300">
                                             {{ $feed->updated_at->diffForHumans() }}
                                         </td>
-                                        <td class="px-4 py-2 text-right">
+                                        <td class="px-4 py-3 text-right">
                                             <div class="relative inline-block text-left" x-data="{ open: false }" @click.away="open = false">
                                                 <button
                                                     type="button"
                                                     @click="open = !open"
-                                                    class="inline-flex items-center justify-center w-8 h-8 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100/80 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all opacity-0 group-hover:opacity-100"
-                                                    :class="{ 'opacity-100 text-gray-600 bg-gray-100': open }">
+                                                    class="inline-flex items-center justify-center w-8 h-8 rounded-lg text-gray-400 dark:text-zinc-500 hover:text-gray-600 dark:hover:text-zinc-300 hover:bg-gray-100/80 dark:hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-amber-500/50 transition-all opacity-0 group-hover:opacity-100"
+                                                    :class="{ 'opacity-100 text-gray-600 dark:text-zinc-300 bg-gray-100 dark:bg-zinc-800': open }">
                                                     <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                                                         <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z"></path>
                                                     </svg>
@@ -181,7 +181,7 @@
                                                     x-transition:leave="transition ease-in duration-75"
                                                     x-transition:leave-start="transform opacity-100 scale-100"
                                                     x-transition:leave-end="transform opacity-0 scale-95"
-                                                    class="absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-lg bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none"
+                                                    class="absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-xl bg-white dark:bg-zinc-800 shadow-lg dark:shadow-none ring-1 ring-black/5 dark:ring-white/10 border border-gray-200 dark:border-zinc-700 focus:outline-none"
                                                     style="display: none;">
                                                     <div class="py-1">
                                                         <button
@@ -190,8 +190,8 @@
                                                             wire:loading.attr="disabled"
                                                             wire:target="refreshFeed({{ $feed->id }})"
                                                             @click="open = false"
-                                                            class="group flex items-center w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 transition-colors disabled:opacity-50">
-                                                            <svg class="w-4 h-4 mr-3 text-gray-400 group-hover:text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            class="group flex items-center w-full px-4 py-2.5 text-sm text-gray-700 dark:text-zinc-300 hover:bg-amber-50 dark:hover:bg-amber-500/10 hover:text-amber-700 dark:hover:text-amber-400 transition-colors disabled:opacity-50">
+                                                            <svg class="w-4 h-4 mr-3 text-gray-400 dark:text-zinc-500 group-hover:text-amber-600 dark:group-hover:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
                                                             </svg>
                                                             <span wire:loading.remove wire:target="refreshFeed({{ $feed->id }})">Refresh Feed</span>
@@ -202,8 +202,8 @@
                                                             x-on:click.prevent="if(window.confirm('Delete this feed? All imported products from this feed will be removed.')) { $wire.deleteFeed({{ $feed->id }}); open = false; }"
                                                             wire:loading.attr="disabled"
                                                             wire:target="deleteFeed({{ $feed->id }})"
-                                                            class="group flex items-center w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-red-50 hover:text-red-700 transition-colors disabled:opacity-50">
-                                                            <svg class="w-4 h-4 mr-3 text-gray-400 group-hover:text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            class="group flex items-center w-full px-4 py-2.5 text-sm text-gray-700 dark:text-zinc-300 hover:bg-red-50 dark:hover:bg-red-500/10 hover:text-red-700 dark:hover:text-red-400 transition-colors disabled:opacity-50">
+                                                            <svg class="w-4 h-4 mr-3 text-gray-400 dark:text-zinc-500 group-hover:text-red-600 dark:group-hover:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                                                             </svg>
                                                             <span wire:loading.remove wire:target="deleteFeed({{ $feed->id }})">Delete Feed</span>

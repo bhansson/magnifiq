@@ -1,14 +1,14 @@
 <div class="space-y-6">
     @if ($statusMessage)
-        <div class="rounded-md bg-indigo-50 px-4 py-3 text-sm text-indigo-800">
+        <div class="rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 px-4 py-3 text-sm text-amber-800 dark:text-amber-400">
             {{ $statusMessage }}
         </div>
     @endif
 
     <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-            <h1 class="text-2xl font-semibold text-gray-900">Template Library</h1>
-            <p class="mt-1 text-sm text-gray-600">
+            <h1 class="text-2xl font-semibold text-gray-900 dark:text-white">Template Library</h1>
+            <p class="mt-1 text-sm text-gray-600 dark:text-zinc-300">
                 Manage AI prompt templates used across product generations. Default templates are provided for every team;
                 create custom ones tailored to your workflow.
             </p>
@@ -33,31 +33,31 @@
                 $contentType = \Illuminate\Support\Str::headline($template->settings['content_type'] ?? 'text');
                 $isDefault = $template->team_id === null;
             @endphp
-                <div class="rounded-lg border border-gray-200 bg-white shadow-sm">
+                <div class="rounded-xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 shadow-sm dark:shadow-none">
                     <div class="px-5 py-4 sm:flex sm:items-start sm:justify-between">
                         <div class="space-y-2">
                                 <div class="flex flex-wrap items-center gap-2">
-                                    <h2 class="text-lg font-semibold text-gray-900">{{ $template->name }}</h2>
+                                    <h2 class="text-lg font-semibold text-gray-900 dark:text-white">{{ $template->name }}</h2>
                                     @if ($isDefault)
-                                        <span class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-700">
+                                        <span class="inline-flex items-center rounded-full bg-slate-100 dark:bg-zinc-700 px-2.5 py-0.5 text-xs font-medium text-slate-700 dark:text-zinc-300">
                                             Default
                                         </span>
                                     @endif
                                 </div>
                                 @if ($template->description)
-                                    <p class="text-sm text-gray-600">{{ $template->description }}</p>
+                                    <p class="text-sm text-gray-600 dark:text-zinc-300">{{ $template->description }}</p>
                                 @endif
-                            <dl class="grid gap-1 text-sm text-gray-600 sm:grid-cols-2">
+                            <dl class="grid gap-1 text-sm text-gray-600 dark:text-zinc-300 sm:grid-cols-2">
                                 <div>
-                                    <dt class="text-xs uppercase tracking-wide text-gray-500">Slug</dt>
+                                    <dt class="text-xs uppercase tracking-wide text-gray-500 dark:text-zinc-400">Slug</dt>
                                     <dd>{{ $template->slug }}</dd>
                                 </div>
                                 <div>
-                                    <dt class="text-xs uppercase tracking-wide text-gray-500">Content type</dt>
+                                    <dt class="text-xs uppercase tracking-wide text-gray-500 dark:text-zinc-400">Content type</dt>
                                     <dd>{{ $contentType }}</dd>
                                 </div>
                                 <div>
-                                    <dt class="text-xs uppercase tracking-wide text-gray-500">Context variables</dt>
+                                    <dt class="text-xs uppercase tracking-wide text-gray-500 dark:text-zinc-400">Context variables</dt>
                                     <dd>{{ $placeholders ?: 'None' }}</dd>
                                 </div>
                             </dl>
@@ -73,18 +73,18 @@
                                 <button type="button"
                                         x-data
                                         x-on:click.prevent="if (window.confirm('Delete the {{ addslashes($template->name) }} template? This action cannot be undone.')) { $wire.delete({{ $template->id }}) }"
-                                        class="inline-flex items-center px-3 py-1.5 bg-red-600 border border-transparent rounded-md text-xs font-medium text-white shadow-sm hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2">
+                                        class="inline-flex items-center px-3 py-1.5 bg-red-600 border border-transparent rounded-full text-xs font-medium text-white shadow-sm hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 dark:focus:ring-offset-zinc-900">
                                     Delete
                                 </button>
                             @endif
                         </div>
                     </div>
-                    <div class="border-t border-gray-100 bg-gray-50 px-5 py-3 text-xs text-gray-500">
+                    <div class="border-t border-gray-100 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-800/30 px-5 py-3 text-xs text-gray-500 dark:text-zinc-400">
                         Updated {{ optional($template->updated_at)->diffForHumans() ?? 'recently' }}
                     </div>
                 </div>
             @empty
-                <div class="rounded-lg border border-dashed border-gray-300 bg-gray-50 px-5 py-6 text-sm text-gray-600">
+                <div class="rounded-xl border border-dashed border-gray-300 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-800/30 px-5 py-6 text-sm text-gray-600 dark:text-zinc-300">
                     No templates found yet. Start by creating one above.
                 </div>
             @endforelse
@@ -92,12 +92,12 @@
 
         <div class="space-y-4">
             @if ($showForm)
-                <div class="rounded-lg border border-indigo-200 bg-white shadow-sm">
-                    <div class="border-b border-indigo-100 px-5 py-4">
-                        <h2 class="text-lg font-semibold text-gray-900">
+                <div class="rounded-xl border border-amber-200 dark:border-amber-500/30 bg-white dark:bg-zinc-900/50 shadow-sm dark:shadow-none">
+                    <div class="border-b border-amber-100 dark:border-amber-500/20 px-5 py-4">
+                        <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
                             {{ $editingTemplateId ? 'Edit template' : 'Create template' }}
                         </h2>
-                        <p class="mt-1 text-sm text-gray-600">
+                        <p class="mt-1 text-sm text-gray-600 dark:text-zinc-300">
                             Fill out the details below to {{ $editingTemplateId ? 'update your' : 'add a new' }} template.
                         </p>
                     </div>
@@ -125,30 +125,30 @@
                               }
                           }">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700">Name</label>
-                            <input type="text" wire:model.defer="form.name" class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                            @error('form.name') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+                            <label class="block text-sm font-medium text-gray-700 dark:text-zinc-300">Name</label>
+                            <input type="text" wire:model.defer="form.name" class="mt-1 w-full rounded-xl border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-800/50 text-gray-900 dark:text-zinc-100 shadow-sm focus:border-amber-500 dark:focus:border-amber-500 focus:ring-amber-500/20">
+                            @error('form.name') <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ $message }}</p> @enderror
                         </div>
 
                         <div>
-                            <label class="block text-sm font-medium text-gray-700">Description <span class="text-xs text-gray-500">(optional)</span></label>
-                            <textarea wire:model.defer="form.description" rows="2" class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"></textarea>
-                            @error('form.description') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+                            <label class="block text-sm font-medium text-gray-700 dark:text-zinc-300">Description <span class="text-xs text-gray-500 dark:text-zinc-400">(optional)</span></label>
+                            <textarea wire:model.defer="form.description" rows="2" class="mt-1 w-full rounded-xl border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-800/50 text-gray-900 dark:text-zinc-100 shadow-sm focus:border-amber-500 dark:focus:border-amber-500 focus:ring-amber-500/20"></textarea>
+                            @error('form.description') <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ $message }}</p> @enderror
                         </div>
 
                         <div>
-                            <label class="block text-sm font-medium text-gray-700">Content type</label>
-                            <select wire:model.defer="form.content_type" class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-zinc-300">Content type</label>
+                            <select wire:model.defer="form.content_type" class="mt-1 w-full rounded-xl border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-800/50 text-gray-900 dark:text-zinc-100 shadow-sm focus:border-amber-500 dark:focus:border-amber-500 focus:ring-amber-500/20">
                                 <option value="text">Text</option>
                                 <option value="usps">List</option>
                                 <option value="faq">FAQ entries</option>
                             </select>
-                            @error('form.content_type') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+                            @error('form.content_type') <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ $message }}</p> @enderror
                         </div>
 
                         <div class="space-y-2">
                             <div class="flex items-center justify-between">
-                                <label class="block text-sm font-medium text-gray-700">Prompt</label>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-zinc-300">Prompt</label>
                                 <div class="flex flex-wrap gap-2">
                                     @php
                                         $chipKeys = ['title', 'description', 'sku', 'gtin', 'brand'];
@@ -160,15 +160,15 @@
                                             $placeholder = '{'.'{ '.$chipKey.' }'.'}';
                                         @endphp
                                         <button type="button"
-                                                class="inline-flex items-center rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:border-indigo-300 hover:text-indigo-600"
+                                                class="inline-flex items-center rounded-full border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-zinc-300 hover:border-amber-300 dark:hover:border-amber-500/50 hover:text-amber-600 dark:hover:text-amber-400"
                                                 x-on:click.prevent="insertPlaceholder('{{ $placeholder }}')">
                                             {{ $label }}
                                         </button>
                                     @endforeach
                                 </div>
                             </div>
-                            <textarea id="template-prompt" x-ref="promptField" wire:model.defer="form.prompt" rows="6" class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"></textarea>
-                            @error('form.prompt') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+                            <textarea id="template-prompt" x-ref="promptField" wire:model.defer="form.prompt" rows="6" class="mt-1 w-full rounded-xl border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-800/50 text-gray-900 dark:text-zinc-100 shadow-sm focus:border-amber-500 dark:focus:border-amber-500 focus:ring-amber-500/20"></textarea>
+                            @error('form.prompt') <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ $message }}</p> @enderror
                         </div>
 
                         <div class="flex flex-wrap items-center gap-3">
@@ -182,7 +182,7 @@
                     </form>
                 </div>
             @else
-                <div class="rounded-lg border border-dashed border-gray-300 bg-gray-50 px-5 py-6 text-sm text-gray-600">
+                <div class="rounded-xl border border-dashed border-gray-300 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-800/30 px-5 py-6 text-sm text-gray-600 dark:text-zinc-300">
                     Select a template to edit or create a new one. The form will appear here.
                 </div>
             @endif
