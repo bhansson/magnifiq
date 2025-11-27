@@ -149,9 +149,7 @@ class GeneratePhotoStudioImage implements ShouldQueue
      */
     private function buildGenerationMessages(string $prompt, ?string $imageUrl): array
     {
-        $systemPrompt = <<<'PROMPT'
-You are a senior CGI artist who specialises in photorealistic product renders. Generate exactly one high-resolution marketing image using the supplied prompt and reference photo.
-PROMPT;
+        $systemPrompt = config('photo-studio.prompts.generation.system');
 
         $userContent = [
             new TextContentData(

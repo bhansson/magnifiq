@@ -10,6 +10,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -194,7 +195,13 @@ class PhotoStudio extends Component
 
             $messages = $this->buildMessages($imageUrl, $product);
 
-            $model = config('services.photo_studio.model', 'openai/gpt-4.1');
+            $model = config('photo-studio.models.vision');
+
+            if (! $model) {
+                throw new RuntimeException(
+                    'Photo Studio vision model is not configured. Set OPENROUTER_PHOTO_STUDIO_MODEL in your environment.'
+                );
+            }
 
             $chatData = new ChatData(
                 messages: $messages,
@@ -215,11 +222,18 @@ class PhotoStudio extends Component
         } catch (ValidationException $exception) {
             throw $exception;
         } catch (Throwable $exception) {
-            Log::error('Photo Studio prompt extraction failed', [
+            $context = [
                 'user_id' => Auth::id(),
                 'product_id' => $this->productId,
                 'exception' => $exception,
-            ]);
+            ];
+
+            // Extract full API response body from Guzzle exceptions
+            if ($exception instanceof \GuzzleHttp\Exception\ClientException) {
+                $context['response_body'] = (string) $exception->getResponse()?->getBody();
+            }
+
+            Log::error('Photo Studio prompt extraction failed', $context);
 
             $this->errorMessage = 'Unable to extract a prompt right now. Please try again in a moment.';
         } finally {
@@ -247,7 +261,7 @@ class PhotoStudio extends Component
 
         $this->validate();
 
-        $disk = config('services.photo_studio.generation_disk', 's3');
+        $disk = config('photo-studio.generation_disk', 's3');
         $availableDisks = config('filesystems.disks', []);
 
         if (! array_key_exists($disk, $availableDisks)) {
@@ -281,7 +295,13 @@ class PhotoStudio extends Component
                     : $product?->image_link;
             }
 
-            $model = config('services.photo_studio.image_model', 'google/gemini-2.5-flash-image');
+            $model = config('photo-studio.models.image_generation');
+
+            if (! $model) {
+                $this->errorMessage = 'Photo Studio image model is not configured. Set OPENROUTER_PHOTO_STUDIO_IMAGE_MODEL in your environment.';
+
+                return;
+            }
 
             $this->resetGenerationPreview();
 
@@ -511,8 +531,15 @@ class PhotoStudio extends Component
             return;
         }
 
-        $disk = config('services.photo_studio.generation_disk', 's3');
-        $model = config('services.photo_studio.image_model', 'google/gemini-2.5-flash-image');
+        $disk = config('photo-studio.generation_disk', 's3');
+        $model = config('photo-studio.models.image_generation');
+
+        if (! $model) {
+            $this->editSubmitting = false;
+            $this->addError('editInstruction', 'Photo Studio image model is not configured. Set OPENROUTER_PHOTO_STUDIO_IMAGE_MODEL in your environment.');
+
+            return;
+        }
 
         try {
             // Establish baseline generation ID for polling
@@ -523,7 +550,12 @@ class PhotoStudio extends Component
 
             $imageUrl = Storage::disk($parentGeneration->storage_disk)->url($parentGeneration->storage_path);
 
-            $newPrompt = $parentGeneration->prompt."\n\nModification requested: ".$this->editInstruction;
+            $editTemplate = config('photo-studio.prompts.edit_template', "{original_prompt}\n\nModification requested: {instruction}");
+            $newPrompt = str_replace(
+                ['{original_prompt}', '{instruction}'],
+                [$parentGeneration->prompt, $this->editInstruction],
+                $editTemplate
+            );
 
             $jobRecord = ProductAiJob::create([
                 'team_id' => $team->id,
@@ -636,7 +668,97 @@ class PhotoStudio extends Component
             ]);
         }
 
-        return [$product->image_link, $product];
+        // Fetch and convert external image to ensure compatibility with AI vision APIs
+        $imageDataUri = $this->fetchAndConvertExternalImage($product->image_link);
+
+        return [$imageDataUri, $product];
+    }
+
+    /**
+     * Fetch an external image and convert to JPEG data URI if needed.
+     *
+     * AI vision APIs typically only support JPEG, PNG, GIF, and WebP.
+     * Formats like AVIF need to be converted.
+     */
+    private function fetchAndConvertExternalImage(string $url): string
+    {
+        $response = Http::timeout(30)->get($url);
+
+        if ($response->failed()) {
+            throw new RuntimeException('Failed to fetch the product image from: '.$url);
+        }
+
+        $binary = $response->body();
+        $contentType = $response->header('Content-Type') ?? $this->detectMimeFromBinary($binary);
+
+        // Supported formats that don't need conversion
+        $supportedFormats = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+
+        if (in_array($contentType, $supportedFormats, true)) {
+            return 'data:'.$contentType.';base64,'.base64_encode($binary);
+        }
+
+        // Convert unsupported formats (AVIF, HEIC, BMP, etc.) to JPEG
+        return $this->convertImageToJpegDataUri($binary);
+    }
+
+    /**
+     * Convert any image binary to JPEG data URI.
+     */
+    private function convertImageToJpegDataUri(string $binary): string
+    {
+        if (! function_exists('imagecreatefromstring')) {
+            throw new RuntimeException('GD extension is required to convert image formats.');
+        }
+
+        $image = @imagecreatefromstring($binary);
+
+        if ($image === false) {
+            throw new RuntimeException('Unable to process the product image format.');
+        }
+
+        $width = imagesx($image);
+        $height = imagesy($image);
+
+        // Create a new true color image with white background (for transparency)
+        $canvas = imagecreatetruecolor($width, $height);
+        $white = imagecolorallocate($canvas, 255, 255, 255);
+        imagefilledrectangle($canvas, 0, 0, $width, $height, $white);
+        imagecopy($canvas, $image, 0, 0, 0, 0, $width, $height);
+
+        ob_start();
+        imagejpeg($canvas, null, 90);
+        $jpegBinary = ob_get_clean();
+
+        imagedestroy($image);
+        imagedestroy($canvas);
+
+        if ($jpegBinary === false) {
+            throw new RuntimeException('Failed to convert image to JPEG format.');
+        }
+
+        return 'data:image/jpeg;base64,'.base64_encode($jpegBinary);
+    }
+
+    /**
+     * Detect MIME type from binary content.
+     */
+    private function detectMimeFromBinary(string $binary): ?string
+    {
+        if (! function_exists('finfo_open')) {
+            return null;
+        }
+
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+
+        if ($finfo === false) {
+            return null;
+        }
+
+        $mime = finfo_buffer($finfo, $binary) ?: null;
+        finfo_close($finfo);
+
+        return $mime;
     }
 
     private function encodeUploadedImage(UploadedFile $file): string
@@ -649,7 +771,15 @@ class PhotoStudio extends Component
 
         $mime = $file->getMimeType() ?: 'image/png';
 
-        return 'data:'.$mime.';base64,'.base64_encode($contents);
+        // Supported formats that don't need conversion
+        $supportedFormats = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+
+        if (in_array($mime, $supportedFormats, true)) {
+            return 'data:'.$mime.';base64,'.base64_encode($contents);
+        }
+
+        // Convert unsupported formats (AVIF, HEIC, BMP, etc.) to JPEG
+        return $this->convertImageToJpegDataUri($contents);
     }
 
     /**
@@ -657,9 +787,8 @@ class PhotoStudio extends Component
      */
     private function buildMessages(string $imageUrl, ?Product $product): array
     {
-        $systemPrompt = <<<'PROMPT'
-You are an expert visual art director and product photographer. The response must be plain text no longer than 300 words. ONLY output the prompt text, no titles, pre text or comments, nothing else.
-PROMPT;
+        $systemPrompt = config('photo-studio.prompts.extraction.system');
+        $userText = config('photo-studio.prompts.extraction.user');
 
         $details = $product ? sprintf(
             "Product name: %s\nBrand: %s\nSKU: %s",
@@ -667,16 +796,6 @@ PROMPT;
             $product->brand ?: 'N/A',
             $product->sku ?: 'N/A',
         ) : 'Product metadata: not provided.';
-
-        $userText = <<<'TEXT'
-Analyze the product image to understand what kind of item it is, including its approximate size, materials,
-intended use, and emotional tone (e.g. sporty, safety-focused, luxury, tech, lifestyle, beauty, etc.).
-Based on that understanding, create one single, high-quality image generation prompt where the same product
-(referred to as “the reference product”) appears naturally and fittingly in a relevant environment, lighting
-condition, and visual style that reflect its real-world context. Do not mention or describe brand names, logos,
-or label text. Keep the product clearly visible and central in the scene. Do not describe the product, only
-the environment to fit it.
-TEXT;
 
         $contentParts = [
             new TextContentData(

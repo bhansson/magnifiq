@@ -197,10 +197,10 @@ Key components:
 The application uses the `moe-mizrak/laravel-openrouter` package for AI provider access. Configure via:
 - `OPENROUTER_API_KEY` (required for AI features)
 - `OPENROUTER_MODEL` (default: `openrouter/auto`)
-- `OPENROUTER_PHOTO_STUDIO_MODEL` (vision model, default: `openai/gpt-4.1`)
-- `OPENROUTER_PHOTO_STUDIO_IMAGE_MODEL` (image gen model, default: `google/gemini-2.5-flash-image`)
+- `OPENROUTER_PHOTO_STUDIO_MODEL` (vision model for prompt extraction, **required** for Photo Studio)
+- `OPENROUTER_PHOTO_STUDIO_IMAGE_MODEL` (image generation model, **required** for Photo Studio)
 
-The system gracefully degrades when API keys are missing—UI displays error messages rather than failing silently.
+**Important:** Photo Studio models have no defaults—the application will raise an error if these environment variables are not set. This ensures explicit model selection rather than silent fallbacks.
 
 ### Database and Migrations
 
@@ -249,8 +249,8 @@ Key variables beyond standard Laravel config:
 **OpenRouter Configuration:**
 - `OPENROUTER_API_KEY`: Required for all AI features (required)
 - `OPENROUTER_MODEL`: Default model for product AI templates (default: `openrouter/auto`)
-- `OPENROUTER_PHOTO_STUDIO_MODEL`: Vision model for prompt extraction (default: `openai/gpt-4.1`)
-- `OPENROUTER_PHOTO_STUDIO_IMAGE_MODEL`: Image generation model (default: `google/gemini-2.5-flash-image`)
+- `OPENROUTER_PHOTO_STUDIO_MODEL`: Vision model for prompt extraction (**required** for Photo Studio, no default)
+- `OPENROUTER_PHOTO_STUDIO_IMAGE_MODEL`: Image generation model (**required** for Photo Studio, no default)
 - `OPENROUTER_API_ENDPOINT`: Custom API endpoint if needed (optional)
 - `OPENROUTER_API_TITLE`: App title for OpenRouter tracking (optional)
 - `OPENROUTER_API_REFERER`: Referer header for OpenRouter (optional)
@@ -306,6 +306,7 @@ Frontend assets are in `resources/js/app.js` and `resources/css/app.css`. Livewi
 - Livewire components:
   - Class names: PascalCase (e.g., `ManageProductFeeds`)
   - Blade views: kebab-case under `resources/views/livewire/` (e.g., `manage-product-feeds.blade.php`)
+- Nested ternary operator should not be used (maintainability issues)
 
 ### Code Quality Tools
 
