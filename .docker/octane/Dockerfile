@@ -28,12 +28,14 @@ RUN apt-get update \
         libfreetype6-dev \
         libonig-dev \
         libxml2-dev \
+        libavif-dev \
+        libwebp-dev \
         ca-certificates \
         procps \
     && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
     && apt-get install --no-install-recommends --yes nodejs \
     && docker-php-ext-configure zip \
-    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg --with-avif --with-webp \
     && docker-php-ext-install \
         bcmath \
         pcntl \

@@ -37,7 +37,9 @@ class PhotoStudioTest extends TestCase
     public function test_user_can_extract_prompt_using_product_image(): void
     {
         config()->set('laravel-openrouter.api_key', 'test-key');
-        config()->set('services.photo_studio.model', 'openai/gpt-4.1');
+        config()->set('photo-studio.models.vision', 'openai/gpt-4.1');
+
+        $this->fakeProductImageFetch();
 
         $user = User::factory()->withPersonalTeam()->create();
         $team = $user->currentTeam;
@@ -54,7 +56,7 @@ class PhotoStudioTest extends TestCase
                 'brand' => 'Acme',
             ]);
 
-        $this->fakeOpenRouter(function ($chatData) use ($product) {
+        $this->fakeOpenRouter(function ($chatData) {
             $this->assertInstanceOf(ChatData::class, $chatData);
             $this->assertSame('openai/gpt-4.1', $chatData->model);
 
@@ -65,7 +67,8 @@ class PhotoStudioTest extends TestCase
                 ->first(fn ($part) => $part instanceof ImageContentPartData);
 
             $this->assertNotNull($imagePart, 'Image payload missing from message.');
-            $this->assertSame($product->image_link, $imagePart->image_url->url);
+            // Image is now fetched and converted to data URI
+            $this->assertStringStartsWith('data:image/', $imagePart->image_url->url);
 
             return [
                 'id' => 'photo-studio-test',
@@ -90,9 +93,10 @@ class PhotoStudioTest extends TestCase
     public function test_user_can_generate_image_and_queue_job(): void
     {
         config()->set('laravel-openrouter.api_key', 'test-key');
-        config()->set('services.photo_studio.image_model', 'google/gemini-2.5-flash-image');
-        config()->set('services.photo_studio.generation_disk', 's3');
+        config()->set('photo-studio.models.image_generation', 'google/gemini-2.5-flash-image');
+        config()->set('photo-studio.generation_disk', 's3');
 
+        $this->fakeProductImageFetch();
         Queue::fake();
 
         $user = User::factory()->withPersonalTeam()->create();
@@ -140,9 +144,10 @@ class PhotoStudioTest extends TestCase
     public function test_generate_image_uses_existing_generations_as_baseline(): void
     {
         config()->set('laravel-openrouter.api_key', 'test-key');
-        config()->set('services.photo_studio.image_model', 'google/gemini-2.5-flash-image');
-        config()->set('services.photo_studio.generation_disk', 's3');
+        config()->set('photo-studio.models.image_generation', 'google/gemini-2.5-flash-image');
+        config()->set('photo-studio.generation_disk', 's3');
 
+        $this->fakeProductImageFetch();
         Queue::fake();
 
         $user = User::factory()->withPersonalTeam()->create();
@@ -185,8 +190,8 @@ class PhotoStudioTest extends TestCase
     public function test_user_can_generate_image_with_prompt_only(): void
     {
         config()->set('laravel-openrouter.api_key', 'test-key');
-        config()->set('services.photo_studio.image_model', 'google/gemini-2.5-flash-image');
-        config()->set('services.photo_studio.generation_disk', 's3');
+        config()->set('photo-studio.models.image_generation', 'google/gemini-2.5-flash-image');
+        config()->set('photo-studio.generation_disk', 's3');
 
         Queue::fake();
 
@@ -516,7 +521,7 @@ class PhotoStudioTest extends TestCase
 
     public function test_generate_photo_studio_image_job_persists_output(): void
     {
-        config()->set('services.photo_studio.generation_disk', 's3');
+        config()->set('photo-studio.generation_disk', 's3');
 
         Storage::fake('s3');
 
@@ -589,7 +594,7 @@ class PhotoStudioTest extends TestCase
 
     public function test_generate_photo_studio_image_job_handles_attachment_pointers(): void
     {
-        config()->set('services.photo_studio.generation_disk', 's3');
+        config()->set('photo-studio.generation_disk', 's3');
 
         Storage::fake('s3');
 
@@ -657,7 +662,7 @@ class PhotoStudioTest extends TestCase
 
     public function test_generate_photo_studio_image_job_handles_inline_image_payload(): void
     {
-        config()->set('services.photo_studio.generation_disk', 's3');
+        config()->set('photo-studio.generation_disk', 's3');
 
         Storage::fake('s3');
 
@@ -719,7 +724,7 @@ class PhotoStudioTest extends TestCase
 
     public function test_generate_photo_studio_image_job_handles_message_image_urls(): void
     {
-        config()->set('services.photo_studio.generation_disk', 's3');
+        config()->set('photo-studio.generation_disk', 's3');
 
         Storage::fake('s3');
 
@@ -781,7 +786,7 @@ class PhotoStudioTest extends TestCase
 
     public function test_generate_photo_studio_image_job_fetches_openrouter_file_with_headers(): void
     {
-        config()->set('services.photo_studio.generation_disk', 's3');
+        config()->set('photo-studio.generation_disk', 's3');
         config()->set('laravel-openrouter.api_key', 'test-key');
         config()->set('laravel-openrouter.referer', 'https://example.com/app');
         config()->set('laravel-openrouter.title', 'Magnifiq Test');
@@ -1026,5 +1031,17 @@ class PhotoStudioTest extends TestCase
     private function testImageDataUri(): string
     {
         return 'data:'.$this->testImageMime().';base64,'.$this->testImageBase64();
+    }
+
+    /**
+     * Fake HTTP responses for product image URLs used in tests.
+     */
+    private function fakeProductImageFetch(): void
+    {
+        Http::fake([
+            'cdn.example.com/*' => Http::response($this->testImageBinary(), 200, [
+                'Content-Type' => $this->testImageMime(),
+            ]),
+        ]);
     }
 }
