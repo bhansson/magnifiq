@@ -729,6 +729,7 @@
         </div>
     </div>
 
+    @teleport('body')
     <div
         x-cloak
         x-show="overlayOpen"
@@ -955,9 +956,11 @@
             </div>
         </div>
     </div>
+    @endteleport
 
     {{-- Edit Modal --}}
     @if ($showEditModal)
+        @teleport('body')
         <div
             x-data="{
                 show: true,
@@ -1176,5 +1179,6 @@
             </div>
         </div>
         </div>
+        @endteleport
     @endif
 </div>
