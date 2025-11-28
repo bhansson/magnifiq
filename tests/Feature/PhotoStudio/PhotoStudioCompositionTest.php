@@ -46,7 +46,7 @@ class PhotoStudioCompositionTest extends TestCase
         Livewire::test(PhotoStudio::class)
             ->set('activeTab', 'composition')
             ->assertSee('Choose composition style')
-            ->assertSee('Products Together')
+            ->assertSee('Product Group Image')
             ->assertSee('Blend & Collage')
             ->assertSee('Reference + Hero');
     }
@@ -263,7 +263,7 @@ class PhotoStudioCompositionTest extends TestCase
 
         $this->assertTrue($generation->isComposition());
         $this->assertEquals(2, $generation->getCompositionImageCount());
-        $this->assertEquals('Products Together', $generation->getCompositionModeLabel());
+        $this->assertEquals('Product Group Image', $generation->getCompositionModeLabel());
 
         // Non-composition generation should return false
         $singleGeneration = PhotoStudioGeneration::factory()->create([
@@ -292,6 +292,6 @@ class PhotoStudioCompositionTest extends TestCase
         ]);
 
         Livewire::test(PhotoStudio::class)
-            ->assertSee('Products Together');
+            ->assertSee('Product Group Image');
     }
 }
