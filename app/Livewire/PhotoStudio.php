@@ -134,6 +134,17 @@ class PhotoStudio extends Component
 
     public ?int $editNewGenerationId = null;
 
+    /**
+     * Selected aspect ratio for image generation.
+     * 'match_input' will auto-detect from the input image.
+     */
+    public string $aspectRatio = 'match_input';
+
+    /**
+     * Detected aspect ratio from the input image (when aspectRatio is 'match_input').
+     */
+    public ?string $detectedAspectRatio = null;
+
     public function mount(): void
     {
         $team = Auth::user()?->currentTeam;
@@ -171,6 +182,7 @@ class PhotoStudio extends Component
         $this->resetGenerationPreview();
         $this->syncSelectedProductPreview();
         $this->refreshProductGallery();
+        $this->updateDetectedAspectRatio();
     }
 
     public function updatedProductSearch(): void
@@ -188,6 +200,7 @@ class PhotoStudio extends Component
         $this->resetGenerationPreview();
         $this->productImagePreview = null;
         $this->refreshProductGallery();
+        $this->updateDetectedAspectRatio();
     }
 
     public function updatedGallerySearch(): void
@@ -349,6 +362,8 @@ class PhotoStudio extends Component
 
             $this->resetGenerationPreview();
 
+            $effectiveAspectRatio = $this->resolveEffectiveAspectRatio($imageInput);
+
             $jobRecord = ProductAiJob::create([
                 'team_id' => $team->id,
                 'product_id' => $product?->id,
@@ -363,6 +378,7 @@ class PhotoStudio extends Component
                     'source_reference' => $sourceReference,
                     'prompt' => $this->promptResult,
                     'model' => $model,
+                    'aspect_ratio' => $effectiveAspectRatio,
                 ]),
             ]);
 
@@ -377,6 +393,7 @@ class PhotoStudio extends Component
                 imageInput: $imageInput,
                 sourceType: $sourceType,
                 sourceReference: $sourceReference,
+                aspectRatio: $effectiveAspectRatio,
             );
 
             $this->pendingGenerationBaselineId = $previousGenerationId ?? 0;
@@ -620,6 +637,12 @@ class PhotoStudio extends Component
                 ]),
             ]);
 
+            // Preserve aspect ratio from parent generation if available, otherwise detect from image
+            $editAspectRatio = $this->detectAspectRatioFromDimensions(
+                $parentGeneration->image_width,
+                $parentGeneration->image_height
+            );
+
             GeneratePhotoStudioImage::dispatch(
                 productAiJobId: $jobRecord->id,
                 teamId: $team->id,
@@ -633,6 +656,7 @@ class PhotoStudio extends Component
                 sourceReference: $parentGeneration->storage_path,
                 parentId: $parentGeneration->id,
                 editInstruction: $this->editInstruction,
+                aspectRatio: $editAspectRatio,
             );
 
             $this->editSubmitting = false;
@@ -988,6 +1012,10 @@ class PhotoStudio extends Component
                 ]),
             ]);
 
+            // For compositions, use the hero/first image's aspect ratio
+            $heroImageIndex = $this->compositionMode === 'reference_hero' ? $this->compositionHeroIndex : 0;
+            $compositionAspectRatio = $this->resolveEffectiveAspectRatio($imageDataUris[$heroImageIndex] ?? null);
+
             GeneratePhotoStudioImage::dispatch(
                 productAiJobId: $jobRecord->id,
                 teamId: $team->id,
@@ -1003,6 +1031,7 @@ class PhotoStudio extends Component
                 editInstruction: null,
                 compositionMode: $this->compositionMode,
                 sourceReferences: $sourceReferences,
+                aspectRatio: $compositionAspectRatio,
             );
 
             $this->pendingGenerationBaselineId = $previousGenerationId ?? 0;
@@ -1178,7 +1207,8 @@ class PhotoStudio extends Component
      * Fetch an external image and convert to JPEG data URI if needed.
      *
      * AI vision APIs typically only support JPEG, PNG, GIF, and WebP.
-     * Formats like AVIF need to be converted.
+     * Formats like AVIF need to be converted. All images are resized
+     * if they exceed the configured max input dimension.
      */
     private function fetchAndConvertExternalImage(string $url): string
     {
@@ -1195,15 +1225,21 @@ class PhotoStudio extends Component
         $supportedFormats = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 
         if (in_array($contentType, $supportedFormats, true)) {
+            // Resize if needed while preserving format
+            $binary = $this->resizeImageIfNeeded($binary);
+
+            // Re-detect MIME after potential resize
+            $contentType = $this->detectMimeFromBinary($binary) ?: $contentType;
+
             return 'data:'.$contentType.';base64,'.base64_encode($binary);
         }
 
-        // Convert unsupported formats (AVIF, HEIC, BMP, etc.) to JPEG
+        // Convert unsupported formats (AVIF, HEIC, BMP, etc.) to JPEG (includes resize)
         return $this->convertImageToJpegDataUri($binary);
     }
 
     /**
-     * Convert any image binary to JPEG data URI.
+     * Convert any image binary to JPEG data URI, resizing if needed.
      */
     private function convertImageToJpegDataUri(string $binary): string
     {
@@ -1220,14 +1256,32 @@ class PhotoStudio extends Component
         $width = imagesx($image);
         $height = imagesy($image);
 
+        // Resize if exceeds max dimension
+        [$newWidth, $newHeight, $needsResize] = $this->calculateResizeDimensions($width, $height);
+
+        if ($needsResize) {
+            $resized = imagescale($image, $newWidth, $newHeight, IMG_BICUBIC);
+            imagedestroy($image);
+
+            if ($resized === false) {
+                throw new RuntimeException('Failed to resize the image.');
+            }
+
+            $image = $resized;
+            $width = $newWidth;
+            $height = $newHeight;
+        }
+
         // Create a new true color image with white background (for transparency)
         $canvas = imagecreatetruecolor($width, $height);
         $white = imagecolorallocate($canvas, 255, 255, 255);
         imagefilledrectangle($canvas, 0, 0, $width, $height, $white);
         imagecopy($canvas, $image, 0, 0, 0, 0, $width, $height);
 
+        $jpegQuality = (int) config('photo-studio.input.jpeg_quality', 90);
+
         ob_start();
-        imagejpeg($canvas, null, 90);
+        imagejpeg($canvas, null, $jpegQuality);
         $jpegBinary = ob_get_clean();
 
         imagedestroy($image);
@@ -1238,6 +1292,108 @@ class PhotoStudio extends Component
         }
 
         return 'data:image/jpeg;base64,'.base64_encode($jpegBinary);
+    }
+
+    /**
+     * Calculate new dimensions if image exceeds max input dimension.
+     *
+     * @return array{0: int, 1: int, 2: bool} [newWidth, newHeight, needsResize]
+     */
+    private function calculateResizeDimensions(int $width, int $height): array
+    {
+        $maxDimension = config('photo-studio.input.max_dimension');
+
+        if ($maxDimension === null || $maxDimension <= 0) {
+            return [$width, $height, false];
+        }
+
+        $maxDimension = (int) $maxDimension;
+
+        // Check if resize is needed
+        if ($width <= $maxDimension && $height <= $maxDimension) {
+            return [$width, $height, false];
+        }
+
+        // Scale proportionally based on the longest edge
+        if ($width >= $height) {
+            $newWidth = $maxDimension;
+            $newHeight = (int) round($height * ($maxDimension / $width));
+        } else {
+            $newHeight = $maxDimension;
+            $newWidth = (int) round($width * ($maxDimension / $height));
+        }
+
+        return [$newWidth, $newHeight, true];
+    }
+
+    /**
+     * Resize image binary if it exceeds max input dimension, preserving format.
+     *
+     * Returns the original binary if no resize is needed or if GD is unavailable.
+     */
+    private function resizeImageIfNeeded(string $binary): string
+    {
+        $maxDimension = config('photo-studio.input.max_dimension');
+
+        if ($maxDimension === null || $maxDimension <= 0) {
+            return $binary;
+        }
+
+        if (! function_exists('imagecreatefromstring') || ! function_exists('getimagesizefromstring')) {
+            return $binary;
+        }
+
+        $size = @getimagesizefromstring($binary);
+
+        if ($size === false || ! isset($size[0], $size[1])) {
+            return $binary;
+        }
+
+        $width = $size[0];
+        $height = $size[1];
+
+        [$newWidth, $newHeight, $needsResize] = $this->calculateResizeDimensions($width, $height);
+
+        if (! $needsResize) {
+            return $binary;
+        }
+
+        $image = @imagecreatefromstring($binary);
+
+        if ($image === false) {
+            return $binary;
+        }
+
+        $resized = imagescale($image, $newWidth, $newHeight, IMG_BICUBIC);
+        imagedestroy($image);
+
+        if ($resized === false) {
+            return $binary;
+        }
+
+        // Output in original format based on detected type
+        $imageType = $size[2] ?? IMAGETYPE_PNG;
+
+        $jpegQuality = (int) config('photo-studio.input.jpeg_quality', 90);
+        $webpQuality = (int) config('photo-studio.input.webp_quality', 90);
+        $pngCompression = (int) config('photo-studio.input.png_compression', 6);
+
+        ob_start();
+        $success = match ($imageType) {
+            IMAGETYPE_JPEG => imagejpeg($resized, null, $jpegQuality),
+            IMAGETYPE_GIF => imagegif($resized),
+            IMAGETYPE_WEBP => imagewebp($resized, null, $webpQuality),
+            default => imagepng($resized, null, $pngCompression),
+        };
+        $output = ob_get_clean();
+
+        imagedestroy($resized);
+
+        if (! $success || $output === false) {
+            return $binary;
+        }
+
+        return $output;
     }
 
     /**
@@ -1275,10 +1431,16 @@ class PhotoStudio extends Component
         $supportedFormats = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 
         if (in_array($mime, $supportedFormats, true)) {
+            // Resize if needed while preserving format
+            $contents = $this->resizeImageIfNeeded($contents);
+
+            // Re-detect MIME after potential resize
+            $mime = $this->detectMimeFromBinary($contents) ?: $mime;
+
             return 'data:'.$mime.';base64,'.base64_encode($contents);
         }
 
-        // Convert unsupported formats (AVIF, HEIC, BMP, etc.) to JPEG
+        // Convert unsupported formats (AVIF, HEIC, BMP, etc.) to JPEG (includes resize)
         return $this->convertImageToJpegDataUri($contents);
     }
 
@@ -1586,6 +1748,153 @@ class PhotoStudio extends Component
                     'image_link' => $selectedProduct->image_link,
                 ];
             }
+        }
+    }
+
+    /**
+     * Resolve the effective aspect ratio to use for generation.
+     *
+     * If 'match_input' is selected, detect from the input image.
+     * Otherwise, use the explicitly selected ratio.
+     */
+    private function resolveEffectiveAspectRatio(?string $imageDataUri): ?string
+    {
+        if ($this->aspectRatio !== 'match_input') {
+            return $this->aspectRatio;
+        }
+
+        if (! $imageDataUri) {
+            return null;
+        }
+
+        return $this->detectAspectRatioFromDataUri($imageDataUri);
+    }
+
+    /**
+     * Detect the aspect ratio from an image data URI and map to the closest supported ratio.
+     */
+    private function detectAspectRatioFromDataUri(string $dataUri): ?string
+    {
+        // Extract binary from data URI
+        if (! preg_match('/^data:[^;]+;base64,(.+)$/', $dataUri, $matches)) {
+            return null;
+        }
+
+        $binary = base64_decode($matches[1], true);
+
+        if ($binary === false) {
+            return null;
+        }
+
+        return $this->detectAspectRatioFromBinary($binary);
+    }
+
+    /**
+     * Detect aspect ratio from image binary data.
+     */
+    private function detectAspectRatioFromBinary(string $binary): ?string
+    {
+        if (! function_exists('getimagesizefromstring')) {
+            return null;
+        }
+
+        $size = @getimagesizefromstring($binary);
+
+        if ($size === false || ! isset($size[0], $size[1]) || $size[0] === 0 || $size[1] === 0) {
+            return null;
+        }
+
+        return $this->mapToClosestAspectRatio($size[0], $size[1]);
+    }
+
+    /**
+     * Detect aspect ratio from known image dimensions.
+     */
+    private function detectAspectRatioFromDimensions(?int $width, ?int $height): ?string
+    {
+        if (! $width || ! $height) {
+            return null;
+        }
+
+        return $this->mapToClosestAspectRatio($width, $height);
+    }
+
+    /**
+     * Map image dimensions to the closest supported aspect ratio.
+     *
+     * Reads available ratios from config to adhere to DRY principle.
+     */
+    private function mapToClosestAspectRatio(int $width, int $height): string
+    {
+        $inputRatio = $width / $height;
+
+        // Build supported ratios from config, excluding 'match_input'
+        $availableRatios = config('photo-studio.aspect_ratios.available', []);
+        $supportedRatios = [];
+
+        foreach (array_keys($availableRatios) as $ratio) {
+            if ($ratio === 'match_input') {
+                continue;
+            }
+
+            // Parse ratio string (e.g., "16:9") to decimal
+            $parts = explode(':', $ratio);
+            if (count($parts) === 2 && is_numeric($parts[0]) && is_numeric($parts[1]) && (float) $parts[1] !== 0.0) {
+                $supportedRatios[$ratio] = (float) $parts[0] / (float) $parts[1];
+            }
+        }
+
+        // Fallback if config is empty
+        if (empty($supportedRatios)) {
+            return '1:1';
+        }
+
+        $closestRatio = array_key_first($supportedRatios);
+        $smallestDiff = PHP_FLOAT_MAX;
+
+        foreach ($supportedRatios as $ratio => $decimal) {
+            $diff = abs($inputRatio - $decimal);
+            if ($diff < $smallestDiff) {
+                $smallestDiff = $diff;
+                $closestRatio = $ratio;
+            }
+        }
+
+        return $closestRatio;
+    }
+
+    /**
+     * Update the detected aspect ratio preview when the image source changes.
+     */
+    public function updateDetectedAspectRatio(): void
+    {
+        $this->detectedAspectRatio = null;
+
+        if (! $this->hasImageSource()) {
+            return;
+        }
+
+        try {
+            if ($this->image instanceof TemporaryUploadedFile) {
+                $contents = file_get_contents($this->image->getRealPath());
+                if ($contents !== false) {
+                    $this->detectedAspectRatio = $this->detectAspectRatioFromBinary($contents);
+                }
+            } elseif ($this->productId) {
+                $teamId = Auth::user()?->currentTeam?->id;
+                $product = Product::query()
+                    ->where('team_id', $teamId)
+                    ->find($this->productId);
+
+                if ($product?->image_link) {
+                    $response = Http::timeout(10)->get($product->image_link);
+                    if ($response->successful()) {
+                        $this->detectedAspectRatio = $this->detectAspectRatioFromBinary($response->body());
+                    }
+                }
+            }
+        } catch (Throwable) {
+            // Silently ignore detection failures
         }
     }
 }

@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use MoeMizrak\LaravelOpenrouter\DTO\ChatData;
+use MoeMizrak\LaravelOpenrouter\DTO\ImageConfigData;
 use MoeMizrak\LaravelOpenrouter\DTO\ImageContentPartData;
 use MoeMizrak\LaravelOpenrouter\DTO\ImageUrlData;
 use MoeMizrak\LaravelOpenrouter\DTO\MessageData;
@@ -51,6 +52,7 @@ class GeneratePhotoStudioImage implements ShouldQueue
         public ?string $editInstruction = null,
         public ?string $compositionMode = null,
         public ?array $sourceReferences = null,
+        public ?string $aspectRatio = null,
     ) {
         //
     }
@@ -72,11 +74,17 @@ class GeneratePhotoStudioImage implements ShouldQueue
 
             $messages = $this->buildGenerationMessages($this->prompt, $this->imageInput);
 
+            $imageConfig = $this->aspectRatio ? new ImageConfigData(
+                aspect_ratio: $this->aspectRatio,
+            ) : null;
+
             $chatData = new ChatData(
                 messages: $messages,
                 model: $this->model,
                 temperature: 0.85,
                 max_tokens: 2048,
+                modalities: ['text', 'image'],
+                image_config: $imageConfig,
             );
 
             $response = LaravelOpenRouter::chatRequest($chatData)->toArray();

@@ -16,7 +16,7 @@
         "laravel/tinker": "^2.10.1",
         "league/flysystem-aws-s3-v3": "^3.0",
         "livewire/livewire": "^3.6.4",
-        "moe-mizrak/laravel-openrouter": "^2.3",
+        "moe-mizrak/laravel-openrouter": "^2.4",
         "symfony/mailgun-mailer": "^7.3"
     },
     "require-dev": {

@@ -5,3 +5,9 @@
 [x-cloak] {
     display: none;
 }
+
+/* Hide native search cancel button on inputs with custom icons */
+input[type="search"].search-icon-custom::-webkit-search-cancel-button {
+    -webkit-appearance: none;
+    appearance: none;
+}
