@@ -44,11 +44,13 @@ class GeneratePhotoStudioImage implements ShouldQueue
         public string $prompt,
         public string $model,
         public string $disk,
-        public ?string $imageInput,
+        public string|array|null $imageInput,
         public string $sourceType,
         public ?string $sourceReference = null,
         public ?int $parentId = null,
         public ?string $editInstruction = null,
+        public ?string $compositionMode = null,
+        public ?array $sourceReferences = null,
     ) {
         //
     }
@@ -104,6 +106,8 @@ class GeneratePhotoStudioImage implements ShouldQueue
                 'product_ai_job_id' => $jobRecord->id,
                 'source_type' => $this->sourceType,
                 'source_reference' => $this->sourceReference,
+                'composition_mode' => $this->compositionMode,
+                'source_references' => $this->sourceReferences,
                 'prompt' => $this->prompt,
                 'edit_instruction' => $this->editInstruction,
                 'model' => $this->model,
@@ -145,9 +149,10 @@ class GeneratePhotoStudioImage implements ShouldQueue
     }
 
     /**
+     * @param  string|array<int, string>|null  $imageUrls
      * @return MessageData[]
      */
-    private function buildGenerationMessages(string $prompt, ?string $imageUrl): array
+    private function buildGenerationMessages(string $prompt, string|array|null $imageUrls): array
     {
         $systemPrompt = config('photo-studio.prompts.generation.system');
 
@@ -158,7 +163,10 @@ class GeneratePhotoStudioImage implements ShouldQueue
             ),
         ];
 
-        if ($imageUrl) {
+        // Handle both single image (string) and multiple images (array)
+        $images = is_array($imageUrls) ? $imageUrls : ($imageUrls ? [$imageUrls] : []);
+
+        foreach ($images as $imageUrl) {
             $userContent[] = new ImageContentPartData(
                 type: ImageContentPartData::ALLOWED_TYPE,
                 image_url: new ImageUrlData(

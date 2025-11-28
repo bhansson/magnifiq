@@ -3,6 +3,75 @@
 return [
     /*
     |--------------------------------------------------------------------------
+    | Composition Mode Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Settings for the Composition feature that allows combining multiple
+    | product images and/or uploaded images into a single generation.
+    |
+    */
+    'composition' => [
+        'max_images' => env('PHOTO_STUDIO_COMPOSITION_MAX_IMAGES', 14),
+
+        'modes' => [
+            'products_together' => [
+                'label' => 'Products Together',
+                'description' => 'All products appear in one cohesive scene',
+                'icon' => 'user-group',
+                'example_hint' => 'Perfect for: outfit combinations, product bundles, room setups',
+                'example_image' => 'images/composition-examples/products-together.svg',
+            ],
+            'blend_collage' => [
+                'label' => 'Blend & Collage',
+                'description' => 'Extract visual elements and blend into artistic composition',
+                'icon' => 'squares-2x2',
+                'example_hint' => 'Perfect for: mood boards, artistic arrangements, abstract designs',
+                'example_image' => 'images/composition-examples/blend-collage.svg',
+            ],
+            'reference_hero' => [
+                'label' => 'Reference + Hero',
+                'description' => 'One primary product styled using other images as mood/style reference',
+                'icon' => 'star',
+                'example_hint' => 'Perfect for: style transfer, themed photoshoots, branded looks',
+                'example_image' => 'images/composition-examples/reference-hero.svg',
+            ],
+        ],
+
+        'extraction_prompts' => [
+            'products_together' => <<<'PROMPT'
+Analyze the provided product images to understand each item: its size, materials, intended use, and style.
+Create a unified scene prompt where ALL products naturally coexist in the same environment.
+Consider how these products would realistically be used or displayed together.
+Choose an environment, lighting, and composition that makes sense for the entire collection.
+Each product should be clearly visible and well-positioned relative to the others.
+Do not describe individual products in detail - focus on the scene, arrangement, and atmosphere.
+Output only the scene prompt, no explanations or commentary.
+PROMPT,
+
+            'blend_collage' => <<<'PROMPT'
+Analyze the visual elements, colors, textures, and aesthetic qualities of each provided image.
+Create an artistic composition prompt that blends and combines these visual elements.
+Think like a creative director crafting a mood board or artistic collage.
+Focus on color harmony, texture interplay, and visual flow between elements.
+The result should feel cohesive and intentional, not a random collection.
+Output only the composition prompt, no explanations or commentary.
+PROMPT,
+
+            'reference_hero' => <<<'PROMPT'
+The FIRST/STARRED image is the hero product that must be the central focus.
+The other images provide style, mood, and aesthetic reference ONLY.
+Analyze the reference images for: color palette, lighting style, atmosphere, and visual tone.
+Create a prompt that places the hero product in a scene inspired by the reference aesthetic.
+The hero product should be prominent and clearly visible.
+The scene styling (background, lighting, props) should reflect the mood of the reference images.
+Do not include the reference images' subjects in the final scene - only their style influence.
+Output only the scene prompt, no explanations or commentary.
+PROMPT,
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | AI Models
     |--------------------------------------------------------------------------
     |
