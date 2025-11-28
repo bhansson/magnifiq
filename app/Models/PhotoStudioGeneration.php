@@ -13,6 +13,13 @@ class PhotoStudioGeneration extends Model
     use SoftDeletes;
 
     /**
+     * Composition mode constants
+     */
+    public const MODE_PRODUCTS_TOGETHER = 'products_together';
+    public const MODE_BLEND_COLLAGE = 'blend_collage';
+    public const MODE_REFERENCE_HERO = 'reference_hero';
+
+    /**
      * @var array<int, string>
      */
     protected $fillable = [
@@ -22,6 +29,8 @@ class PhotoStudioGeneration extends Model
         'product_id',
         'source_type',
         'source_reference',
+        'composition_mode',
+        'source_references',
         'prompt',
         'edit_instruction',
         'model',
@@ -40,6 +49,7 @@ class PhotoStudioGeneration extends Model
      */
     protected $casts = [
         'response_metadata' => 'array',
+        'source_references' => 'array',
     ];
 
     public function team(): BelongsTo
@@ -129,5 +139,48 @@ class PhotoStudioGeneration extends Model
             'current' => $this,
             'descendants' => $this->descendants(),
         ];
+    }
+
+    /**
+     * Check if this generation was created using composition mode
+     */
+    public function isComposition(): bool
+    {
+        return $this->composition_mode !== null;
+    }
+
+    /**
+     * Get the number of images used in a composition
+     */
+    public function getCompositionImageCount(): int
+    {
+        return count($this->source_references ?? []);
+    }
+
+    /**
+     * Get all products used in a composition
+     *
+     * @return \Illuminate\Database\Eloquent\Collection<int, Product>
+     */
+    public function compositionProducts()
+    {
+        $productIds = collect($this->source_references ?? [])
+            ->where('type', 'product')
+            ->pluck('product_id')
+            ->filter();
+
+        return Product::whereIn('id', $productIds)->get();
+    }
+
+    /**
+     * Get human-readable composition mode label
+     */
+    public function getCompositionModeLabel(): ?string
+    {
+        if (! $this->composition_mode) {
+            return null;
+        }
+
+        return config("photo-studio.composition.modes.{$this->composition_mode}.label", $this->composition_mode);
     }
 }

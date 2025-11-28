@@ -88,6 +88,36 @@ class PhotoStudio extends Component
 
     public int $productResultsLimit = self::PRODUCT_SEARCH_LIMIT;
 
+    /**
+     * Active tab: 'upload', 'catalog', or 'composition'
+     */
+    public string $activeTab = 'upload';
+
+    /**
+     * Composition mode: 'products_together', 'blend_collage', or 'reference_hero'
+     */
+    public string $compositionMode = 'products_together';
+
+    /**
+     * Images added to the composition.
+     * Each entry: ['type' => 'product'|'upload', 'product_id' => ?int, 'title' => string, 'preview_url' => string, 'data_uri' => ?string]
+     *
+     * @var array<int, array<string, mixed>>
+     */
+    public array $compositionImages = [];
+
+    /**
+     * Index of the hero image for 'reference_hero' mode (0-based).
+     */
+    public int $compositionHeroIndex = 0;
+
+    /**
+     * Temporary uploaded files for composition (multi-file upload).
+     *
+     * @var array<int, TemporaryUploadedFile>
+     */
+    public array $compositionUploads = [];
+
     public ?int $editingGenerationId = null;
 
     public string $editInstruction = '';
@@ -167,6 +197,13 @@ class PhotoStudio extends Component
 
     public function extractPrompt(): void
     {
+        // Route to composition method if in composition tab
+        if ($this->activeTab === 'composition') {
+            $this->extractCompositionPrompt();
+
+            return;
+        }
+
         $this->resetErrorBag();
         $this->errorMessage = null;
         $this->promptResult = null;
@@ -243,6 +280,13 @@ class PhotoStudio extends Component
 
     public function generateImage(): void
     {
+        // Route to composition method if in composition tab
+        if ($this->activeTab === 'composition') {
+            $this->generateCompositionImage();
+
+            return;
+        }
+
         $this->resetErrorBag();
         $this->errorMessage = null;
         $this->generationStatus = null;
@@ -607,6 +651,462 @@ class PhotoStudio extends Component
             $this->editSubmitting = false;
             $this->addError('editInstruction', 'Unable to edit the image right now. Please try again in a moment.');
         }
+    }
+
+    /**
+     * Handle composition file uploads.
+     */
+    public function updatedCompositionUploads(): void
+    {
+        $maxImages = config('photo-studio.composition.max_images', 14);
+        $currentCount = count($this->compositionImages);
+
+        foreach ($this->compositionUploads as $file) {
+            if ($currentCount >= $maxImages) {
+                break;
+            }
+
+            if (! $file instanceof TemporaryUploadedFile) {
+                continue;
+            }
+
+            try {
+                $dataUri = $this->encodeUploadedImage($file);
+
+                $this->compositionImages[] = [
+                    'type' => 'upload',
+                    'product_id' => null,
+                    'title' => $file->getClientOriginalName() ?: 'Uploaded image',
+                    'preview_url' => $file->temporaryUrl(),
+                    'data_uri' => $dataUri,
+                    'source_reference' => $file->getClientOriginalName() ?: $file->getFilename(),
+                ];
+                $currentCount++;
+            } catch (Throwable $e) {
+                Log::warning('Failed to process composition upload', ['exception' => $e]);
+            }
+        }
+
+        // Clear temporary uploads after processing
+        $this->compositionUploads = [];
+        $this->promptResult = null;
+    }
+
+    /**
+     * Add a product to the composition.
+     */
+    public function addProductToComposition(int $productId): void
+    {
+        $maxImages = config('photo-studio.composition.max_images', 14);
+
+        if (count($this->compositionImages) >= $maxImages) {
+            return;
+        }
+
+        // Check if product is already in composition
+        foreach ($this->compositionImages as $img) {
+            if ($img['type'] === 'product' && $img['product_id'] === $productId) {
+                return;
+            }
+        }
+
+        $teamId = Auth::user()?->currentTeam?->id;
+
+        $product = Product::query()
+            ->where('team_id', $teamId)
+            ->find($productId, ['id', 'title', 'sku', 'brand', 'image_link']);
+
+        if (! $product || ! $product->image_link) {
+            return;
+        }
+
+        $this->compositionImages[] = [
+            'type' => 'product',
+            'product_id' => $product->id,
+            'title' => $product->title ?: 'Product #'.$product->id,
+            'preview_url' => $product->image_link,
+            'data_uri' => null, // Will be fetched during extraction
+            'source_reference' => $product->image_link,
+        ];
+
+        $this->promptResult = null;
+    }
+
+    /**
+     * Remove an image from the composition by index.
+     */
+    public function removeFromComposition(int $index): void
+    {
+        if (! isset($this->compositionImages[$index])) {
+            return;
+        }
+
+        array_splice($this->compositionImages, $index, 1);
+
+        // Adjust hero index if needed
+        if ($this->compositionHeroIndex >= count($this->compositionImages)) {
+            $this->compositionHeroIndex = max(0, count($this->compositionImages) - 1);
+        } elseif ($this->compositionHeroIndex > $index) {
+            $this->compositionHeroIndex--;
+        }
+
+        $this->promptResult = null;
+    }
+
+    /**
+     * Reorder composition images based on new order array.
+     *
+     * @param  array<int, int>  $order  Array of old indices in new order
+     */
+    public function reorderComposition(array $order): void
+    {
+        $newImages = [];
+        $oldHeroProductId = $this->compositionImages[$this->compositionHeroIndex]['product_id'] ?? null;
+        $oldHeroType = $this->compositionImages[$this->compositionHeroIndex]['type'] ?? null;
+        $oldHeroTitle = $this->compositionImages[$this->compositionHeroIndex]['title'] ?? null;
+
+        foreach ($order as $newIndex => $oldIndex) {
+            if (isset($this->compositionImages[$oldIndex])) {
+                $newImages[$newIndex] = $this->compositionImages[$oldIndex];
+            }
+        }
+
+        $this->compositionImages = array_values($newImages);
+
+        // Find the hero's new position
+        foreach ($this->compositionImages as $index => $img) {
+            if ($img['type'] === $oldHeroType && $img['product_id'] === $oldHeroProductId && $img['title'] === $oldHeroTitle) {
+                $this->compositionHeroIndex = $index;
+                break;
+            }
+        }
+
+        $this->promptResult = null;
+    }
+
+    /**
+     * Set the hero image for reference_hero mode.
+     */
+    public function setCompositionHero(int $index): void
+    {
+        if (isset($this->compositionImages[$index])) {
+            $this->compositionHeroIndex = $index;
+            $this->promptResult = null;
+        }
+    }
+
+    /**
+     * Clear all composition images.
+     */
+    public function clearComposition(): void
+    {
+        $this->compositionImages = [];
+        $this->compositionHeroIndex = 0;
+        $this->compositionUploads = [];
+        $this->promptResult = null;
+    }
+
+    /**
+     * Extract prompt for composition (multiple images).
+     */
+    public function extractCompositionPrompt(): void
+    {
+        $this->resetErrorBag();
+        $this->errorMessage = null;
+        $this->promptResult = null;
+        $this->resetGenerationPreview();
+
+        if (count($this->compositionImages) < 2) {
+            $this->errorMessage = 'Add at least 2 images to create a composition.';
+
+            return;
+        }
+
+        if (! config('laravel-openrouter.api_key')) {
+            $this->errorMessage = 'Configure an OpenRouter API key before extracting prompts.';
+
+            return;
+        }
+
+        $this->isProcessing = true;
+
+        try {
+            $imageDataUris = $this->resolveCompositionImageSources();
+
+            $messages = $this->buildCompositionMessages($imageDataUris);
+
+            $model = config('photo-studio.models.vision');
+
+            if (! $model) {
+                throw new RuntimeException(
+                    'Photo Studio vision model is not configured. Set OPENROUTER_PHOTO_STUDIO_MODEL in your environment.'
+                );
+            }
+
+            $chatData = new ChatData(
+                messages: $messages,
+                model: $model,
+                max_tokens: 700,
+                temperature: 0.4,
+            );
+
+            $response = LaravelOpenRouter::chatRequest($chatData);
+
+            $content = $this->extractResponseContent($response->toArray());
+
+            if ($content === '') {
+                throw new RuntimeException('Received an empty response from the AI provider.');
+            }
+
+            $this->promptResult = $content;
+        } catch (Throwable $exception) {
+            $context = [
+                'user_id' => Auth::id(),
+                'composition_mode' => $this->compositionMode,
+                'image_count' => count($this->compositionImages),
+                'exception' => $exception,
+            ];
+
+            if ($exception instanceof \GuzzleHttp\Exception\ClientException) {
+                $context['response_body'] = (string) $exception->getResponse()?->getBody();
+            }
+
+            Log::error('Photo Studio composition prompt extraction failed', $context);
+
+            $this->errorMessage = 'Unable to extract a prompt right now. Please try again in a moment.';
+        } finally {
+            $this->isProcessing = false;
+        }
+    }
+
+    /**
+     * Generate image from composition.
+     */
+    public function generateCompositionImage(): void
+    {
+        $this->resetErrorBag();
+        $this->errorMessage = null;
+        $this->generationStatus = null;
+
+        if (! config('laravel-openrouter.api_key')) {
+            $this->errorMessage = 'Configure an OpenRouter API key before generating images.';
+
+            return;
+        }
+
+        if (! $this->promptResult) {
+            $this->errorMessage = 'Prompt is missing. Extract a prompt first.';
+
+            return;
+        }
+
+        if (count($this->compositionImages) < 2) {
+            $this->errorMessage = 'Add at least 2 images to create a composition.';
+
+            return;
+        }
+
+        $disk = config('photo-studio.generation_disk', 's3');
+        $availableDisks = config('filesystems.disks', []);
+
+        if (! array_key_exists($disk, $availableDisks)) {
+            $this->errorMessage = 'The configured storage disk for Photo Studio is not available.';
+
+            return;
+        }
+
+        $team = Auth::user()?->currentTeam;
+
+        if (! $team) {
+            abort(403, 'Join or create a team to access the Photo Studio.');
+        }
+
+        try {
+            $previousGenerationId = PhotoStudioGeneration::query()
+                ->where('team_id', $team->id)
+                ->max('id');
+
+            $imageDataUris = $this->resolveCompositionImageSources();
+
+            // Reorder images for reference_hero mode (hero first)
+            if ($this->compositionMode === 'reference_hero' && $this->compositionHeroIndex > 0) {
+                $hero = $imageDataUris[$this->compositionHeroIndex];
+                unset($imageDataUris[$this->compositionHeroIndex]);
+                array_unshift($imageDataUris, $hero);
+
+                // Also reorder source_references
+                $heroImg = $this->compositionImages[$this->compositionHeroIndex];
+                $reorderedImages = $this->compositionImages;
+                unset($reorderedImages[$this->compositionHeroIndex]);
+                array_unshift($reorderedImages, $heroImg);
+            } else {
+                $reorderedImages = $this->compositionImages;
+            }
+
+            // Build source_references array for storage
+            $sourceReferences = collect($reorderedImages)->map(function ($img) {
+                return [
+                    'type' => $img['type'],
+                    'product_id' => $img['product_id'],
+                    'title' => $img['title'],
+                    'source_reference' => $img['source_reference'],
+                ];
+            })->values()->toArray();
+
+            $model = config('photo-studio.models.image_generation');
+
+            if (! $model) {
+                $this->errorMessage = 'Photo Studio image model is not configured. Set OPENROUTER_PHOTO_STUDIO_IMAGE_MODEL in your environment.';
+
+                return;
+            }
+
+            $this->resetGenerationPreview();
+
+            // Get first product ID for association (if any products in composition)
+            $firstProductId = collect($this->compositionImages)
+                ->where('type', 'product')
+                ->pluck('product_id')
+                ->first();
+
+            $jobRecord = ProductAiJob::create([
+                'team_id' => $team->id,
+                'product_id' => $firstProductId,
+                'sku' => $firstProductId ? Product::find($firstProductId)?->sku : null,
+                'product_ai_template_id' => null,
+                'job_type' => ProductAiJob::TYPE_PHOTO_STUDIO,
+                'status' => ProductAiJob::STATUS_QUEUED,
+                'progress' => 0,
+                'queued_at' => now(),
+                'meta' => array_filter([
+                    'source_type' => 'composition',
+                    'composition_mode' => $this->compositionMode,
+                    'image_count' => count($this->compositionImages),
+                    'source_references' => $sourceReferences,
+                    'prompt' => $this->promptResult,
+                    'model' => $model,
+                ]),
+            ]);
+
+            GeneratePhotoStudioImage::dispatch(
+                productAiJobId: $jobRecord->id,
+                teamId: $team->id,
+                userId: Auth::id(),
+                productId: $firstProductId,
+                prompt: $this->promptResult,
+                model: $model,
+                disk: $disk,
+                imageInput: $imageDataUris,
+                sourceType: 'composition',
+                sourceReference: null,
+                parentId: null,
+                editInstruction: null,
+                compositionMode: $this->compositionMode,
+                sourceReferences: $sourceReferences,
+            );
+
+            $this->pendingGenerationBaselineId = $previousGenerationId ?? 0;
+            $this->isAwaitingGeneration = true;
+            $this->pendingProductId = null; // Compositions may have multiple or no products
+            $this->generationStatus = 'Composition generation queued. Hang tight while we render your scene.';
+        } catch (Throwable $exception) {
+            Log::error('Photo Studio composition generation failed', [
+                'user_id' => Auth::id(),
+                'composition_mode' => $this->compositionMode,
+                'exception' => $exception,
+            ]);
+
+            $this->errorMessage = 'Unable to generate a composition image right now. Please try again in a moment.';
+        }
+    }
+
+    /**
+     * Resolve all composition images to data URIs.
+     *
+     * @return array<int, string>
+     */
+    private function resolveCompositionImageSources(): array
+    {
+        $dataUris = [];
+
+        foreach ($this->compositionImages as $img) {
+            // Use pre-fetched data_uri if available (for any type)
+            if (! empty($img['data_uri'])) {
+                $dataUris[] = $img['data_uri'];
+            } elseif ($img['type'] === 'product' && ! empty($img['preview_url'])) {
+                // Fetch and convert external product image
+                $dataUris[] = $this->fetchAndConvertExternalImage($img['preview_url']);
+            }
+        }
+
+        return $dataUris;
+    }
+
+    /**
+     * Build messages for composition prompt extraction.
+     *
+     * @param  array<int, string>  $imageDataUris
+     * @return MessageData[]
+     */
+    private function buildCompositionMessages(array $imageDataUris): array
+    {
+        $systemPrompt = config('photo-studio.prompts.extraction.system');
+        $modePrompt = config("photo-studio.composition.extraction_prompts.{$this->compositionMode}");
+
+        // Build product details for context
+        $productDetails = collect($this->compositionImages)
+            ->filter(fn($img) => $img['type'] === 'product' && $img['product_id'])
+            ->map(function ($img) {
+                $product = Product::find($img['product_id']);
+
+                return $product ? sprintf(
+                    '- %s (Brand: %s, SKU: %s)',
+                    $product->title ?: 'Untitled',
+                    $product->brand ?: 'N/A',
+                    $product->sku ?: 'N/A'
+                ) : null;
+            })
+            ->filter()
+            ->implode("\n");
+
+        $contextText = $modePrompt;
+
+        if ($productDetails) {
+            $contextText .= "\n\nProducts included:\n".$productDetails;
+        }
+
+        if ($this->creativeBrief !== '') {
+            $contextText .= "\n\nCreative direction from the user: ".$this->creativeBrief;
+        }
+
+        // Build content parts with multiple images
+        $contentParts = [
+            new TextContentData(
+                type: TextContentData::ALLOWED_TYPE,
+                text: $contextText
+            ),
+        ];
+
+        foreach ($imageDataUris as $index => $dataUri) {
+            $contentParts[] = new ImageContentPartData(
+                type: ImageContentPartData::ALLOWED_TYPE,
+                image_url: new ImageUrlData(
+                    url: $dataUri,
+                    detail: 'high'
+                )
+            );
+        }
+
+        return [
+            new MessageData(
+                role: 'system',
+                content: $systemPrompt
+            ),
+            new MessageData(
+                role: 'user',
+                content: array_values($contentParts)
+            ),
+        ];
     }
 
     public function render(): View
@@ -976,6 +1476,9 @@ class PhotoStudio extends Component
                     'ancestors' => $ancestors,
                     'descendants' => $descendants,
                     'has_history' => count($ancestors) > 0 || count($descendants) > 0,
+                    'composition_mode' => $generation->composition_mode,
+                    'composition_image_count' => $generation->getCompositionImageCount(),
+                    'source_references' => $generation->source_references,
                 ];
             })
             ->toArray();
