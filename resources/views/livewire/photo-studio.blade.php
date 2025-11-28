@@ -80,10 +80,10 @@
                                     id="photo-studio-gallery-search"
                                     wire:model.live.debounce.400ms="gallerySearch"
                                     placeholder="By prompt, title, or SKU..."
-                                    class="block w-full rounded-xl border border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-800/50 py-2 pl-3 pr-4 text-sm text-gray-900 dark:text-zinc-100 shadow-sm focus:border-amber-500 dark:focus:border-amber-500 focus:ring-amber-500/20"
+                                    class="search-icon-custom block w-full rounded-xl border border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-800/50 py-2 pl-3 pr-10 text-sm text-gray-900 dark:text-zinc-100 shadow-sm focus:border-amber-500 dark:focus:border-amber-500 focus:ring-amber-500/20"
                                 />
                                 <div class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-gray-400 dark:text-zinc-500">
-                                    <svg class="h-4.5 w-4.5" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                                    <svg class="size-[18px]" viewBox="0 0 20 20" fill="none" aria-hidden="true">
                                         <path d="m14.5 14.5 3 3" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
                                         <circle cx="9.5" cy="9" r="5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
                                     </svg>
@@ -458,14 +458,14 @@
                                     @input="handleInput()"
                                     @keydown.escape.stop="hideList()"
                                     placeholder="Search by title, SKU, or brand"
-                                    class="block w-full rounded-xl border border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-800/50 py-2 pl-3 pr-4 text-sm text-gray-900 dark:text-zinc-100 shadow-sm focus:border-amber-500 dark:focus:border-amber-500 focus:ring-amber-500/20"
+                                    class="search-icon-custom block w-full rounded-xl border border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-800/50 py-2 pl-3 pr-10 text-sm text-gray-900 dark:text-zinc-100 shadow-sm focus:border-amber-500 dark:focus:border-amber-500 focus:ring-amber-500/20"
                                     role="combobox"
                                     :aria-expanded="open.toString()"
                                     aria-controls="photo-studio-product-options"
                                     autocomplete="off"
                                 />
                                 <div class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-gray-400 dark:text-zinc-500">
-                                    <svg class="h-4.5 w-4.5" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                                    <svg class="size-[18px]" viewBox="0 0 20 20" fill="none" aria-hidden="true">
                                         <path d="m14.5 14.5 3 3" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
                                         <circle cx="9.5" cy="9" r="5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
                                     </svg>
@@ -512,7 +512,7 @@
                                                         </p>
                                                     </div>
                                                     <svg
-                                                        class="h-4.5 w-4.5 text-emerald-500 {{ $isSelected ? '' : 'hidden' }}"
+                                                        class="size-[18px] text-emerald-500 {{ $isSelected ? '' : 'hidden' }}"
                                                         :class="{ 'hidden': Number(selectedId) !== {{ $product['id'] }} }"
                                                         viewBox="0 0 20 20"
                                                         fill="none"
@@ -634,7 +634,7 @@
                                         @endif
                                         @if (!empty($modeConfig['example_image']))
                                             <div class="mt-3 overflow-hidden rounded-lg border border-gray-200 dark:border-zinc-700">
-                                                <img src="{{ asset($modeConfig['example_image']) }}" alt="{{ $modeConfig['label'] }} example" class="w-full h-20 object-cover" />
+                                                <img src="{{ asset($modeConfig['example_image']) }}" alt="{{ $modeConfig['label'] }} example" class="w-full h-28 object-cover" />
                                             </div>
                                         @endif
                                         <p class="mt-2 text-xs text-gray-400 dark:text-zinc-500 italic">{{ $modeConfig['example_hint'] }}</p>
@@ -911,6 +911,43 @@
                     <p class="mt-2 text-xs text-gray-500 dark:text-zinc-500">
                         This prompt is sent to the image model when you choose Generate image.
                     </p>
+
+                    @php
+                        $aspectRatios = config('photo-studio.aspect_ratios.available', []);
+                        $currentAspectRatio = $aspectRatio ?? 'match_input';
+                        $detectedRatioLabel = $detectedAspectRatio ? $aspectRatios[$detectedAspectRatio]['label'] ?? $detectedAspectRatio : null;
+                    @endphp
+
+                    <div class="mt-4">
+                        <label for="photo-studio-aspect-ratio" class="block text-sm font-medium text-gray-700 dark:text-zinc-300">
+                            Output aspect ratio
+                        </label>
+                        <div class="mt-1 flex items-center gap-3">
+                            <select
+                                id="photo-studio-aspect-ratio"
+                                wire:model.live="aspectRatio"
+                                class="block w-full max-w-xs rounded-xl border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-800/50 text-sm text-gray-900 dark:text-zinc-100 shadow-sm focus:border-amber-500 dark:focus:border-amber-500 focus:ring-amber-500/20"
+                            >
+                                @foreach ($aspectRatios as $ratio => $config)
+                                    <option value="{{ $ratio }}">
+                                        {{ $config['label'] }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            @if ($currentAspectRatio === 'match_input' && $detectedRatioLabel)
+                                <span class="text-xs text-gray-500 dark:text-zinc-500">
+                                    Detected: <span class="font-medium text-amber-600 dark:text-amber-400">{{ $detectedRatioLabel }}</span>
+                                </span>
+                            @endif
+                        </div>
+                        <p class="mt-1 text-xs text-gray-500 dark:text-zinc-500">
+                            @if ($currentAspectRatio === 'match_input')
+                                The output will match your source image's aspect ratio.
+                            @else
+                                {{ $aspectRatios[$currentAspectRatio]['description'] ?? '' }}
+                            @endif
+                        </p>
+                    </div>
 
                     @if ($generationStatus)
                         <div class="mt-4 rounded-md bg-amber-50 dark:bg-amber-500/10 p-4 text-sm text-amber-800 dark:text-amber-400" @if ($isAwaitingGeneration) wire:poll.3s="pollGenerationStatus" @endif>

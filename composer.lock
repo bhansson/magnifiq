@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "1eba6791d10b04ef9b0f587d7b0c6401",
+    "content-hash": "51d90f8a2c77307b66c956dfdb14abec",
     "packages": [
         {
             "name": "aws/aws-crt-php",
@@ -3036,16 +3036,16 @@
         },
         {
             "name": "moe-mizrak/laravel-openrouter",
-            "version": "v2.3.0",
+            "version": "v2.4.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/moe-mizrak/laravel-openrouter.git",
-                "reference": "3d60f40b46eeb8635d7f913ca87b288037e69d8b"
+                "reference": "3b7a93a8f145a902b3c423a23619661c2ca7ac8e"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/moe-mizrak/laravel-openrouter/zipball/3d60f40b46eeb8635d7f913ca87b288037e69d8b",
-                "reference": "3d60f40b46eeb8635d7f913ca87b288037e69d8b",
+                "url": "https://api.github.com/repos/moe-mizrak/laravel-openrouter/zipball/3b7a93a8f145a902b3c423a23619661c2ca7ac8e",
+                "reference": "3b7a93a8f145a902b3c423a23619661c2ca7ac8e",
                 "shasum": ""
             },
             "require": {
@@ -3097,9 +3097,9 @@
             ],
             "support": {
                 "issues": "https://github.com/moe-mizrak/laravel-openrouter/issues",
-                "source": "https://github.com/moe-mizrak/laravel-openrouter/tree/v2.3.0"
+                "source": "https://github.com/moe-mizrak/laravel-openrouter/tree/v2.4.0"
             },
-            "time": "2025-11-01T10:45:39+00:00"
+            "time": "2025-11-23T12:07:44+00:00"
         },
         {
             "name": "monolog/monolog",

@@ -15,7 +15,7 @@ return [
 
         'modes' => [
             'products_together' => [
-                'label' => 'Products Together',
+                'label' => 'Product Group Image',
                 'description' => 'All products appear in one cohesive scene',
                 'icon' => 'user-group',
                 'example_hint' => 'Perfect for: outfit combinations, product bundles, room setups',
@@ -104,6 +104,92 @@ PROMPT,
         'max_tokens' => 700,
         'temperature' => 0.4,
         'max_prompt_words' => 300,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Input Image Processing
+    |--------------------------------------------------------------------------
+    |
+    | Configure how input images are processed before being sent to AI models.
+    | Images larger than max_input_dimension will be resized proportionally
+    | so the longest edge matches this value, preserving aspect ratio.
+    |
+    */
+    'input' => [
+        // Maximum dimension (width or height) for input images in pixels.
+        // Images exceeding this will be resized while maintaining aspect ratio.
+        // Set to null to disable resizing.
+        'max_dimension' => env('PHOTO_STUDIO_MAX_INPUT_DIMENSION', 1500),
+
+        // Compression quality for resized images (0-100 for JPEG/WebP, 0-9 for PNG).
+        // Higher values = better quality but larger file size.
+        'jpeg_quality' => env('PHOTO_STUDIO_INPUT_JPEG_QUALITY', 80),
+        'webp_quality' => env('PHOTO_STUDIO_INPUT_WEBP_QUALITY', 80),
+        'png_compression' => env('PHOTO_STUDIO_INPUT_PNG_COMPRESSION', 5),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Aspect Ratio Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Configure available aspect ratios for image generation. The 'match_input'
+    | option automatically detects the input image's aspect ratio and maps it
+    | to the closest supported ratio.
+    |
+    */
+    'aspect_ratios' => [
+        // Default behavior - detect from input image
+        'default' => 'match_input',
+
+        // All ratios supported by OpenRouter image generation
+        'available' => [
+            'match_input' => [
+                'label' => 'Match input image',
+                'description' => 'Automatically match the aspect ratio of the source image',
+            ],
+            '1:1' => [
+                'label' => 'Square (1:1)',
+                'description' => '1024×1024 - Perfect for social media profiles',
+            ],
+            '4:3' => [
+                'label' => 'Landscape (4:3)',
+                'description' => 'Classic photo format',
+            ],
+            '3:2' => [
+                'label' => 'Wide (3:2)',
+                'description' => 'Standard DSLR format',
+            ],
+            '16:9' => [
+                'label' => 'Widescreen (16:9)',
+                'description' => 'HD video format',
+            ],
+            '21:9' => [
+                'label' => 'Ultra-wide (21:9)',
+                'description' => 'Cinematic banner format',
+            ],
+            '3:4' => [
+                'label' => 'Portrait (3:4)',
+                'description' => 'Vertical photo format',
+            ],
+            '2:3' => [
+                'label' => 'Tall (2:3)',
+                'description' => 'Vertical DSLR format',
+            ],
+            '9:16' => [
+                'label' => 'Mobile (9:16)',
+                'description' => 'Stories and vertical video',
+            ],
+            '4:5' => [
+                'label' => 'Instagram (4:5)',
+                'description' => 'Optimal for Instagram feed',
+            ],
+            '5:4' => [
+                'label' => 'Large format (5:4)',
+                'description' => '8×10 print format',
+            ],
+        ],
     ],
 
     /*

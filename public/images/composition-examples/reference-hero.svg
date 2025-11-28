@@ -1,18 +1,16 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300">
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="120" viewBox="0 0 400 120">
   <defs>
     <linearGradient id="bg3" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" style="stop-color:#fce7f3"/>
       <stop offset="100%" style="stop-color:#fbcfe8"/>
     </linearGradient>
   </defs>
-  <rect width="400" height="300" fill="url(#bg3)"/>
+  <rect width="400" height="120" fill="url(#bg3)"/>
   <!-- Hero product (larger, centered with star) -->
-  <rect x="130" y="40" width="140" height="160" rx="12" fill="#ec4899" opacity="0.9"/>
-  <polygon points="200,55 206,75 228,75 210,88 216,108 200,96 184,108 190,88 172,75 194,75" fill="#fde047"/>
+  <rect x="150" y="10" width="100" height="100" rx="10" fill="#ec4899" opacity="0.9"/>
+  <polygon points="200,22 205,38 222,38 208,48 213,64 200,54 187,64 192,48 178,38 195,38" fill="#fde047"/>
   <!-- Reference images (smaller, faded) -->
-  <rect x="30" y="100" width="70" height="90" rx="8" fill="#f472b6" opacity="0.4"/>
-  <rect x="300" y="80" width="70" height="100" rx="8" fill="#f472b6" opacity="0.4"/>
-  <rect x="310" y="190" width="60" height="50" rx="6" fill="#f472b6" opacity="0.3"/>
-  <text x="200" y="250" text-anchor="middle" font-family="system-ui, sans-serif" font-size="14" fill="#9d174d" font-weight="600">Reference + Hero</text>
-  <text x="200" y="270" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" fill="#be185d">Hero product styled by reference mood</text>
+  <rect x="30" y="30" width="55" height="65" rx="6" fill="#f472b6" opacity="0.4"/>
+  <rect x="315" y="20" width="55" height="70" rx="6" fill="#f472b6" opacity="0.4"/>
+  <rect x="320" y="85" width="45" height="25" rx="4" fill="#f472b6" opacity="0.3"/>
 </svg>

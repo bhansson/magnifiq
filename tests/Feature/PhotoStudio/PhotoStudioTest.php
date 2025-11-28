@@ -1044,4 +1044,392 @@ class PhotoStudioTest extends TestCase
             ]),
         ]);
     }
+
+    public function test_aspect_ratio_is_passed_to_job(): void
+    {
+        config()->set('laravel-openrouter.api_key', 'test-key');
+        config()->set('photo-studio.models.image_generation', 'google/gemini-3-pro-image-preview');
+        config()->set('photo-studio.generation_disk', 's3');
+
+        $this->fakeProductImageFetch();
+        Queue::fake();
+
+        $user = User::factory()->withPersonalTeam()->create();
+        $team = $user->currentTeam;
+
+        $feed = ProductFeed::factory()->create([
+            'team_id' => $team->id,
+        ]);
+
+        $product = Product::factory()
+            ->for($feed, 'feed')
+            ->create([
+                'team_id' => $team->id,
+                'image_link' => 'https://cdn.example.com/reference.jpg',
+            ]);
+
+        $this->actingAs($user);
+
+        // Test with explicit 16:9 aspect ratio
+        Livewire::test(PhotoStudio::class)
+            ->set('productId', $product->id)
+            ->set('promptResult', 'Generate a widescreen product image')
+            ->set('aspectRatio', '16:9')
+            ->call('generateImage')
+            ->assertHasNoErrors();
+
+        Queue::assertPushed(GeneratePhotoStudioImage::class, function (GeneratePhotoStudioImage $job) {
+            $this->assertSame('16:9', $job->aspectRatio);
+
+            return true;
+        });
+
+        // Check that aspect ratio is stored in job meta
+        $this->assertDatabaseHas('product_ai_jobs', [
+            'team_id' => $team->id,
+            'job_type' => ProductAiJob::TYPE_PHOTO_STUDIO,
+        ]);
+
+        $jobRecord = ProductAiJob::latest()->first();
+        $this->assertSame('16:9', $jobRecord->meta['aspect_ratio']);
+    }
+
+    public function test_match_input_aspect_ratio_detects_from_image(): void
+    {
+        config()->set('laravel-openrouter.api_key', 'test-key');
+        config()->set('photo-studio.models.image_generation', 'google/gemini-3-pro-image-preview');
+        config()->set('photo-studio.generation_disk', 's3');
+
+        $this->fakeProductImageFetch();
+        Queue::fake();
+
+        $user = User::factory()->withPersonalTeam()->create();
+        $team = $user->currentTeam;
+
+        $feed = ProductFeed::factory()->create([
+            'team_id' => $team->id,
+        ]);
+
+        $product = Product::factory()
+            ->for($feed, 'feed')
+            ->create([
+                'team_id' => $team->id,
+                'image_link' => 'https://cdn.example.com/reference.jpg',
+            ]);
+
+        $this->actingAs($user);
+
+        // Test with 'match_input' - should detect from the test image (1x1 square)
+        Livewire::test(PhotoStudio::class)
+            ->set('productId', $product->id)
+            ->set('promptResult', 'Generate matching aspect ratio image')
+            ->set('aspectRatio', 'match_input')
+            ->call('generateImage')
+            ->assertHasNoErrors();
+
+        Queue::assertPushed(GeneratePhotoStudioImage::class, function (GeneratePhotoStudioImage $job) {
+            // Test image is 1x1, so should detect as 1:1
+            $this->assertSame('1:1', $job->aspectRatio);
+
+            return true;
+        });
+    }
+
+    public function test_aspect_ratio_dropdown_shows_in_ui(): void
+    {
+        $user = User::factory()->withPersonalTeam()->create();
+
+        $this->actingAs($user);
+
+        Livewire::test(PhotoStudio::class)
+            ->assertSee('Output aspect ratio')
+            ->assertSee('Match input image')
+            ->assertSee('Square (1:1)')
+            ->assertSee('Widescreen (16:9)');
+    }
+
+    public function test_large_product_image_is_resized_before_ai_call(): void
+    {
+        config()->set('laravel-openrouter.api_key', 'test-key');
+        config()->set('photo-studio.models.vision', 'openai/gpt-4.1');
+        config()->set('photo-studio.input.max_dimension', 512);
+
+        // Test image is 1200x1200, should be resized to 512x512
+        $this->fakeProductImageFetch();
+
+        $user = User::factory()->withPersonalTeam()->create();
+        $team = $user->currentTeam;
+
+        $feed = ProductFeed::factory()->create([
+            'team_id' => $team->id,
+        ]);
+
+        $product = Product::factory()
+            ->for($feed, 'feed')
+            ->create([
+                'team_id' => $team->id,
+                'image_link' => 'https://cdn.example.com/large-product.jpg',
+            ]);
+
+        $capturedImageSize = null;
+
+        $this->fakeOpenRouter(function ($chatData) use (&$capturedImageSize) {
+            $userMessage = Arr::get($chatData->messages, 1);
+            $imagePart = collect($userMessage->content ?? [])
+                ->first(fn ($part) => $part instanceof ImageContentPartData);
+
+            // Extract and decode the image to check dimensions
+            if ($imagePart && preg_match('/^data:[^;]+;base64,(.+)$/', $imagePart->image_url->url, $matches)) {
+                $binary = base64_decode($matches[1], true);
+                if ($binary !== false) {
+                    $size = @getimagesizefromstring($binary);
+                    if ($size !== false) {
+                        $capturedImageSize = [$size[0], $size[1]];
+                    }
+                }
+            }
+
+            return [
+                'id' => 'photo-studio-test',
+                'model' => 'openrouter/openai/gpt-4.1',
+                'object' => 'chat.completion',
+                'created' => now()->timestamp,
+                'choices' => [
+                    ['message' => ['content' => 'Resized image prompt']],
+                ],
+            ];
+        });
+
+        $this->actingAs($user);
+
+        Livewire::test(PhotoStudio::class)
+            ->set('productId', $product->id)
+            ->call('extractPrompt')
+            ->assertSet('promptResult', 'Resized image prompt');
+
+        $this->assertNotNull($capturedImageSize, 'Image dimensions should have been captured.');
+        $this->assertSame(512, $capturedImageSize[0], 'Width should be resized to max dimension.');
+        $this->assertSame(512, $capturedImageSize[1], 'Height should be resized proportionally.');
+    }
+
+    public function test_image_resize_preserves_aspect_ratio(): void
+    {
+        config()->set('photo-studio.input.max_dimension', 800);
+
+        // Create a 1600x1200 image (4:3 aspect ratio)
+        $wideImage = imagecreatetruecolor(1600, 1200);
+        $color = imagecolorallocate($wideImage, 128, 128, 255);
+        imagefilledrectangle($wideImage, 0, 0, 1600, 1200, $color);
+
+        ob_start();
+        imagejpeg($wideImage, null, 90);
+        $wideImageBinary = ob_get_clean();
+        imagedestroy($wideImage);
+
+        Http::fake([
+            'cdn.example.com/*' => Http::response($wideImageBinary, 200, [
+                'Content-Type' => 'image/jpeg',
+            ]),
+        ]);
+
+        config()->set('laravel-openrouter.api_key', 'test-key');
+        config()->set('photo-studio.models.vision', 'openai/gpt-4.1');
+
+        $user = User::factory()->withPersonalTeam()->create();
+        $team = $user->currentTeam;
+
+        $feed = ProductFeed::factory()->create([
+            'team_id' => $team->id,
+        ]);
+
+        $product = Product::factory()
+            ->for($feed, 'feed')
+            ->create([
+                'team_id' => $team->id,
+                'image_link' => 'https://cdn.example.com/wide-product.jpg',
+            ]);
+
+        $capturedImageSize = null;
+
+        $this->fakeOpenRouter(function ($chatData) use (&$capturedImageSize) {
+            $userMessage = Arr::get($chatData->messages, 1);
+            $imagePart = collect($userMessage->content ?? [])
+                ->first(fn ($part) => $part instanceof ImageContentPartData);
+
+            if ($imagePart && preg_match('/^data:[^;]+;base64,(.+)$/', $imagePart->image_url->url, $matches)) {
+                $binary = base64_decode($matches[1], true);
+                if ($binary !== false) {
+                    $size = @getimagesizefromstring($binary);
+                    if ($size !== false) {
+                        $capturedImageSize = [$size[0], $size[1]];
+                    }
+                }
+            }
+
+            return [
+                'id' => 'photo-studio-test',
+                'model' => 'openrouter/openai/gpt-4.1',
+                'object' => 'chat.completion',
+                'created' => now()->timestamp,
+                'choices' => [
+                    ['message' => ['content' => 'Wide image prompt']],
+                ],
+            ];
+        });
+
+        $this->actingAs($user);
+
+        Livewire::test(PhotoStudio::class)
+            ->set('productId', $product->id)
+            ->call('extractPrompt')
+            ->assertSet('promptResult', 'Wide image prompt');
+
+        $this->assertNotNull($capturedImageSize, 'Image dimensions should have been captured.');
+        // 1600x1200 with max 800 should become 800x600 (maintaining 4:3 ratio)
+        $this->assertSame(800, $capturedImageSize[0], 'Width should be resized to max dimension.');
+        $this->assertSame(600, $capturedImageSize[1], 'Height should maintain 4:3 aspect ratio.');
+    }
+
+    public function test_small_images_are_not_resized(): void
+    {
+        config()->set('photo-studio.input.max_dimension', 1024);
+
+        // Create a 512x512 image (smaller than max)
+        $smallImage = imagecreatetruecolor(512, 512);
+        $color = imagecolorallocate($smallImage, 255, 128, 128);
+        imagefilledrectangle($smallImage, 0, 0, 512, 512, $color);
+
+        ob_start();
+        imagejpeg($smallImage, null, 90);
+        $smallImageBinary = ob_get_clean();
+        imagedestroy($smallImage);
+
+        Http::fake([
+            'cdn.example.com/*' => Http::response($smallImageBinary, 200, [
+                'Content-Type' => 'image/jpeg',
+            ]),
+        ]);
+
+        config()->set('laravel-openrouter.api_key', 'test-key');
+        config()->set('photo-studio.models.vision', 'openai/gpt-4.1');
+
+        $user = User::factory()->withPersonalTeam()->create();
+        $team = $user->currentTeam;
+
+        $feed = ProductFeed::factory()->create([
+            'team_id' => $team->id,
+        ]);
+
+        $product = Product::factory()
+            ->for($feed, 'feed')
+            ->create([
+                'team_id' => $team->id,
+                'image_link' => 'https://cdn.example.com/small-product.jpg',
+            ]);
+
+        $capturedImageSize = null;
+
+        $this->fakeOpenRouter(function ($chatData) use (&$capturedImageSize) {
+            $userMessage = Arr::get($chatData->messages, 1);
+            $imagePart = collect($userMessage->content ?? [])
+                ->first(fn ($part) => $part instanceof ImageContentPartData);
+
+            if ($imagePart && preg_match('/^data:[^;]+;base64,(.+)$/', $imagePart->image_url->url, $matches)) {
+                $binary = base64_decode($matches[1], true);
+                if ($binary !== false) {
+                    $size = @getimagesizefromstring($binary);
+                    if ($size !== false) {
+                        $capturedImageSize = [$size[0], $size[1]];
+                    }
+                }
+            }
+
+            return [
+                'id' => 'photo-studio-test',
+                'model' => 'openrouter/openai/gpt-4.1',
+                'object' => 'chat.completion',
+                'created' => now()->timestamp,
+                'choices' => [
+                    ['message' => ['content' => 'Small image prompt']],
+                ],
+            ];
+        });
+
+        $this->actingAs($user);
+
+        Livewire::test(PhotoStudio::class)
+            ->set('productId', $product->id)
+            ->call('extractPrompt')
+            ->assertSet('promptResult', 'Small image prompt');
+
+        $this->assertNotNull($capturedImageSize, 'Image dimensions should have been captured.');
+        // Image should remain at original size
+        $this->assertSame(512, $capturedImageSize[0], 'Width should remain unchanged.');
+        $this->assertSame(512, $capturedImageSize[1], 'Height should remain unchanged.');
+    }
+
+    public function test_resize_disabled_when_max_dimension_is_null(): void
+    {
+        config()->set('photo-studio.input.max_dimension', null);
+
+        // Test image is 1200x1200
+        $this->fakeProductImageFetch();
+
+        config()->set('laravel-openrouter.api_key', 'test-key');
+        config()->set('photo-studio.models.vision', 'openai/gpt-4.1');
+
+        $user = User::factory()->withPersonalTeam()->create();
+        $team = $user->currentTeam;
+
+        $feed = ProductFeed::factory()->create([
+            'team_id' => $team->id,
+        ]);
+
+        $product = Product::factory()
+            ->for($feed, 'feed')
+            ->create([
+                'team_id' => $team->id,
+                'image_link' => 'https://cdn.example.com/large-product.jpg',
+            ]);
+
+        $capturedImageSize = null;
+
+        $this->fakeOpenRouter(function ($chatData) use (&$capturedImageSize) {
+            $userMessage = Arr::get($chatData->messages, 1);
+            $imagePart = collect($userMessage->content ?? [])
+                ->first(fn ($part) => $part instanceof ImageContentPartData);
+
+            if ($imagePart && preg_match('/^data:[^;]+;base64,(.+)$/', $imagePart->image_url->url, $matches)) {
+                $binary = base64_decode($matches[1], true);
+                if ($binary !== false) {
+                    $size = @getimagesizefromstring($binary);
+                    if ($size !== false) {
+                        $capturedImageSize = [$size[0], $size[1]];
+                    }
+                }
+            }
+
+            return [
+                'id' => 'photo-studio-test',
+                'model' => 'openrouter/openai/gpt-4.1',
+                'object' => 'chat.completion',
+                'created' => now()->timestamp,
+                'choices' => [
+                    ['message' => ['content' => 'Full size prompt']],
+                ],
+            ];
+        });
+
+        $this->actingAs($user);
+
+        Livewire::test(PhotoStudio::class)
+            ->set('productId', $product->id)
+            ->call('extractPrompt')
+            ->assertSet('promptResult', 'Full size prompt');
+
+        $this->assertNotNull($capturedImageSize, 'Image dimensions should have been captured.');
+        // Image should remain at original size when resize is disabled
+        $this->assertSame(1200, $capturedImageSize[0], 'Width should remain at original size when resize disabled.');
+        $this->assertSame(1200, $capturedImageSize[1], 'Height should remain at original size when resize disabled.');
+    }
 }
