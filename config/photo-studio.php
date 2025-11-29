@@ -21,19 +21,19 @@ return [
                 'example_hint' => 'Perfect for: outfit combinations, product bundles, room setups',
                 'example_image' => 'images/composition-examples/products-together.svg',
             ],
-            'blend_collage' => [
-                'label' => 'Blend & Collage',
-                'description' => 'Extract visual elements and blend into artistic composition',
-                'icon' => 'squares-2x2',
-                'example_hint' => 'Perfect for: mood boards, artistic arrangements, abstract designs',
-                'example_image' => 'images/composition-examples/blend-collage.svg',
+            'lifestyle_context' => [
+                'label' => 'Lifestyle Context',
+                'description' => 'Show product being used by people in real-world scenarios',
+                'icon' => 'users',
+                'example_hint' => 'Perfect for: product-in-use shots, lifestyle marketing, social media content',
+                'example_image' => 'images/composition-examples/lifestyle-context.svg',
             ],
             'reference_hero' => [
                 'label' => 'Reference + Hero',
                 'description' => 'One primary product styled using other images as mood/style reference',
-                'icon' => 'star',
+                'icon' => 'viewfinder-circle',
                 'example_hint' => 'Perfect for: style transfer, themed photoshoots, branded looks',
-                'example_image' => 'images/composition-examples/reference-hero.svg',
+                'example_image' => 'images/composition-examples/reference-hero.png',
             ],
         ],
 
@@ -45,27 +45,28 @@ Consider how these products would realistically be used or displayed together.
 Choose an environment, lighting, and composition that makes sense for the entire collection.
 Each product should be clearly visible and well-positioned relative to the others.
 Do not describe individual products in detail - focus on the scene, arrangement, and atmosphere.
-Output only the scene prompt, no explanations or commentary.
+Output only the prompt, no explanations or commentary.
 PROMPT,
 
-            'blend_collage' => <<<'PROMPT'
-Analyze the visual elements, colors, textures, and aesthetic qualities of each provided image.
-Create an artistic composition prompt that blends and combines these visual elements.
-Think like a creative director crafting a mood board or artistic collage.
-Focus on color harmony, texture interplay, and visual flow between elements.
-The result should feel cohesive and intentional, not a random collection.
-Output only the composition prompt, no explanations or commentary.
+            'lifestyle_context' => <<<'PROMPT'
+Analyze the product image to understand what it is, how it's used, and who would use it.
+Create a lifestyle scene prompt showing the product being actively used or interacted with by a person.
+The person should be naturally engaged with the product in a realistic, relatable context.
+Focus on creating an authentic "product-in-use" moment that tells a story.
+The product must remain clearly visible and identifiable as the focal point.
+Choose an appropriate setting, lighting, and mood that matches the product's target audience.
+Output only the prompt, no explanations or commentary.
 PROMPT,
 
             'reference_hero' => <<<'PROMPT'
-The FIRST/STARRED image is the hero product that must be the central focus.
+The FIRST image is the hero product that must be the central focus.
 The other images provide style, mood, and aesthetic reference ONLY.
 Analyze the reference images for: color palette, lighting style, atmosphere, and visual tone.
 Create a prompt that places the hero product in a scene inspired by the reference aesthetic.
 The hero product should be prominent and clearly visible.
 The scene styling (background, lighting, props) should reflect the mood of the reference images.
 Do not include the reference images' subjects in the final scene - only their style influence.
-Output only the scene prompt, no explanations or commentary.
+Output only the prompt, no explanations or commentary.
 PROMPT,
         ],
     ],
