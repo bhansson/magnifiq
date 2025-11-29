@@ -223,9 +223,58 @@
         </div>
 
         <!-- Product Showcase Panel with 3D Perspective -->
-        <div class="relative max-w-[90rem] mx-auto perspective-container">
+        <div class="relative max-w-[90rem] mx-auto perspective-container"
+             x-data="{
+                 progress: 0,
+                 // Transform values: [tilted, flat]
+                 rotateX: [8, 0],
+                 rotateY: [18, 0],
+                 rotateZ: [-10, 0],
+                 scale: [0.95, 1],
+                 translateX: [8, 0],
+                 fadeOpacity: [1, 0],
+
+                 lerp(start, end, t) {
+                     return start + (end - start) * Math.min(Math.max(t, 0), 1);
+                 },
+
+                 updateProgress() {
+                     const rect = this.$el.getBoundingClientRect();
+                     const windowHeight = window.innerHeight;
+
+                     // Start animation when element enters viewport (bottom)
+                     // Complete animation when element center reaches viewport center
+                     const elementCenter = rect.top + rect.height / 2;
+                     const viewportCenter = windowHeight / 2;
+
+                     // Progress: 0 when element enters from bottom, 1 when center aligns
+                     const startPoint = windowHeight;
+                     const endPoint = viewportCenter;
+
+                     this.progress = 1 - (elementCenter - endPoint) / (startPoint - endPoint);
+                     this.progress = Math.min(Math.max(this.progress, 0), 1);
+                 },
+
+                 getTransform() {
+                     const rx = this.lerp(this.rotateX[0], this.rotateX[1], this.progress);
+                     const ry = this.lerp(this.rotateY[0], this.rotateY[1], this.progress);
+                     const rz = this.lerp(this.rotateZ[0], this.rotateZ[1], this.progress);
+                     const s = this.lerp(this.scale[0], this.scale[1], this.progress);
+                     const tx = this.lerp(this.translateX[0], this.translateX[1], this.progress);
+
+                     return `rotateX(${rx}deg) rotateY(${ry}deg) rotateZ(${rz}deg) scale(${s}) translateX(${tx}%)`;
+                 },
+
+                 getFadeOpacity() {
+                     return this.lerp(this.fadeOpacity[0], this.fadeOpacity[1], this.progress);
+                 }
+             }"
+             x-init="updateProgress(); window.addEventListener('scroll', () => updateProgress(), { passive: true })"
+        >
             <!-- 3D Perspective Wrapper -->
-            <div class="dashboard-3d group">
+            <div class="dashboard-3d group"
+                 :style="'transform: ' + getTransform()"
+            >
                 <!-- Main dashboard mockup with glass effect -->
                 <div class="relative rounded-2xl overflow-hidden bg-zinc-900/90 backdrop-blur-xl border border-zinc-800/80 shadow-2xl shadow-black/50">
                     <!-- Subtle top gradient shine -->
@@ -421,7 +470,8 @@
                 </div>
 
                 <!-- Bottom fade gradient overlay -->
-                <div class="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/80 to-transparent pointer-events-none rounded-b-2xl dashboard-fade"></div>
+                <div class="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/80 to-transparent pointer-events-none rounded-b-2xl dashboard-fade"
+                     :style="'opacity: ' + getFadeOpacity()"></div>
             </div>
 
             <!-- Floating glow effect under panel -->
@@ -443,26 +493,9 @@
         perspective-origin: 40% 50%;
     }
 
-    /* Dashboard with 3D transform - tilted and skewed by default */
+    /* Dashboard with 3D transform - scroll-driven animation handled by Alpine.js */
     .dashboard-3d {
         transform-style: preserve-3d;
-        transform: rotateX(8deg) rotateY(18deg) rotateZ(-10deg) scale(0.95) translateX(8%);
-        transition: transform 1.2s cubic-bezier(0.23, 1, 0.32, 1);
         transform-origin: 30% 50%;
-    }
-
-    /* On hover, flatten to front view */
-    .dashboard-3d:hover {
-        transform: rotateX(0deg) rotateY(0deg) scale(1) translateX(0);
-    }
-
-    /* Fade effect adjusts on hover */
-    .dashboard-fade {
-        opacity: 1;
-        transition: opacity 1.2s cubic-bezier(0.23, 1, 0.32, 1);
-    }
-
-    .dashboard-3d:hover .dashboard-fade {
-        opacity: 0;
     }
 </style>
