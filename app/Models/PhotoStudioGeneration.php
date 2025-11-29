@@ -183,4 +183,57 @@ class PhotoStudioGeneration extends Model
 
         return config("photo-studio.composition.modes.{$this->composition_mode}.label", $this->composition_mode);
     }
+
+    /**
+     * Get URLs for all source images in a composition.
+     *
+     * For product images, returns the external URL directly.
+     * For uploaded images, returns the route URL to the controller that serves private images.
+     *
+     * @return array<int, array{url: string|null, type: string, title: string, product_id: int|null}>
+     */
+    public function getSourceImageUrls(): array
+    {
+        if (! $this->isComposition() || empty($this->source_references)) {
+            return [];
+        }
+
+        return collect($this->source_references)
+            ->map(function (array $ref, int $index) {
+                $url = null;
+
+                if ($ref['type'] === 'product') {
+                    $url = $ref['source_reference'] ?? null;
+                    if ($url && ! filter_var($url, FILTER_VALIDATE_URL)) {
+                        $url = null;
+                    }
+                } elseif ($ref['type'] === 'upload') {
+                    $path = $ref['source_reference'] ?? null;
+                    // Only generate URL if image was persisted (has path separator)
+                    if ($path && str_contains($path, '/')) {
+                        $url = route('photo-studio.generation.source', [
+                            'generation' => $this->id,
+                            'index' => $index,
+                        ]);
+                    }
+                }
+
+                return [
+                    'url' => $url,
+                    'type' => $ref['type'],
+                    'title' => $ref['title'] ?? 'Untitled',
+                    'product_id' => $ref['product_id'] ?? null,
+                ];
+            })
+            ->toArray();
+    }
+
+    /**
+     * Check if this generation has any viewable source images.
+     */
+    public function hasViewableSourceImages(): bool
+    {
+        return collect($this->getSourceImageUrls())
+            ->contains(fn ($img) => $img['url'] !== null);
+    }
 }
