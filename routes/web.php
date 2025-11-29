@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\DownloadPhotoStudioGenerationController;
+use App\Http\Controllers\PhotoStudioSourceImageController;
 use App\Models\Product;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
@@ -42,6 +43,10 @@ Route::middleware([
 
     Route::get('/photo-studio/gallery/{generation}/download', DownloadPhotoStudioGenerationController::class)
         ->name('photo-studio.gallery.download');
+
+    Route::get('/photo-studio/generations/{generation}/sources/{index}', PhotoStudioSourceImageController::class)
+        ->name('photo-studio.generation.source')
+        ->whereNumber('index');
 });
 
 // Partner admin routes (superadmin only)

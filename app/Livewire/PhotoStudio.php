@@ -6,6 +6,7 @@ use App\Jobs\GeneratePhotoStudioImage;
 use App\Models\PhotoStudioGeneration;
 use App\Models\Product;
 use App\Models\ProductAiJob;
+use App\Services\PhotoStudioSourceStorage;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Arr;
@@ -684,6 +685,13 @@ class PhotoStudio extends Component
     {
         $maxImages = config('photo-studio.composition.max_images', 14);
         $currentCount = count($this->compositionImages);
+        $teamId = Auth::user()?->currentTeam?->id;
+
+        if (! $teamId) {
+            return;
+        }
+
+        $sourceStorage = app(PhotoStudioSourceStorage::class);
 
         foreach ($this->compositionUploads as $file) {
             if ($currentCount >= $maxImages) {
@@ -695,7 +703,14 @@ class PhotoStudio extends Component
             }
 
             try {
-                $dataUri = $this->encodeUploadedImage($file);
+                // Process image to JPEG binary (resized + compressed)
+                $processedBinary = $this->processUploadedImageToJpegBinary($file);
+
+                // Store to S3 with private visibility for team-level access
+                $storagePath = $sourceStorage->store($processedBinary, $teamId, 'jpg');
+
+                // Create data URI for AI processing from processed binary
+                $dataUri = 'data:image/jpeg;base64,'.base64_encode($processedBinary);
 
                 $this->compositionImages[] = [
                     'type' => 'upload',
@@ -703,7 +718,8 @@ class PhotoStudio extends Component
                     'title' => $file->getClientOriginalName() ?: 'Uploaded image',
                     'preview_url' => $file->temporaryUrl(),
                     'data_uri' => $dataUri,
-                    'source_reference' => $file->getClientOriginalName() ?: $file->getFilename(),
+                    'source_reference' => $storagePath,
+                    'storage_disk' => $sourceStorage->getDisk(),
                 ];
                 $currentCount++;
             } catch (Throwable $e) {
@@ -969,12 +985,19 @@ class PhotoStudio extends Component
 
             // Build source_references array for storage
             $sourceReferences = collect($reorderedImages)->map(function ($img) {
-                return [
+                $ref = [
                     'type' => $img['type'],
                     'product_id' => $img['product_id'],
                     'title' => $img['title'],
                     'source_reference' => $img['source_reference'],
                 ];
+
+                // Include storage_disk for uploaded images that were persisted
+                if ($img['type'] === 'upload' && isset($img['storage_disk'])) {
+                    $ref['storage_disk'] = $img['storage_disk'];
+                }
+
+                return $ref;
             })->values()->toArray();
 
             $model = config('photo-studio.models.image_generation');
@@ -1445,6 +1468,80 @@ class PhotoStudio extends Component
     }
 
     /**
+     * Process an uploaded image to JPEG binary for storage.
+     *
+     * This method resizes and converts the image to JPEG format, returning
+     * the processed binary data suitable for storage.
+     */
+    private function processUploadedImageToJpegBinary(UploadedFile $file): string
+    {
+        $contents = file_get_contents($file->getRealPath());
+
+        if ($contents === false) {
+            throw new RuntimeException('Failed to read the uploaded image.');
+        }
+
+        // Always convert to JPEG for consistent storage format
+        return $this->convertBinaryToJpeg($contents);
+    }
+
+    /**
+     * Convert any image binary to JPEG binary, resizing if needed.
+     */
+    private function convertBinaryToJpeg(string $binary): string
+    {
+        if (! function_exists('imagecreatefromstring')) {
+            throw new RuntimeException('GD extension is required to convert image formats.');
+        }
+
+        $image = @imagecreatefromstring($binary);
+
+        if ($image === false) {
+            throw new RuntimeException('Unable to process the image format.');
+        }
+
+        $width = imagesx($image);
+        $height = imagesy($image);
+
+        // Resize if exceeds max dimension
+        [$newWidth, $newHeight, $needsResize] = $this->calculateResizeDimensions($width, $height);
+
+        if ($needsResize) {
+            $resized = imagescale($image, $newWidth, $newHeight, IMG_BICUBIC);
+            imagedestroy($image);
+
+            if ($resized === false) {
+                throw new RuntimeException('Failed to resize the image.');
+            }
+
+            $image = $resized;
+            $width = $newWidth;
+            $height = $newHeight;
+        }
+
+        // Create a new true color image with white background (for transparency)
+        $canvas = imagecreatetruecolor($width, $height);
+        $white = imagecolorallocate($canvas, 255, 255, 255);
+        imagefilledrectangle($canvas, 0, 0, $width, $height, $white);
+        imagecopy($canvas, $image, 0, 0, 0, 0, $width, $height);
+
+        $jpegQuality = (int) config('photo-studio.input.jpeg_quality', 90);
+
+        ob_start();
+        imagejpeg($canvas, null, $jpegQuality);
+        $jpegBinary = ob_get_clean();
+
+        imagedestroy($image);
+        imagedestroy($canvas);
+
+        if ($jpegBinary === false) {
+            throw new RuntimeException('Failed to convert image to JPEG format.');
+        }
+
+        return $jpegBinary;
+    }
+
+    /**
      * @return MessageData[]
      */
     private function buildMessages(string $imageUrl, ?Product $product): array
@@ -1641,6 +1738,8 @@ class PhotoStudio extends Component
                     'composition_mode' => $generation->composition_mode,
                     'composition_image_count' => $generation->getCompositionImageCount(),
                     'source_references' => $generation->source_references,
+                    'source_images' => $generation->getSourceImageUrls(),
+                    'has_viewable_sources' => $generation->hasViewableSourceImages(),
                 ];
             })
             ->toArray();

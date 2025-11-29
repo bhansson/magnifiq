@@ -60,6 +60,46 @@
                             </template>
                         </p>
                     </div>
+
+                    {{-- Composition Source Images --}}
+                    <div x-show="selectedEntry && selectedEntry.composition_mode && selectedEntry.has_viewable_sources">
+                        <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-zinc-500">Source Images</p>
+                        <p class="mt-1 text-xs text-gray-400 dark:text-zinc-500">
+                            <span x-text="selectedEntry && selectedEntry.composition_image_count ? selectedEntry.composition_image_count + ' images combined' : ''"></span>
+                        </p>
+                        <div class="mt-3 flex flex-wrap gap-2">
+                            <template x-for="(sourceImg, idx) in (selectedEntry && selectedEntry.source_images ? selectedEntry.source_images : [])" :key="idx">
+                                <div
+                                    class="group relative"
+                                    x-show="sourceImg.url"
+                                >
+                                    <img
+                                        :src="sourceImg.url"
+                                        :alt="sourceImg.title"
+                                        class="size-16 rounded-lg border border-gray-200 dark:border-zinc-700 object-cover transition group-hover:ring-2 group-hover:ring-amber-400"
+                                        loading="lazy"
+                                    />
+                                    <span
+                                        class="absolute bottom-0.5 left-0.5 rounded bg-black/60 px-1 py-0.5 text-[9px] font-medium text-white"
+                                        x-text="sourceImg.type === 'product' ? 'Product' : 'Upload'"
+                                    ></span>
+                                    {{-- Tooltip on hover --}}
+                                    <div
+                                        class="absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-gray-900 px-2 py-1 text-xs text-white opacity-0 transition group-hover:opacity-100 pointer-events-none z-10"
+                                        x-text="sourceImg.title"
+                                    ></div>
+                                </div>
+                            </template>
+                        </div>
+                        {{-- Note for legacy uploads --}}
+                        <p
+                            class="mt-2 text-xs text-gray-400 dark:text-zinc-500 italic"
+                            x-show="selectedEntry && selectedEntry.source_references && selectedEntry.source_references.some(r => r.type === 'upload' && (!r.source_reference || !r.source_reference.includes('/')))"
+                        >
+                            Some uploaded images were not preserved (created before this feature).
+                        </p>
+                    </div>
+
                     <div x-show="selectedEntry && selectedEntry.edit_instruction">
                         <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-zinc-500">Edit Instruction</p>
                         <div class="mt-2 rounded-lg border border-amber-200 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/10 p-3">
