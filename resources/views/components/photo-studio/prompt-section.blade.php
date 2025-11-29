@@ -99,43 +99,6 @@
 
 {{-- Prompt Workspace --}}
 <div class="space-y-5 border-t border-gray-100 dark:border-zinc-800 pt-6">
-    <div>
-        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Shape the wording before you generate</h3>
-        <p class="text-sm text-gray-600 dark:text-zinc-400">
-            Prompts extracted from the reference appear below&mdash;edit, combine, or paste your own instructions.
-        </p>
-    </div>
-
-    {{-- Prompt Status Indicator --}}
-    <div
-        @class([
-            'rounded-xl border p-4 text-sm',
-            $hasPromptText ? 'border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-900 dark:text-emerald-400' : 'border-amber-200 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/10 text-amber-900 dark:text-amber-400',
-        ])
-    >
-        <div class="flex items-start gap-3">
-            @if ($hasPromptText)
-                <svg class="h-5 w-5 text-emerald-500" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-                    <path d="m5 10 3 3 7-7" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
-                </svg>
-                <div>
-                    <p class="font-semibold dark:text-emerald-300">Prompt ready.</p>
-                    <p class="text-emerald-900/80 dark:text-emerald-400/80">Preview or refine it below before sending it to the model.</p>
-                </div>
-            @else
-                <svg class="h-5 w-5 text-amber-500" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-                    <path d="M10 3.333 3.333 16.667h13.334L10 3.333Z" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
-                    <path d="m10 8.333.008 3.334" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
-                    <path d="M9.992 13.333h.016" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
-                </svg>
-                <div>
-                    <p class="font-semibold dark:text-amber-300">No prompt yet.</p>
-                    <p class="text-amber-900/80 dark:text-amber-400/80">Run craft prompt above or paste your own copy into the workspace.</p>
-                </div>
-            @endif
-        </div>
-    </div>
-
     {{-- Error Message --}}
     @if ($errorMessage)
         <div class="rounded-md bg-red-50 dark:bg-red-500/10 p-4">

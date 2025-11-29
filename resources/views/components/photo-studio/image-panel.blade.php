@@ -19,7 +19,7 @@
     <div>
         <div class="flex items-center justify-between mb-3">
             <p class="text-sm font-semibold text-gray-900 dark:text-white">
-                {{ $isSingleImageMode ? 'Your image' : 'Selected images' }}
+                Input images
             </p>
             <div class="flex items-center gap-3">
                 @if (!$isSingleImageMode)
@@ -104,23 +104,53 @@
     {{-- Add Images Panel (only show if can add more) --}}
     @if ($canAddMore)
         <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-            {{-- Upload Column --}}
-            <div class="rounded-2xl border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-800/50 p-4">
+            {{-- Upload Column (Dropzone) --}}
+            <div
+                class="rounded-2xl border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-800/50 p-4"
+                x-data="{ isDragging: false }"
+                x-on:dragover.prevent="isDragging = true"
+                x-on:dragleave.prevent="isDragging = false"
+                x-on:drop.prevent="isDragging = false; $refs.fileInput.files = $event.dataTransfer.files; $refs.fileInput.dispatchEvent(new Event('change'))"
+            >
                 <p class="text-sm font-semibold text-gray-900 dark:text-white mb-3">Upload image</p>
-                <input
-                    type="file"
-                    wire:model="compositionUploads"
-                    accept="image/*"
-                    {{ $isSingleImageMode ? '' : 'multiple' }}
-                    class="block w-full rounded-xl border border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-800/50 text-sm text-gray-900 dark:text-zinc-100 shadow-sm focus:border-amber-500 dark:focus:border-amber-500 focus:ring-amber-500/20"
-                />
-                <p class="mt-2 text-xs text-gray-500 dark:text-zinc-500">
-                    JPG, PNG or WEBP up to 8MB{{ $isSingleImageMode ? '' : '. Select multiple files at once.' }}
-                </p>
-                <div wire:loading.flex wire:target="compositionUploads" class="mt-2 flex items-center gap-2 text-xs text-gray-500 dark:text-zinc-400">
-                    <x-loading-spinner class="size-4" />
-                    Processing upload{{ $isSingleImageMode ? '' : 's' }}...
+                <div
+                    class="relative cursor-pointer rounded-xl border-2 border-dashed transition-colors"
+                    :class="isDragging ? 'border-amber-400 bg-amber-50 dark:bg-amber-500/10' : 'border-gray-300 dark:border-zinc-600 hover:border-amber-400 dark:hover:border-amber-500'"
+                    @click="$refs.fileInput.click()"
+                >
+                    <input
+                        type="file"
+                        wire:model="compositionUploads"
+                        accept="image/*"
+                        {{ $isSingleImageMode ? '' : 'multiple' }}
+                        class="sr-only"
+                        x-ref="fileInput"
+                    />
+                    <div class="flex flex-col items-center justify-center py-6 px-4" wire:loading.remove wire:target="compositionUploads">
+                        <svg
+                            class="size-10 transition-colors"
+                            :class="isDragging ? 'text-amber-500' : 'text-gray-400 dark:text-zinc-500'"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke-width="1.5"
+                            stroke="currentColor"
+                        >
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+                        </svg>
+                        <p class="mt-2 text-sm font-medium text-gray-700 dark:text-zinc-300" x-text="isDragging ? 'Drop to upload' : 'Drop files here'"></p>
+                        <p class="mt-1 text-xs text-gray-500 dark:text-zinc-500">or <span class="text-amber-600 dark:text-amber-400 font-medium">browse</span></p>
+                    </div>
+                    <div wire:loading.flex wire:target="compositionUploads" class="flex flex-col items-center justify-center py-6 px-4">
+                        <x-loading-spinner class="size-8 text-amber-500" />
+                        <p class="mt-2 text-sm text-gray-500 dark:text-zinc-400">Processing upload{{ $isSingleImageMode ? '' : 's' }}...</p>
+                    </div>
                 </div>
+                <p class="mt-2 text-xs text-gray-500 dark:text-zinc-500 text-center">
+                    JPG, PNG, WEBP, or AVIF up to 8MB{{ $isSingleImageMode ? '' : '. Select multiple files.' }}
+                </p>
+                @error('compositionUploads.*')
+                    <p class="mt-2 text-xs text-red-600 dark:text-red-400 text-center">{{ $message }}</p>
+                @enderror
             </div>
 
             {{-- Catalog Column --}}

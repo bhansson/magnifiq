@@ -1015,6 +1015,11 @@ class PhotoStudio extends Component
     {
         return [
             'creativeBrief' => ['nullable', 'string', 'max:600'],
+            'compositionUploads.*' => [
+                'file',
+                'max:8192', // 8MB
+                'mimes:jpg,jpeg,png,gif,webp,avif',
+            ],
         ];
     }
 
