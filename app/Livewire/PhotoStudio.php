@@ -1036,7 +1036,7 @@ class PhotoStudio extends Component
 
             $this->pendingGenerationBaselineId = $previousGenerationId ?? 0;
             $this->isAwaitingGeneration = true;
-            $this->pendingProductId = null; // Compositions may have multiple or no products
+            $this->pendingProductId = $firstProductId;
             $this->generationStatus = 'Composition generation queued. Hang tight while we render your scene.';
         } catch (Throwable $exception) {
             Log::error('Photo Studio composition generation failed', [
