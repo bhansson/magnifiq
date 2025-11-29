@@ -97,7 +97,8 @@ PROMPT,
 
     // Disk for storing composition source images (processed uploads).
     // These are stored with private visibility for team-level access control.
-    'source_disk' => env('PHOTO_STUDIO_SOURCE_DISK', 's3'),
+    // Defaults to the generation disk to ensure consistent storage configuration.
+    'source_disk' => env('PHOTO_STUDIO_SOURCE_DISK', env('PHOTO_STUDIO_GENERATION_DISK', 's3')),
 
     /*
     |--------------------------------------------------------------------------

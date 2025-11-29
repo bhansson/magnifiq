@@ -72,6 +72,7 @@
                                 <div
                                     class="group relative"
                                     x-show="sourceImg.url"
+                                    :title="sourceImg.title"
                                 >
                                     <img
                                         :src="sourceImg.url"
@@ -83,11 +84,6 @@
                                         class="absolute bottom-0.5 left-0.5 rounded bg-black/60 px-1 py-0.5 text-[9px] font-medium text-white"
                                         x-text="sourceImg.type === 'product' ? 'Product' : 'Upload'"
                                     ></span>
-                                    {{-- Tooltip on hover --}}
-                                    <div
-                                        class="absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-gray-900 px-2 py-1 text-xs text-white opacity-0 transition group-hover:opacity-100 pointer-events-none z-10"
-                                        x-text="sourceImg.title"
-                                    ></div>
                                 </div>
                             </template>
                         </div>
