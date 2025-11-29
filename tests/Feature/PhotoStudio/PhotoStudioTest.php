@@ -24,6 +24,15 @@ class PhotoStudioTest extends TestCase
 {
     use RefreshDatabase;
 
+    private const TEST_IMAGE_MODEL = 'google/gemini-2.5-flash-image';
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        config()->set('photo-studio.models.image_generation', self::TEST_IMAGE_MODEL);
+    }
+
     public function test_page_loads_for_authenticated_user(): void
     {
         $user = User::factory()->withPersonalTeam()->create();
@@ -93,7 +102,6 @@ class PhotoStudioTest extends TestCase
     public function test_user_can_generate_image_and_queue_job(): void
     {
         config()->set('laravel-openrouter.api_key', 'test-key');
-        config()->set('photo-studio.models.image_generation', 'google/gemini-2.5-flash-image');
         config()->set('photo-studio.generation_disk', 's3');
 
         $this->fakeProductImageFetch();
@@ -133,7 +141,7 @@ class PhotoStudioTest extends TestCase
             $this->assertSame($team->id, $job->teamId);
             $this->assertSame($user->id, $job->userId);
             $this->assertSame($product->id, $job->productId);
-            $this->assertSame('google/gemini-2.5-flash-image', $job->model);
+            $this->assertSame($this->imageGenerationModel(), $job->model);
             $this->assertSame('s3', $job->disk);
             $this->assertSame('product_image', $job->sourceType);
 
@@ -144,7 +152,6 @@ class PhotoStudioTest extends TestCase
     public function test_generate_image_uses_existing_generations_as_baseline(): void
     {
         config()->set('laravel-openrouter.api_key', 'test-key');
-        config()->set('photo-studio.models.image_generation', 'google/gemini-2.5-flash-image');
         config()->set('photo-studio.generation_disk', 's3');
 
         $this->fakeProductImageFetch();
@@ -172,7 +179,7 @@ class PhotoStudioTest extends TestCase
             'source_type' => 'product_image',
             'source_reference' => 'https://cdn.example.com/reference.png',
             'prompt' => 'Historic prompt',
-            'model' => 'google/gemini-2.5-flash-image',
+            'model' => $this->imageGenerationModel(),
             'storage_disk' => 's3',
             'storage_path' => 'photo-studio/historic.png',
         ]);
@@ -190,7 +197,6 @@ class PhotoStudioTest extends TestCase
     public function test_user_can_generate_image_with_prompt_only(): void
     {
         config()->set('laravel-openrouter.api_key', 'test-key');
-        config()->set('photo-studio.models.image_generation', 'google/gemini-2.5-flash-image');
         config()->set('photo-studio.generation_disk', 's3');
 
         Queue::fake();
@@ -251,7 +257,7 @@ class PhotoStudioTest extends TestCase
             'source_type' => 'product_image',
             'source_reference' => 'https://cdn.example.com/reference.png',
             'prompt' => 'Studio prompt',
-            'model' => 'google/gemini-2.5-flash-image',
+            'model' => $this->imageGenerationModel(),
             'storage_disk' => 's3',
             'storage_path' => 'photo-studio/a-first.png',
         ]);
@@ -263,7 +269,7 @@ class PhotoStudioTest extends TestCase
             'source_type' => 'product_image',
             'source_reference' => 'https://cdn.example.com/reference.png',
             'prompt' => 'Studio prompt other product',
-            'model' => 'google/gemini-2.5-flash-image',
+            'model' => $this->imageGenerationModel(),
             'storage_disk' => 's3',
             'storage_path' => 'photo-studio/b-first.png',
         ]);
@@ -309,7 +315,7 @@ class PhotoStudioTest extends TestCase
             'source_type' => 'product_image',
             'source_reference' => 'https://cdn.example.com/reference.png',
             'prompt' => 'Cozy studio couch scene',
-            'model' => 'google/gemini-2.5-flash-image',
+            'model' => $this->imageGenerationModel(),
             'storage_disk' => 's3',
             'storage_path' => 'photo-studio/matching.png',
         ]);
@@ -321,7 +327,7 @@ class PhotoStudioTest extends TestCase
             'source_type' => 'product_image',
             'source_reference' => 'https://cdn.example.com/reference.png',
             'prompt' => 'Brutalist arch shot',
-            'model' => 'google/gemini-2.5-flash-image',
+            'model' => $this->imageGenerationModel(),
             'storage_disk' => 's3',
             'storage_path' => 'photo-studio/other.png',
         ]);
@@ -391,7 +397,7 @@ class PhotoStudioTest extends TestCase
             'source_type' => 'product_image',
             'source_reference' => 'https://cdn.example.com/reference.png',
             'prompt' => 'Fresh prompt',
-            'model' => 'google/gemini-2.5-flash-image',
+            'model' => $this->imageGenerationModel(),
             'storage_disk' => 's3',
             'storage_path' => 'photo-studio/new.png',
             'response_id' => 'test-response',
@@ -446,7 +452,7 @@ class PhotoStudioTest extends TestCase
             'source_type' => 'product_image',
             'source_reference' => 'https://cdn.example.com/reference.png',
             'prompt' => 'Other product prompt',
-            'model' => 'google/gemini-2.5-flash-image',
+            'model' => $this->imageGenerationModel(),
             'storage_disk' => 's3',
             'storage_path' => 'photo-studio/b-run.png',
         ]);
@@ -463,7 +469,7 @@ class PhotoStudioTest extends TestCase
             'source_type' => 'product_image',
             'source_reference' => 'https://cdn.example.com/reference.png',
             'prompt' => 'Matching prompt',
-            'model' => 'google/gemini-2.5-flash-image',
+            'model' => $this->imageGenerationModel(),
             'storage_disk' => 's3',
             'storage_path' => 'photo-studio/a-run.png',
         ]);
@@ -499,7 +505,7 @@ class PhotoStudioTest extends TestCase
             'source_type' => 'product_image',
             'source_reference' => 'https://cdn.example.com/reference.png',
             'prompt' => 'Prompt to delete',
-            'model' => 'google/gemini-2.5-flash-image',
+            'model' => $this->imageGenerationModel(),
             'storage_disk' => 's3',
             'storage_path' => 'photo-studio/delete-me.png',
         ]);
@@ -531,10 +537,12 @@ class PhotoStudioTest extends TestCase
         $imagePayload = $this->testImageBase64();
         $imageMime = $this->testImageMime();
 
-        $this->fakeOpenRouter(function () use ($imagePayload, $imageMime) {
+        $model = $this->imageGenerationModel();
+
+        $this->fakeOpenRouter(function () use ($imagePayload, $imageMime, $model) {
             return [
                 'id' => 'photo-studio-image',
-                'model' => 'google/gemini-2.5-flash-image',
+                'model' => $model,
                 'object' => 'chat.completion',
                 'created' => now()->timestamp,
                 'provider' => 'OpenRouter',
@@ -566,7 +574,7 @@ class PhotoStudioTest extends TestCase
             userId: $user->id,
             productId: null,
             prompt: 'Use this prompt as-is',
-            model: 'google/gemini-2.5-flash-image',
+            model: $model,
             disk: 's3',
             imageInput: $this->testImageDataUri(),
             sourceType: 'uploaded_image',
@@ -581,7 +589,7 @@ class PhotoStudioTest extends TestCase
         $this->assertSame($team->id, $generation->team_id);
         $this->assertSame($user->id, $generation->user_id);
         $this->assertNull($generation->product_id);
-        $this->assertSame('google/gemini-2.5-flash-image', $generation->model);
+        $this->assertSame($model, $generation->model);
         $this->assertSame('s3', $generation->storage_disk);
         $this->assertNotEmpty($generation->storage_path);
         $this->assertStringEndsWith('.jpg', $generation->storage_path);
@@ -603,11 +611,12 @@ class PhotoStudioTest extends TestCase
 
         $pointerPayload = $this->testImageBase64();
         $imageMime = $this->testImageMime();
+        $model = $this->imageGenerationModel();
 
-        $this->fakeOpenRouter(function () use ($pointerPayload, $imageMime) {
+        $this->fakeOpenRouter(function () use ($pointerPayload, $imageMime, $model) {
             return [
                 'id' => 'photo-studio-image',
-                'model' => 'google/gemini-2.5-flash-image',
+                'model' => $model,
                 'object' => 'chat.completion',
                 'created' => now()->timestamp,
                 'choices' => [
@@ -642,7 +651,7 @@ class PhotoStudioTest extends TestCase
             userId: $user->id,
             productId: null,
             prompt: 'Use this prompt as-is',
-            model: 'google/gemini-2.5-flash-image',
+            model: $model,
             disk: 's3',
             imageInput: $this->testImageDataUri(),
             sourceType: 'uploaded_image',
@@ -671,11 +680,12 @@ class PhotoStudioTest extends TestCase
 
         $inlinePayload = $this->testImageBase64();
         $imageMime = $this->testImageMime();
+        $model = $this->imageGenerationModel();
 
-        $this->fakeOpenRouter(function () use ($inlinePayload, $imageMime) {
+        $this->fakeOpenRouter(function () use ($inlinePayload, $imageMime, $model) {
             return [
                 'id' => 'photo-studio-image',
-                'model' => 'google/gemini-2.5-flash-image',
+                'model' => $model,
                 'object' => 'chat.completion',
                 'created' => now()->timestamp,
                 'choices' => [
@@ -704,7 +714,7 @@ class PhotoStudioTest extends TestCase
             userId: $user->id,
             productId: null,
             prompt: 'Use this prompt as-is',
-            model: 'google/gemini-2.5-flash-image',
+            model: $model,
             disk: 's3',
             imageInput: $this->testImageDataUri(),
             sourceType: 'uploaded_image',
@@ -733,11 +743,12 @@ class PhotoStudioTest extends TestCase
 
         $inlinePayload = $this->testImageBase64();
         $dataUri = 'data:'.$this->testImageMime().';base64,'.$inlinePayload;
+        $model = $this->imageGenerationModel();
 
-        $this->fakeOpenRouter(function () use ($dataUri) {
+        $this->fakeOpenRouter(function () use ($dataUri, $model) {
             return [
                 'id' => 'photo-studio-image',
-                'model' => 'google/gemini-2.5-flash-image',
+                'model' => $model,
                 'object' => 'chat.completion',
                 'created' => now()->timestamp,
                 'choices' => [
@@ -766,7 +777,7 @@ class PhotoStudioTest extends TestCase
             userId: $user->id,
             productId: null,
             prompt: 'Use this prompt as-is',
-            model: 'google/gemini-2.5-flash-image',
+            model: $model,
             disk: 's3',
             imageInput: $this->testImageDataUri(),
             sourceType: 'uploaded_image',
@@ -795,6 +806,7 @@ class PhotoStudioTest extends TestCase
 
         $user = User::factory()->withPersonalTeam()->create();
         $team = $user->currentTeam;
+        $model = $this->imageGenerationModel();
 
         $requestLog = [];
 
@@ -808,10 +820,10 @@ class PhotoStudioTest extends TestCase
             },
         ]);
 
-        $this->fakeOpenRouter(function () {
+        $this->fakeOpenRouter(function () use ($model) {
             return [
                 'id' => 'photo-studio-image',
-                'model' => 'google/gemini-2.5-flash-image',
+                'model' => $model,
                 'object' => 'chat.completion',
                 'created' => now()->timestamp,
                 'choices' => [
@@ -839,7 +851,7 @@ class PhotoStudioTest extends TestCase
             userId: $user->id,
             productId: null,
             prompt: 'Use this prompt as-is',
-            model: 'google/gemini-2.5-flash-image',
+            model: $model,
             disk: 's3',
             imageInput: $this->testImageDataUri(),
             sourceType: 'uploaded_image',
@@ -1045,10 +1057,14 @@ class PhotoStudioTest extends TestCase
         ]);
     }
 
+    private function imageGenerationModel(): string
+    {
+        return config('photo-studio.models.image_generation');
+    }
+
     public function test_aspect_ratio_is_passed_to_job(): void
     {
         config()->set('laravel-openrouter.api_key', 'test-key');
-        config()->set('photo-studio.models.image_generation', 'google/gemini-3-pro-image-preview');
         config()->set('photo-studio.generation_disk', 's3');
 
         $this->fakeProductImageFetch();
@@ -1097,7 +1113,6 @@ class PhotoStudioTest extends TestCase
     public function test_match_input_aspect_ratio_detects_from_image(): void
     {
         config()->set('laravel-openrouter.api_key', 'test-key');
-        config()->set('photo-studio.models.image_generation', 'google/gemini-3-pro-image-preview');
         config()->set('photo-studio.generation_disk', 's3');
 
         $this->fakeProductImageFetch();
