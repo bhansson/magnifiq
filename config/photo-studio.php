@@ -14,12 +14,22 @@ return [
         'max_images' => env('PHOTO_STUDIO_COMPOSITION_MAX_IMAGES', 14),
 
         'modes' => [
+            'scene_composition' => [
+                'label' => 'Scene Composition',
+                'description' => 'Create a beautifully composed scene for a single product',
+                'icon' => 'sparkles',
+                'example_hint' => 'Perfect for: hero images, product showcases, marketing banners',
+                'example_image' => 'images/composition-examples/scene-composition.svg',
+                'min_images' => 1,
+                'max_images' => 1,
+            ],
             'products_together' => [
                 'label' => 'Product Group Image',
                 'description' => 'All products appear in one cohesive scene',
                 'icon' => 'user-group',
                 'example_hint' => 'Perfect for: outfit combinations, product bundles, room setups',
                 'example_image' => 'images/composition-examples/products-together.svg',
+                'min_images' => 2,
             ],
             'lifestyle_context' => [
                 'label' => 'Lifestyle Context',
@@ -27,6 +37,7 @@ return [
                 'icon' => 'users',
                 'example_hint' => 'Perfect for: product-in-use shots, lifestyle marketing, social media content',
                 'example_image' => 'images/composition-examples/lifestyle-context.svg',
+                'min_images' => 1,
             ],
             'reference_hero' => [
                 'label' => 'Reference + Hero',
@@ -34,10 +45,22 @@ return [
                 'icon' => 'viewfinder-circle',
                 'example_hint' => 'Perfect for: style transfer, themed photoshoots, branded looks',
                 'example_image' => 'images/composition-examples/reference-hero.png',
+                'min_images' => 2,
             ],
         ],
 
         'extraction_prompts' => [
+            'scene_composition' => <<<'PROMPT'
+Analyze the product image to understand what kind of item it is, including its approximate size, materials,
+intended use, and emotional tone (e.g. sporty, safety-focused, luxury, tech, lifestyle, beauty, etc.).
+Based on that understanding, create one single, high-quality image generation prompt where the same product
+(referred to as "the reference product") appears naturally and fittingly in a relevant environment, lighting
+condition, and visual style that reflect its real-world context. Do not mention or describe brand names, logos,
+or label text. Keep the product clearly visible and central in the scene. Do not describe the product, only
+the environment to fit it.
+Output only the prompt, no explanations or commentary.
+PROMPT,
+
             'products_together' => <<<'PROMPT'
 Analyze the provided product images to understand each item: its size, materials, intended use, and style.
 Create a unified scene prompt where ALL products naturally coexist in the same environment.
