@@ -12,6 +12,20 @@ class PhotoStudioDownloadTest extends TestCase
 {
     use RefreshDatabase;
 
+    private const TEST_IMAGE_MODEL = 'google/gemini-2.5-flash-image';
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        config()->set('photo-studio.models.image_generation', self::TEST_IMAGE_MODEL);
+    }
+
+    private function imageGenerationModel(): string
+    {
+        return config('photo-studio.models.image_generation');
+    }
+
     public function test_user_can_download_generation_from_own_team(): void
     {
         Storage::fake('public');
@@ -26,7 +40,7 @@ class PhotoStudioDownloadTest extends TestCase
             'source_type' => 'product_image',
             'source_reference' => 'https://cdn.example.com/reference.png',
             'prompt' => 'Prompt text',
-            'model' => 'google/gemini-2.5-flash-image',
+            'model' => $this->imageGenerationModel(),
             'storage_disk' => 'public',
             'storage_path' => 'photo-studio/test.png',
         ]);
@@ -54,7 +68,7 @@ class PhotoStudioDownloadTest extends TestCase
             'source_type' => 'product_image',
             'source_reference' => 'https://cdn.example.com/reference.png',
             'prompt' => 'Prompt text',
-            'model' => 'google/gemini-2.5-flash-image',
+            'model' => $this->imageGenerationModel(),
             'storage_disk' => 'public',
             'storage_path' => 'photo-studio/other-test.png',
         ]);

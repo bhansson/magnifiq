@@ -37,6 +37,13 @@ class GeneratePhotoStudioImage implements ShouldQueue
 
     public ?int $timeout = 90;
 
+    /**
+     * Backoff intervals (seconds) between retries.
+     *
+     * @var array<int, int>
+     */
+    public array $backoff = [30, 120];
+
     public function __construct(
         public int $productAiJobId,
         public int $teamId,
@@ -154,6 +161,36 @@ class GeneratePhotoStudioImage implements ShouldQueue
 
             throw $exception;
         }
+    }
+
+    /**
+     * Handle a job failure after all retries are exhausted.
+     *
+     * This is critical for timeouts and worker kills where the catch block
+     * inside handle() never executes.
+     */
+    public function failed(Throwable $exception): void
+    {
+        $jobRecord = ProductAiJob::query()->find($this->productAiJobId);
+
+        if (! $jobRecord) {
+            return;
+        }
+
+        $jobRecord->forceFill([
+            'status' => ProductAiJob::STATUS_FAILED,
+            'progress' => 0,
+            'finished_at' => now(),
+            'last_error' => Str::limit($exception->getMessage(), 500),
+        ])->save();
+
+        Log::warning('Photo Studio job permanently failed', [
+            'team_id' => $this->teamId,
+            'user_id' => $this->userId,
+            'product_id' => $this->productId,
+            'product_ai_job_id' => $this->productAiJobId,
+            'exception' => $exception->getMessage(),
+        ]);
     }
 
     /**
