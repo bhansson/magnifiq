@@ -119,7 +119,7 @@
                         <li wire:key="photo-studio-product-{{ $product['id'] }}">
                             <button
                                 type="button"
-                                class="flex w-full items-start justify-between gap-3 px-4 py-3 text-left text-sm text-gray-900 dark:text-zinc-100 transition hover:bg-amber-50 dark:hover:bg-amber-500/10"
+                                class="flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-gray-900 dark:text-zinc-100 transition hover:bg-amber-50 dark:hover:bg-amber-500/10"
                                 :class="{ 'bg-amber-50 dark:bg-amber-500/10 text-amber-900 dark:text-amber-300': Number(selectedId) === {{ $product['id'] }} }"
                                 data-option
                                 data-label="{{ $productLabel }}"
@@ -131,15 +131,7 @@
                                 @click="selectProduct($event.currentTarget)"
                                 wire:click="$set('productId', {{ $product['id'] }})"
                             >
-                                <div class="flex-1">
-                                    <p class="font-semibold">{{ $product['title'] }}</p>
-                                    <p class="mt-0.5 text-xs text-gray-500 dark:text-zinc-500">
-                                        SKU: {{ $product['sku'] ?: '—' }}
-                                        @if (! empty($product['brand']))
-                                            &middot; Brand: {{ $product['brand'] }}
-                                        @endif
-                                    </p>
-                                </div>
+                                <x-photo-studio.product-item :product="$product" />
                                 <svg
                                     class="size-[18px] text-emerald-500 {{ $isSelected ? '' : 'hidden' }}"
                                     :class="{ 'hidden': Number(selectedId) !== {{ $product['id'] }} }"

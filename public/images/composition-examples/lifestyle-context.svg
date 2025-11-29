@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 200" fill="none">
+  <rect width="400" height="200" fill="#fef3c7"/>
+
+  <!-- Person silhouette -->
+  <circle cx="200" cy="60" r="25" fill="#f59e0b"/>
+  <path d="M160 180 L170 120 Q200 100 230 120 L240 180" fill="#f59e0b"/>
+
+  <!-- Product in hands -->
+  <rect x="175" y="110" width="50" height="35" rx="4" fill="#78350f" stroke="#451a03" stroke-width="2"/>
+
+  <!-- Environment hints -->
+  <rect x="20" y="150" width="60" height="50" fill="#fbbf24" opacity="0.5"/>
+  <rect x="320" y="140" width="60" height="60" fill="#fbbf24" opacity="0.5"/>
+
+  <!-- Label -->
+  <text x="200" y="190" text-anchor="middle" fill="#92400e" font-family="system-ui" font-size="12" font-weight="500">Product in Use</text>
+</svg>
