@@ -7,9 +7,9 @@
     'generationStatus' => null,
     'isProcessing' => false,
     'isAwaitingGeneration' => false,
-    'hasReferenceSource' => false,
-    'isCompositionMode' => false,
+    'canGenerate' => false,
     'compositionImageCount' => 0,
+    'minImages' => 1,
 ])
 
 @php
@@ -17,6 +17,7 @@
     $aspectRatios = config('photo-studio.aspect_ratios.available', []);
     $currentAspectRatio = $aspectRatio ?? 'match_input';
     $detectedRatioLabel = $detectedAspectRatio ? $aspectRatios[$detectedAspectRatio]['label'] ?? $detectedAspectRatio : null;
+    $needsMoreImages = $compositionImageCount < $minImages;
 @endphp
 
 {{-- Creative Direction --}}
@@ -43,23 +44,38 @@
 {{-- Reference Status Card --}}
 <div class="flex flex-col gap-4 rounded-2xl border border-dashed border-amber-200 dark:border-amber-500/30 bg-amber-50/60 dark:bg-amber-500/10 p-4 sm:flex-row sm:items-center sm:justify-between">
     <div class="flex items-start gap-3 text-sm text-amber-900 dark:text-amber-400">
-        <svg class="mt-1 h-5 w-5 text-amber-500" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-            <path d="m5 10 3 3 7-7" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
-        </svg>
+        @if ($canGenerate)
+            <svg class="mt-1 h-5 w-5 text-amber-500" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                <path d="m5 10 3 3 7-7" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+        @else
+            <svg class="mt-1 h-5 w-5 text-amber-500" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                <path d="M10 3.333 3.333 16.667h13.334L10 3.333Z" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+                <path d="m10 8.333.008 3.334" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+                <path d="M9.992 13.333h.016" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+        @endif
         <div>
-            @if ($isCompositionMode)
+            @if ($canGenerate)
                 <p class="font-semibold dark:text-amber-300">
-                    {{ $hasReferenceSource ? $compositionImageCount . ' images ready for composition.' : 'Add at least 2 images to continue.' }}
+                    {{ $compositionImageCount === 1 ? '1 image ready.' : "{$compositionImageCount} images ready." }}
                 </p>
                 <p class="text-amber-900/80 dark:text-amber-400/80">
-                    {{ $hasReferenceSource ? "We'll analyse all images together to craft a unified prompt." : 'Upload files or select products from your catalog.' }}
+                    We'll analyse {{ $compositionImageCount === 1 ? 'the image' : 'all images' }} to craft a prompt.
+                </p>
+            @elseif ($needsMoreImages)
+                <p class="font-semibold dark:text-amber-300">
+                    {{ $minImages === 1 ? 'Add an image to continue.' : "Add at least {$minImages} images to continue." }}
+                </p>
+                <p class="text-amber-900/80 dark:text-amber-400/80">
+                    Upload a file or select from your catalog.
                 </p>
             @else
                 <p class="font-semibold dark:text-amber-300">
-                    {{ $hasReferenceSource ? 'Reference locked in.' : 'Choose an image source to continue.' }}
+                    Ready to extract prompt.
                 </p>
                 <p class="text-amber-900/80 dark:text-amber-400/80">
-                    {{ $hasReferenceSource ? "We'll analyse the photo to draft a reusable prompt." : 'Upload a file or switch to a catalog product first.' }}
+                    Click the button to analyse your image(s).
                 </p>
             @endif
         </div>
@@ -68,15 +84,15 @@
         type="button"
         wire:click="extractPrompt"
         wire:loading.attr="disabled"
-        :disabled="! $hasReferenceSource"
+        :disabled="! $canGenerate"
         class="flex items-center gap-2 whitespace-nowrap"
     >
-        <span wire:loading.remove wire:target="extractPrompt,productId,image">
+        <span wire:loading.remove wire:target="extractPrompt,compositionUploads">
             Craft prompt
         </span>
         <span wire:loading.flex wire:target="extractPrompt" class="flex items-center gap-2">
             <x-loading-spinner class="size-4" />
-            Processing…
+            Processing...
         </span>
     </x-button>
 </div>
@@ -204,7 +220,7 @@
             <div class="mt-4 rounded-md bg-amber-50 dark:bg-amber-500/10 p-4 text-sm text-amber-800 dark:text-amber-400" wire:poll.3s="pollGenerationStatus">
                 <div class="flex items-center gap-2">
                     <x-loading-spinner class="size-4" />
-                    <span>Image generation in progress…</span>
+                    <span>Image generation in progress...</span>
                 </div>
             </div>
         @endif
@@ -223,7 +239,7 @@
                 </span>
                 <span wire:loading.flex wire:target="generateImage" class="flex items-center gap-2">
                     <x-loading-spinner class="size-4" />
-                    Generating…
+                    Generating...
                 </span>
             </x-button>
             <button

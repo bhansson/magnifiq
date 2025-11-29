@@ -15,9 +15,6 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
-use Illuminate\Validation\Rule;
-use Illuminate\Validation\Rules\File as FileRule;
-use Illuminate\Validation\ValidationException;
 use Livewire\Component;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
@@ -36,10 +33,6 @@ class PhotoStudio extends Component
 
     private const PRODUCT_SEARCH_LIMIT = 50;
 
-    public ?TemporaryUploadedFile $image = null;
-
-    public ?int $productId = null;
-
     public string $creativeBrief = '';
 
     public ?string $promptResult = null;
@@ -47,8 +40,6 @@ class PhotoStudio extends Component
     public ?string $errorMessage = null;
 
     public bool $isProcessing = false;
-
-    public ?string $productImagePreview = null;
 
     public ?string $generatedImageUrl = null;
 
@@ -90,14 +81,9 @@ class PhotoStudio extends Component
     public int $productResultsLimit = self::PRODUCT_SEARCH_LIMIT;
 
     /**
-     * Active tab: 'upload', 'catalog', or 'composition'
+     * Composition mode: 'scene_composition', 'products_together', 'lifestyle_context', or 'reference_hero'
      */
-    public string $activeTab = 'upload';
-
-    /**
-     * Composition mode: 'products_together', 'blend_collage', or 'reference_hero'
-     */
-    public string $compositionMode = 'products_together';
+    public string $compositionMode = 'scene_composition';
 
     /**
      * Images added to the composition.
@@ -155,10 +141,58 @@ class PhotoStudio extends Component
         }
 
         $this->refreshProductOptions();
-
-        $this->syncSelectedProductPreview();
         $this->refreshLatestGeneration();
         $this->refreshProductGallery();
+    }
+
+    /**
+     * Check if the current mode requirements are met for generation.
+     */
+    public function canGenerate(): bool
+    {
+        $imageCount = count($this->compositionImages);
+
+        if ($imageCount === 0) {
+            return false;
+        }
+
+        $modes = config('photo-studio.composition.modes', []);
+        $modeConfig = $modes[$this->compositionMode] ?? [];
+
+        $minImages = $modeConfig['min_images'] ?? 1;
+        $maxImages = $modeConfig['max_images'] ?? null;
+
+        if ($imageCount < $minImages) {
+            return false;
+        }
+
+        if ($maxImages !== null && $imageCount > $maxImages) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Get the maximum number of images allowed for the current mode.
+     */
+    public function getMaxImagesForCurrentMode(): int
+    {
+        $modes = config('photo-studio.composition.modes', []);
+        $modeConfig = $modes[$this->compositionMode] ?? [];
+
+        return $modeConfig['max_images'] ?? config('photo-studio.composition.max_images', 14);
+    }
+
+    /**
+     * Get the minimum number of images required for the current mode.
+     */
+    public function getMinImagesForCurrentMode(): int
+    {
+        $modes = config('photo-studio.composition.modes', []);
+        $modeConfig = $modes[$this->compositionMode] ?? [];
+
+        return $modeConfig['min_images'] ?? 1;
     }
 
     /**
@@ -170,38 +204,9 @@ class PhotoStudio extends Component
         $this->resetGenerationPreview();
     }
 
-    /**
-     * Ensure only one source of truth is active.
-     */
-    public function updatedProductId(): void
-    {
-        if ($this->productId) {
-            $this->image = null;
-        }
-
-        $this->promptResult = null;
-        $this->resetGenerationPreview();
-        $this->syncSelectedProductPreview();
-        $this->refreshProductGallery();
-        $this->updateDetectedAspectRatio();
-    }
-
     public function updatedProductSearch(): void
     {
         $this->refreshProductOptions();
-    }
-
-    /**
-     * When a new image is uploaded, clear the product selection.
-     */
-    public function updatedImage(): void
-    {
-        $this->productId = null;
-        $this->promptResult = null;
-        $this->resetGenerationPreview();
-        $this->productImagePreview = null;
-        $this->refreshProductGallery();
-        $this->updateDetectedAspectRatio();
     }
 
     public function updatedGallerySearch(): void
@@ -209,209 +214,39 @@ class PhotoStudio extends Component
         $this->refreshProductGallery();
     }
 
-    public function extractPrompt(): void
+    /**
+     * When composition mode changes, clear images if they exceed the new mode's limits.
+     */
+    public function updatedCompositionMode(): void
     {
-        // Route to composition method if in composition tab
-        if ($this->activeTab === 'composition') {
-            $this->extractCompositionPrompt();
+        $maxImages = $this->getMaxImagesForCurrentMode();
 
-            return;
+        // If current images exceed new mode's max, trim the array
+        if (count($this->compositionImages) > $maxImages) {
+            $this->compositionImages = array_slice($this->compositionImages, 0, $maxImages);
+            $this->compositionHeroIndex = min($this->compositionHeroIndex, count($this->compositionImages) - 1);
         }
 
-        $this->resetErrorBag();
-        $this->errorMessage = null;
         $this->promptResult = null;
         $this->resetGenerationPreview();
-
-        $this->validate();
-
-        if (! $this->hasImageSource()) {
-            $message = 'Upload an image or choose a product to continue.';
-            $this->addError('image', $message);
-            $this->addError('productId', $message);
-
-            return;
-        }
-
-        if (! config('laravel-openrouter.api_key')) {
-            $this->errorMessage = 'Configure an OpenRouter API key before extracting prompts.';
-
-            return;
-        }
-
-        $this->isProcessing = true;
-
-        try {
-            [$imageUrl, $product] = $this->resolveImageSource();
-
-            $messages = $this->buildMessages($imageUrl, $product);
-
-            $model = config('photo-studio.models.vision');
-
-            if (! $model) {
-                throw new RuntimeException(
-                    'Photo Studio vision model is not configured. Set OPENROUTER_PHOTO_STUDIO_MODEL in your environment.'
-                );
-            }
-
-            $chatData = new ChatData(
-                messages: $messages,
-                model: $model,
-                max_tokens: 700,
-                temperature: 0.4,
-            );
-
-            $response = LaravelOpenRouter::chatRequest($chatData);
-
-            $content = $this->extractResponseContent($response->toArray());
-
-            if ($content === '') {
-                throw new RuntimeException('Received an empty response from the AI provider.');
-            }
-
-            $this->promptResult = $content;
-        } catch (ValidationException $exception) {
-            throw $exception;
-        } catch (Throwable $exception) {
-            $context = [
-                'user_id' => Auth::id(),
-                'product_id' => $this->productId,
-                'exception' => $exception,
-            ];
-
-            // Extract full API response body from Guzzle exceptions
-            if ($exception instanceof \GuzzleHttp\Exception\ClientException) {
-                $context['response_body'] = (string) $exception->getResponse()?->getBody();
-            }
-
-            Log::error('Photo Studio prompt extraction failed', $context);
-
-            $this->errorMessage = 'Unable to extract a prompt right now. Please try again in a moment.';
-        } finally {
-            $this->isProcessing = false;
-        }
     }
 
+    /**
+     * Extract prompt from composition images.
+     * Unified method that works for all modes (single image or multiple).
+     */
+    public function extractPrompt(): void
+    {
+        $this->extractCompositionPrompt();
+    }
+
+    /**
+     * Generate image from composition images.
+     * Unified method that works for all modes (single image or multiple).
+     */
     public function generateImage(): void
     {
-        // Route to composition method if in composition tab
-        if ($this->activeTab === 'composition') {
-            $this->generateCompositionImage();
-
-            return;
-        }
-
-        $this->resetErrorBag();
-        $this->errorMessage = null;
-        $this->generationStatus = null;
-
-        if (! config('laravel-openrouter.api_key')) {
-            $this->errorMessage = 'Configure an OpenRouter API key before generating images.';
-
-            return;
-        }
-
-        if (! $this->promptResult) {
-            $this->errorMessage = 'Prompt is missing.';
-
-            return;
-        }
-
-        $this->validate();
-
-        $disk = config('photo-studio.generation_disk', 's3');
-        $availableDisks = config('filesystems.disks', []);
-
-        if (! array_key_exists($disk, $availableDisks)) {
-            $this->errorMessage = 'The configured storage disk for Photo Studio is not available.';
-
-            return;
-        }
-
-        $team = Auth::user()?->currentTeam;
-
-        if (! $team) {
-            abort(403, 'Join or create a team to access the Photo Studio.');
-        }
-
-        try {
-            $previousGenerationId = PhotoStudioGeneration::query()
-                ->where('team_id', $team->id)
-                ->where('product_id', $this->productId)
-                ->max('id');
-
-            $imageInput = null;
-            $product = null;
-            $sourceType = 'prompt_only';
-            $sourceReference = null;
-
-            if ($this->hasImageSource()) {
-                [$imageInput, $product] = $this->resolveImageSource();
-                $sourceType = $this->image instanceof TemporaryUploadedFile ? 'uploaded_image' : 'product_image';
-                $sourceReference = $this->image instanceof TemporaryUploadedFile
-                    ? ($this->image->getClientOriginalName() ?: $this->image->getFilename())
-                    : $product?->image_link;
-            }
-
-            $model = config('photo-studio.models.image_generation');
-
-            if (! $model) {
-                $this->errorMessage = 'Photo Studio image model is not configured. Set OPENROUTER_PHOTO_STUDIO_IMAGE_MODEL in your environment.';
-
-                return;
-            }
-
-            $this->resetGenerationPreview();
-
-            $effectiveAspectRatio = $this->resolveEffectiveAspectRatio($imageInput);
-
-            $jobRecord = ProductAiJob::create([
-                'team_id' => $team->id,
-                'product_id' => $product?->id,
-                'sku' => $product?->sku,
-                'product_ai_template_id' => null,
-                'job_type' => ProductAiJob::TYPE_PHOTO_STUDIO,
-                'status' => ProductAiJob::STATUS_QUEUED,
-                'progress' => 0,
-                'queued_at' => now(),
-                'meta' => array_filter([
-                    'source_type' => $sourceType,
-                    'source_reference' => $sourceReference,
-                    'prompt' => $this->promptResult,
-                    'model' => $model,
-                    'aspect_ratio' => $effectiveAspectRatio,
-                ]),
-            ]);
-
-            GeneratePhotoStudioImage::dispatch(
-                productAiJobId: $jobRecord->id,
-                teamId: $team->id,
-                userId: Auth::id(),
-                productId: $product?->id,
-                prompt: $this->promptResult,
-                model: $model,
-                disk: $disk,
-                imageInput: $imageInput,
-                sourceType: $sourceType,
-                sourceReference: $sourceReference,
-                aspectRatio: $effectiveAspectRatio,
-            );
-
-            $this->pendingGenerationBaselineId = $previousGenerationId ?? 0;
-            $this->isAwaitingGeneration = true;
-            $this->pendingProductId = $product?->id;
-            $this->generationStatus = 'Image generation queued. Hang tight while we render your scene.';
-        } catch (ValidationException $exception) {
-            throw $exception;
-        } catch (Throwable $exception) {
-            Log::error('Photo Studio image generation failed', [
-                'user_id' => Auth::id(),
-                'product_id' => $this->productId,
-                'exception' => $exception,
-            ]);
-
-            $this->errorMessage = 'Unable to generate an image right now. Please try again in a moment.';
-        }
+        $this->generateCompositionImage();
     }
 
     public function pollGenerationStatus(): void
@@ -856,8 +691,17 @@ class PhotoStudio extends Component
         $this->promptResult = null;
         $this->resetGenerationPreview();
 
-        if (count($this->compositionImages) < 2) {
-            $this->errorMessage = 'Add at least 2 images to create a composition.';
+        if (! $this->canGenerate()) {
+            $minImages = $this->getMinImagesForCurrentMode();
+            $imageCount = count($this->compositionImages);
+
+            if ($imageCount === 0) {
+                $this->errorMessage = 'Add an image to continue.';
+            } elseif ($imageCount < $minImages) {
+                $this->errorMessage = "Add at least {$minImages} images for this mode.";
+            } else {
+                $this->errorMessage = 'Cannot generate with the current image selection.';
+            }
 
             return;
         }
@@ -940,8 +784,9 @@ class PhotoStudio extends Component
             return;
         }
 
-        if (count($this->compositionImages) < 2) {
-            $this->errorMessage = 'Add at least 2 images to create a composition.';
+        if (! $this->canGenerate()) {
+            $minImages = $this->getMinImagesForCurrentMode();
+            $this->errorMessage = "Add at least {$minImages} image(s) for this mode.";
 
             return;
         }
@@ -1168,62 +1013,9 @@ class PhotoStudio extends Component
 
     protected function rules(): array
     {
-        $teamId = Auth::user()?->currentTeam?->id;
-
         return [
-            'image' => [
-                'nullable',
-                FileRule::image()
-                    ->max(8 * 1024), // 8 MB
-            ],
-            'productId' => [
-                'nullable',
-                'integer',
-                Rule::exists('products', 'id')
-                    ->where('team_id', $teamId),
-            ],
             'creativeBrief' => ['nullable', 'string', 'max:600'],
         ];
-    }
-
-    private function hasImageSource(): bool
-    {
-        return $this->image instanceof TemporaryUploadedFile || $this->productId !== null;
-    }
-
-    /**
-     * @return array{0: string, 1: Product|null}
-     *
-     * @throws ValidationException
-     */
-    private function resolveImageSource(): array
-    {
-        if ($this->image instanceof TemporaryUploadedFile) {
-            return [$this->encodeUploadedImage($this->image), null];
-        }
-
-        $teamId = Auth::user()?->currentTeam?->id;
-
-        $product = Product::query()
-            ->where('team_id', $teamId)
-            ->find($this->productId);
-
-        if (! $product) {
-            throw ValidationException::withMessages([
-                'productId' => 'The selected product is no longer available.',
-            ]);
-        }
-
-        if (! $product->image_link) {
-            throw ValidationException::withMessages([
-                'productId' => 'The selected product does not have an image to analyse.',
-            ]);
-        }
-
-        // Fetch and convert external image to ensure compatibility with AI vision APIs
-        $imageDataUri = $this->fetchAndConvertExternalImage($product->image_link);
-
-        return [$imageDataUri, $product];
     }
 
     /**
@@ -1770,24 +1562,6 @@ class PhotoStudio extends Component
         return '';
     }
 
-    private function syncSelectedProductPreview(): void
-    {
-        $this->productImagePreview = null;
-
-        if (! $this->productId) {
-            return;
-        }
-
-        $teamId = Auth::user()?->currentTeam?->id;
-
-        $product = Product::query()
-            ->select('id', 'team_id', 'image_link')
-            ->where('team_id', $teamId)
-            ->find($this->productId);
-
-        $this->productImagePreview = $product?->image_link;
-    }
-
     private function refreshProductOptions(): void
     {
         $team = Auth::user()?->currentTeam;
@@ -1833,18 +1607,29 @@ class PhotoStudio extends Component
             })
             ->toArray();
 
-        if ($this->productId && ! collect($this->products)->firstWhere('id', $this->productId)) {
-            $selectedProduct = Product::query()
-                ->where('team_id', $team->id)
-                ->find($this->productId, ['id', 'title', 'sku', 'brand', 'image_link']);
+        // Ensure products in current composition are included in the list
+        $compositionProductIds = collect($this->compositionImages)
+            ->where('type', 'product')
+            ->pluck('product_id')
+            ->filter()
+            ->toArray();
 
-            if ($selectedProduct) {
+        $existingProductIds = collect($this->products)->pluck('id')->toArray();
+        $missingProductIds = array_diff($compositionProductIds, $existingProductIds);
+
+        if (! empty($missingProductIds)) {
+            $missingProducts = Product::query()
+                ->where('team_id', $team->id)
+                ->whereIn('id', $missingProductIds)
+                ->get(['id', 'title', 'sku', 'brand', 'image_link']);
+
+            foreach ($missingProducts as $product) {
                 $this->products[] = [
-                    'id' => $selectedProduct->id,
-                    'title' => $selectedProduct->title ?: 'Untitled product #'.$selectedProduct->id,
-                    'sku' => $selectedProduct->sku,
-                    'brand' => $selectedProduct->brand,
-                    'image_link' => $selectedProduct->image_link,
+                    'id' => $product->id,
+                    'title' => $product->title ?: 'Untitled product #'.$product->id,
+                    'sku' => $product->sku,
+                    'brand' => $product->brand,
+                    'image_link' => $product->image_link,
                 ];
             }
         }
@@ -1963,33 +1748,27 @@ class PhotoStudio extends Component
     }
 
     /**
-     * Update the detected aspect ratio preview when the image source changes.
+     * Update the detected aspect ratio preview from the first composition image.
      */
     public function updateDetectedAspectRatio(): void
     {
         $this->detectedAspectRatio = null;
 
-        if (! $this->hasImageSource()) {
+        if (empty($this->compositionImages)) {
             return;
         }
 
-        try {
-            if ($this->image instanceof TemporaryUploadedFile) {
-                $contents = file_get_contents($this->image->getRealPath());
-                if ($contents !== false) {
-                    $this->detectedAspectRatio = $this->detectAspectRatioFromBinary($contents);
-                }
-            } elseif ($this->productId) {
-                $teamId = Auth::user()?->currentTeam?->id;
-                $product = Product::query()
-                    ->where('team_id', $teamId)
-                    ->find($this->productId);
+        $firstImage = $this->compositionImages[0];
 
-                if ($product?->image_link) {
-                    $response = Http::timeout(10)->get($product->image_link);
-                    if ($response->successful()) {
-                        $this->detectedAspectRatio = $this->detectAspectRatioFromBinary($response->body());
-                    }
+        try {
+            if (! empty($firstImage['data_uri'])) {
+                // Use pre-computed data URI
+                $this->detectedAspectRatio = $this->detectAspectRatioFromDataUri($firstImage['data_uri']);
+            } elseif ($firstImage['type'] === 'product' && ! empty($firstImage['preview_url'])) {
+                // Fetch product image
+                $response = Http::timeout(10)->get($firstImage['preview_url']);
+                if ($response->successful()) {
+                    $this->detectedAspectRatio = $this->detectAspectRatioFromBinary($response->body());
                 }
             }
         } catch (Throwable) {

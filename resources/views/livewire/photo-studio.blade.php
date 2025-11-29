@@ -17,14 +17,12 @@
     @keydown.escape.window="closeOverlay()"
 >
     @php
-        $selectedProduct = collect($products)->firstWhere('id', $productId);
-        $isCompositionMode = $activeTab === 'composition';
-        $hasReferenceSource = $isCompositionMode
-            ? count($compositionImages ?? []) >= 2
-            : (bool) ($image || $productId);
-        $hasPromptText = filled($promptResult);
         $compositionModes = config('photo-studio.composition.modes', []);
         $compositionImageCount = count($compositionImages ?? []);
+        $currentModeConfig = $compositionModes[$compositionMode] ?? [];
+        $maxImages = $currentModeConfig['max_images'] ?? config('photo-studio.composition.max_images', 14);
+        $minImages = $currentModeConfig['min_images'] ?? 1;
+        $canGenerate = $this->canGenerate();
     @endphp
 
     {{-- Gallery Section --}}
@@ -40,56 +38,30 @@
     <div class="bg-white dark:bg-zinc-900/50 shadow dark:shadow-none dark:ring-1 dark:ring-zinc-800 sm:rounded-2xl">
         <div class="space-y-6 px-6 py-5 sm:p-8">
             <div class="space-y-2">
-                <div class="flex flex-wrap items-baseline justify-between gap-3">
-                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
-                        Create new product photo
-                    </h3>
-                    @if ($selectedProduct)
-                        <span class="inline-flex items-center gap-2 rounded-full bg-amber-50 dark:bg-amber-500/20 px-3 py-1 text-xs font-medium text-amber-700 dark:text-amber-400">
-                            <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-                                <path d="m5 10 3 3 7-7" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
-                            </svg>
-                            {{ $selectedProduct['title'] }}
-                        </span>
-                    @endif
-                </div>
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+                    Create new product photo
+                </h3>
                 <p class="text-sm text-gray-600 dark:text-zinc-400">
-                    Upload image or choose a product from the catalog.
+                    Choose a mode, add your image(s), and let AI create stunning product photos.
                 </p>
             </div>
 
-            {{-- Reference Tabs --}}
-            <x-photo-studio.reference-tabs :active-tab="$activeTab" />
+            {{-- Mode Selector --}}
+            <x-photo-studio.mode-selector
+                :composition-mode="$compositionMode"
+                :composition-modes="$compositionModes"
+            />
 
-            {{-- Tab Panels --}}
-            <div class="space-y-5">
-                @if ($activeTab === 'upload')
-                    <x-photo-studio.upload-panel :image="$image" />
-                @endif
-
-                @if ($activeTab === 'catalog')
-                    <x-photo-studio.catalog-panel
-                        :products="$products"
-                        :product-id="$productId"
-                        :product-search="$productSearch"
-                        :product-results-limit="$productResultsLimit"
-                        :selected-product="$selectedProduct"
-                        :product-image-preview="$productImagePreview"
-                        :image="$image"
-                    />
-                @endif
-
-                @if ($activeTab === 'composition')
-                    <x-photo-studio.composition-panel
-                        :composition-mode="$compositionMode"
-                        :composition-modes="$compositionModes"
-                        :composition-images="$compositionImages"
-                        :composition-hero-index="$compositionHeroIndex"
-                        :products="$products"
-                        :product-search="$productSearch"
-                    />
-                @endif
-            </div>
+            {{-- Unified Image Panel --}}
+            <x-photo-studio.image-panel
+                :composition-mode="$compositionMode"
+                :composition-images="$compositionImages"
+                :composition-hero-index="$compositionHeroIndex"
+                :products="$products"
+                :product-search="$productSearch"
+                :max-images="$maxImages"
+                :min-images="$minImages"
+            />
 
             {{-- Prompt Section --}}
             <x-photo-studio.prompt-section
@@ -101,9 +73,9 @@
                 :generation-status="$generationStatus"
                 :is-processing="$isProcessing"
                 :is-awaiting-generation="$isAwaitingGeneration"
-                :has-reference-source="$hasReferenceSource"
-                :is-composition-mode="$isCompositionMode"
+                :can-generate="$canGenerate"
                 :composition-image-count="$compositionImageCount"
+                :min-images="$minImages"
             />
         </div>
     </div>
