@@ -2,6 +2,9 @@
 
 namespace App\Jobs;
 
+use App\DTO\AI\ChatMessage;
+use App\DTO\AI\ChatRequest;
+use App\Facades\AI;
 use App\Models\Product;
 use App\Models\ProductAiGeneration;
 use App\Models\ProductAiJob;
@@ -15,10 +18,6 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
-use GuzzleHttp\Exception\GuzzleException;
-use MoeMizrak\LaravelOpenrouter\DTO\ChatData;
-use MoeMizrak\LaravelOpenrouter\DTO\MessageData;
-use MoeMizrak\LaravelOpenrouter\Facades\LaravelOpenRouter;
 use RuntimeException;
 use Throwable;
 
@@ -68,128 +67,70 @@ class RunProductAiTemplateJob implements ShouldQueue
             ->with(['team', 'feed'])
             ->findOrFail($jobRecord->product_id);
 
-        $apiKey = config('laravel-openrouter.api_key');
-
-        if (! $apiKey) {
-            throw new RuntimeException('AI provider API key is not configured.');
-        }
-
         try {
-            $messages = collect($this->buildMessages($template, $product))
-                ->map(fn (array $message) => new MessageData(
-                    role: (string) Arr::get($message, 'role', 'user'),
-                    content: Arr::get($message, 'content')
-                ))
-                ->all();
+            // Build the chat request using the new DTOs
+            $request = $this->buildChatRequest($template, $product);
 
-            $options = $template->options();
-            unset($options['timeout']);
+            // Execute via AI abstraction
+            $response = AI::forFeature('chat')->chat($request);
 
-            $model = Arr::get($template->settings, 'model', config('services.openrouter.model', 'openrouter/auto'));
+            // Check for truncation
+            if ($response->wasTruncated()) {
+                Log::warning('AI provider response hit token limit', [
+                    'product_ai_job_id' => $jobRecord->id,
+                    'product_id' => $product->id,
+                    'template_id' => $template->id,
+                    'template_slug' => $template->slug,
+                    'finish_reason' => $response->finishReason,
+                ]);
 
-            $chatDataPayload = array_merge($options, [
-                'messages' => $messages,
-                'model' => $model,
-            ]);
-
-            try {
-                $response = LaravelOpenRouter::chatRequest(new ChatData(...$chatDataPayload));
-            } catch (GuzzleException $exception) {
-                $errorMessage = 'Failed to generate content from the AI provider.';
-                $status = null;
-
-                if (method_exists($exception, 'getResponse')) {
-                $status = $exception->getResponse()?->getStatusCode();
-
-                $errorMessage = match ($status) {
-                    400 => 'The AI provider rejected the request. Check the template parameters and try again.',
-                    401 => 'AI credentials are invalid or expired. Update the API key and retry.',
-                    402 => 'Out of credits or the request needs fewer max tokens.',
-                    403 => 'Provider flagged the request for moderation. Review the input content.',
-                    408 => 'Provider timed out before the model could respond.',
-                    429 => 'Provider rate limit was hit; wait a moment and try again.',
-                    502 => 'The selected AI model is currently unavailable. Try again shortly.',
-                    503 => 'No AI provider is available for the selected model at the moment.',
-                    default => $errorMessage,
-                };
+                throw new RuntimeException('AI response exceeded the configured token limit.');
             }
 
-            Log::warning('AI provider request failed', [
-                'product_ai_job_id' => $jobRecord->id,
+            if ($response->content === '') {
+                Log::warning('AI provider response missing content', [
+                    'product_ai_job_id' => $jobRecord->id,
+                    'product_id' => $product->id,
+                    'template_id' => $template->id,
+                    'template_slug' => $template->slug,
+                ]);
+
+                throw new RuntimeException('Received empty content from the AI provider.');
+            }
+
+            $jobRecord->forceFill([
+                'progress' => 80,
+            ])->save();
+
+            $contentPayload = ProductAiContentParser::normalize($template->contentType(), $response->content);
+
+            $model = Arr::get($template->settings, 'model', config('ai.features.chat.model', 'openrouter/auto'));
+
+            $record = ProductAiGeneration::create([
+                'team_id' => $product->team_id,
                 'product_id' => $product->id,
-                'template_id' => $template->id,
-                'template_slug' => $template->slug,
-                'status' => $status,
-                'exception' => $exception->getMessage(),
-                'provider' => 'openrouter',
+                'product_ai_template_id' => $template->id,
+                'product_ai_job_id' => $jobRecord->id,
+                'sku' => $product->sku,
+                'content' => $contentPayload,
+                'meta' => [
+                    'model' => $response->model ?? $model,
+                    'template_slug' => $template->slug,
+                    'job_id' => $jobRecord->id,
+                ],
             ]);
 
-            throw new RuntimeException($errorMessage, previous: $exception);
-        }
+            $this->trimHistory($template, $product->id, max($template->historyLimit(), 1));
 
-        $data = $response->toArray();
-        $finishReason = Str::lower((string) Arr::get($data, 'choices.0.finish_reason', ''));
-        $nativeFinishReason = Str::lower((string) Arr::get($data, 'choices.0.native_finish_reason', ''));
+            $meta = $jobRecord->meta ?? [];
+            $meta['generation_id'] = $record->id;
 
-        if (in_array($finishReason, ['length', 'max_tokens'], true) ||
-            in_array($nativeFinishReason, ['max_output_tokens', 'length'], true)) {
-            Log::warning('AI provider response hit token limit', [
-                'product_ai_job_id' => $jobRecord->id,
-                'product_id' => $product->id,
-                'template_id' => $template->id,
-                'template_slug' => $template->slug,
-                'response' => $data,
-            ]);
-
-            throw new RuntimeException('AI response exceeded the configured token limit.');
-        }
-
-        $rawContent = Arr::get($data, 'choices.0.message.content');
-        $content = $this->normalizeMessageContent($rawContent);
-
-        if ($content === '') {
-            Log::warning('AI provider response missing content', [
-                'product_ai_job_id' => $jobRecord->id,
-                'product_id' => $product->id,
-                'template_id' => $template->id,
-                'template_slug' => $template->slug,
-                'response' => $data,
-            ]);
-
-            throw new RuntimeException('Received empty content from the AI provider.');
-        }
-
-        $jobRecord->forceFill([
-            'progress' => 80,
-        ])->save();
-
-        $contentPayload = ProductAiContentParser::normalize($template->contentType(), $content);
-
-        $record = ProductAiGeneration::create([
-            'team_id' => $product->team_id,
-            'product_id' => $product->id,
-            'product_ai_template_id' => $template->id,
-            'product_ai_job_id' => $jobRecord->id,
-            'sku' => $product->sku,
-            'content' => $contentPayload,
-            'meta' => [
-                'model' => $model,
-                'template_slug' => $template->slug,
-                'job_id' => $jobRecord->id,
-            ],
-        ]);
-
-        $this->trimHistory($template, $product->id, max($template->historyLimit(), 1));
-
-        $meta = $jobRecord->meta ?? [];
-        $meta['generation_id'] = $record->id;
-
-        $jobRecord->forceFill([
-            'status' => ProductAiJob::STATUS_COMPLETED,
-            'progress' => 100,
-            'finished_at' => now(),
-            'meta' => $meta,
-        ])->save();
+            $jobRecord->forceFill([
+                'status' => ProductAiJob::STATUS_COMPLETED,
+                'progress' => 100,
+                'finished_at' => now(),
+                'meta' => $meta,
+            ])->save();
         } catch (Throwable $e) {
             $jobRecord->forceFill([
                 'status' => ProductAiJob::STATUS_FAILED,
@@ -218,7 +159,10 @@ class RunProductAiTemplateJob implements ShouldQueue
         ])->save();
     }
 
-    protected function buildMessages(ProductAiTemplate $template, Product $product): array
+    /**
+     * Build the chat request from template and product.
+     */
+    protected function buildChatRequest(ProductAiTemplate $template, Product $product): ChatRequest
     {
         $userTemplate = trim((string) $template->prompt);
 
@@ -233,20 +177,28 @@ class RunProductAiTemplateJob implements ShouldQueue
         $messages = [];
 
         if ($systemPrompt !== '') {
-            $messages[] = [
-                'role' => 'system',
-                'content' => strtr($systemPrompt, $placeholders),
-            ];
+            $messages[] = ChatMessage::system(strtr($systemPrompt, $placeholders));
         }
 
-        $messages[] = [
-            'role' => 'user',
-            'content' => trim($userPrompt),
-        ];
+        $messages[] = ChatMessage::user(trim($userPrompt));
 
-        return $messages;
+        $options = $template->options();
+        unset($options['timeout']);
+
+        $model = Arr::get($template->settings, 'model', config('ai.features.chat.model', 'openrouter/auto'));
+
+        return new ChatRequest(
+            messages: $messages,
+            model: $model,
+            maxTokens: $options['max_tokens'] ?? null,
+            temperature: $options['temperature'] ?? null,
+            extra: array_diff_key($options, ['max_tokens' => 1, 'temperature' => 1]),
+        );
     }
 
+    /**
+     * @return array<string, string>
+     */
     protected function buildPlaceholders(ProductAiTemplate $template, Product $product): array
     {
         $placeholders = [];
@@ -353,6 +305,7 @@ class RunProductAiTemplateJob implements ShouldQueue
             ->orderByDesc('created_at')
             ->orderByDesc('id')
             ->skip($keep)
+            ->take(PHP_INT_MAX) // Required for SQLite compatibility (OFFSET needs LIMIT)
             ->pluck('id');
 
         if ($idsToRemove->isEmpty()) {
@@ -375,39 +328,5 @@ class RunProductAiTemplateJob implements ShouldQueue
     protected function cleanSingleLine(string $value): string
     {
         return trim(preg_replace("/\s+/", ' ', strip_tags($value)));
-    }
-
-    /**
-     * @param  mixed  $content
-     */
-    protected function normalizeMessageContent(mixed $content): string
-    {
-        if (is_string($content)) {
-            return trim($content);
-        }
-
-        if (! is_array($content)) {
-            return '';
-        }
-
-        $segments = collect($content)->map(function ($segment) {
-            if (is_string($segment)) {
-                return $segment;
-            }
-
-            if (is_array($segment)) {
-                if (array_key_exists('text', $segment)) {
-                    return (string) $segment['text'];
-                }
-
-                if (array_key_exists('content', $segment)) {
-                    return (string) $segment['content'];
-                }
-            }
-
-            return '';
-        })->filter()->implode('');
-
-        return trim($segments);
     }
 }

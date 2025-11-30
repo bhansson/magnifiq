@@ -45,9 +45,9 @@ class PhotoStudioCompositionTest extends TestCase
 
         Livewire::test(PhotoStudio::class)
             ->set('activeTab', 'composition')
-            ->assertSee('Choose composition style')
+            ->assertSee('Choose a mode, add your image(s)')
             ->assertSee('Product Group Image')
-            ->assertSee('Blend & Collage')
+            ->assertSee('Lifestyle Context')
             ->assertSee('Reference + Hero');
     }
 
@@ -137,11 +137,13 @@ class PhotoStudioCompositionTest extends TestCase
             'image_link' => 'https://example.com/image.jpg',
         ]);
 
+        // Use 'products_together' mode which requires min_images: 2
         Livewire::test(PhotoStudio::class)
             ->set('activeTab', 'composition')
+            ->set('compositionMode', 'products_together')
             ->call('addProductToComposition', $product->id)
             ->call('extractPrompt')
-            ->assertSet('errorMessage', 'Add at least 2 images to create a composition.');
+            ->assertSet('errorMessage', 'Add at least 2 images for this mode.');
     }
 
     public function test_can_clear_composition(): void

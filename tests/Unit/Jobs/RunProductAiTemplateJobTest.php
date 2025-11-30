@@ -4,14 +4,13 @@ namespace Tests\Unit\Jobs;
 
 use App\Jobs\RunProductAiTemplateJob;
 use App\Models\Product;
-use App\Models\ProductAiJob;
 use App\Models\ProductAiGeneration;
+use App\Models\ProductAiJob;
 use App\Models\ProductAiTemplate;
 use App\Models\ProductFeed;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use MoeMizrak\LaravelOpenrouter\DTO\ResponseData;
-use MoeMizrak\LaravelOpenrouter\Facades\LaravelOpenRouter;
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 class RunProductAiTemplateJobTest extends TestCase
@@ -20,8 +19,10 @@ class RunProductAiTemplateJobTest extends TestCase
 
     public function test_job_creates_summary_record_and_trims_history(): void
     {
-        config()->set('laravel-openrouter.api_key', 'test-key');
-        config()->set('services.openrouter.model', 'test-model');
+        config()->set('ai.providers.openrouter.api_key', 'test-key');
+        config()->set('ai.providers.openrouter.api_endpoint', 'https://openrouter.ai/api/v1/');
+        config()->set('ai.features.chat.model', 'test-model');
+        config()->set('ai.features.chat.driver', 'openrouter');
 
         ProductAiTemplate::syncDefaultTemplates();
 
@@ -58,19 +59,23 @@ class RunProductAiTemplateJobTest extends TestCase
             ])->save();
         }
 
-        LaravelOpenRouter::shouldReceive('chatRequest')
-            ->once()
-            ->andReturn(ResponseData::from([
+        // Fake HTTP response for OpenRouter API
+        Http::fake([
+            '*openrouter.ai/*' => Http::response([
                 'id' => 'test-generation',
                 'model' => 'test-model',
                 'object' => 'chat.completion',
                 'created' => now()->timestamp,
                 'choices' => [
-                    ['message' => ['content' => [
-                        ['type' => 'text', 'text' => 'Newly generated summary.'],
-                    ]]],
+                    [
+                        'message' => [
+                            'content' => 'Newly generated summary.',
+                        ],
+                        'finish_reason' => 'stop',
+                    ],
                 ],
-            ]));
+            ]),
+        ]);
 
         $jobRecord = ProductAiJob::create([
             'team_id' => $team->id,
@@ -86,11 +91,21 @@ class RunProductAiTemplateJobTest extends TestCase
         $job = new RunProductAiTemplateJob($jobRecord->id);
         $job->handle();
 
-        $this->assertDatabaseHas('product_ai_generations', [
-            'product_id' => $product->id,
-            'product_ai_template_id' => $summaryTemplate->id,
-            'content' => 'Newly generated summary.',
-        ]);
+        // Verify an HTTP request was made
+        Http::assertSent(fn ($request) => str_contains($request->url(), 'openrouter.ai'));
+
+        // Check job completed successfully
+        $jobRecord->refresh();
+        $this->assertSame(ProductAiJob::STATUS_COMPLETED, $jobRecord->status, 'Job should be completed. Error: '.$jobRecord->last_error);
+
+        // Debug: Get the most recent generation
+        $latestGeneration = ProductAiGeneration::where('product_id', $product->id)
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->first();
+
+        $this->assertNotNull($latestGeneration, 'A new generation should have been created');
+        $this->assertSame('Newly generated summary.', $latestGeneration->content);
 
         $this->assertSame(10, ProductAiGeneration::where('product_id', $product->id)
             ->where('product_ai_template_id', $summaryTemplate->id)

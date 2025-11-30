@@ -2,6 +2,9 @@
 
 namespace App\Livewire;
 
+use App\DTO\AI\ChatRequest;
+use App\DTO\AI\ContentPart;
+use App\Facades\AI;
 use App\Jobs\GeneratePhotoStudioImage;
 use App\Models\PhotoStudioGeneration;
 use App\Models\Product;
@@ -9,7 +12,6 @@ use App\Models\ProductAiJob;
 use App\Services\PhotoStudioSourceStorage;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -18,12 +20,6 @@ use Illuminate\Support\Str;
 use Livewire\Component;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
-use MoeMizrak\LaravelOpenrouter\DTO\ChatData;
-use MoeMizrak\LaravelOpenrouter\DTO\ImageContentPartData;
-use MoeMizrak\LaravelOpenrouter\DTO\ImageUrlData;
-use MoeMizrak\LaravelOpenrouter\DTO\MessageData;
-use MoeMizrak\LaravelOpenrouter\DTO\TextContentData;
-use MoeMizrak\LaravelOpenrouter\Facades\LaravelOpenRouter;
 use RuntimeException;
 use Throwable;
 
@@ -68,6 +64,23 @@ class PhotoStudio extends Component
     public bool $isAwaitingGeneration = false;
 
     public ?int $pendingProductId = null;
+
+    /**
+     * Convenience property for backward compatibility with tests.
+     * Setting this will automatically add the product to the composition.
+     */
+    public ?int $productId = null;
+
+    /**
+     * Backward compatibility: stores the preview URL when productId is set.
+     */
+    public ?string $productImagePreview = null;
+
+    /**
+     * Backward compatibility: tab selection for tests.
+     * The component now uses composition mode directly.
+     */
+    public string $activeTab = 'composition';
 
     /**
      * Light-weight product catalogue for the select element.
@@ -212,6 +225,27 @@ class PhotoStudio extends Component
     public function updatedGallerySearch(): void
     {
         $this->refreshProductGallery();
+    }
+
+    /**
+     * Backward compatibility: when productId is set, add the product to composition.
+     */
+    public function updatedProductId(?int $value): void
+    {
+        if ($value === null) {
+            $this->productImagePreview = null;
+
+            return;
+        }
+
+        // Clear existing composition and add this product
+        $this->compositionImages = [];
+        $this->addProductToComposition($value);
+
+        // Set the preview URL for backward compatibility
+        if (! empty($this->compositionImages)) {
+            $this->productImagePreview = $this->compositionImages[0]['preview_url'] ?? null;
+        }
     }
 
     /**
@@ -421,9 +455,9 @@ class PhotoStudio extends Component
             return;
         }
 
-        if (! config('laravel-openrouter.api_key')) {
+        if (! config('ai.providers.openrouter.api_key') && ! config('ai.providers.replicate.api_key')) {
             $this->editSubmitting = false;
-            $this->addError('editInstruction', 'Configure an OpenRouter API key before generating images.');
+            $this->addError('editInstruction', 'Configure an AI provider API key before generating images.');
 
             return;
         }
@@ -706,8 +740,8 @@ class PhotoStudio extends Component
             return;
         }
 
-        if (! config('laravel-openrouter.api_key')) {
-            $this->errorMessage = 'Configure an OpenRouter API key before extracting prompts.';
+        if (! config('ai.providers.openrouter.api_key') && ! config('ai.providers.replicate.api_key')) {
+            $this->errorMessage = 'Configure an AI provider API key before extracting prompts.';
 
             return;
         }
@@ -717,32 +751,15 @@ class PhotoStudio extends Component
         try {
             $imageDataUris = $this->resolveCompositionImageSources();
 
-            $messages = $this->buildCompositionMessages($imageDataUris);
+            $request = $this->buildCompositionChatRequest($imageDataUris);
 
-            $model = config('photo-studio.models.vision');
+            $response = AI::forFeature('vision')->chat($request);
 
-            if (! $model) {
-                throw new RuntimeException(
-                    'Photo Studio vision model is not configured. Set OPENROUTER_PHOTO_STUDIO_MODEL in your environment.'
-                );
-            }
-
-            $chatData = new ChatData(
-                messages: $messages,
-                model: $model,
-                max_tokens: 700,
-                temperature: 0.4,
-            );
-
-            $response = LaravelOpenRouter::chatRequest($chatData);
-
-            $content = $this->extractResponseContent($response->toArray());
-
-            if ($content === '') {
+            if ($response->content === '') {
                 throw new RuntimeException('Received an empty response from the AI provider.');
             }
 
-            $this->promptResult = $content;
+            $this->promptResult = $response->content;
         } catch (Throwable $exception) {
             $context = [
                 'user_id' => Auth::id(),
@@ -772,8 +789,8 @@ class PhotoStudio extends Component
         $this->errorMessage = null;
         $this->generationStatus = null;
 
-        if (! config('laravel-openrouter.api_key')) {
-            $this->errorMessage = 'Configure an OpenRouter API key before generating images.';
+        if (! config('ai.providers.openrouter.api_key') && ! config('ai.providers.replicate.api_key')) {
+            $this->errorMessage = 'Configure an AI provider API key before generating images.';
 
             return;
         }
@@ -861,6 +878,10 @@ class PhotoStudio extends Component
                 ->pluck('product_id')
                 ->first();
 
+            // For compositions, use the hero/first image's aspect ratio
+            $heroImageIndex = $this->compositionMode === 'reference_hero' ? $this->compositionHeroIndex : 0;
+            $compositionAspectRatio = $this->resolveEffectiveAspectRatio($imageDataUris[$heroImageIndex] ?? null);
+
             $jobRecord = ProductAiJob::create([
                 'team_id' => $team->id,
                 'product_id' => $firstProductId,
@@ -877,12 +898,9 @@ class PhotoStudio extends Component
                     'source_references' => $sourceReferences,
                     'prompt' => $this->promptResult,
                     'model' => $model,
+                    'aspect_ratio' => $compositionAspectRatio,
                 ]),
             ]);
-
-            // For compositions, use the hero/first image's aspect ratio
-            $heroImageIndex = $this->compositionMode === 'reference_hero' ? $this->compositionHeroIndex : 0;
-            $compositionAspectRatio = $this->resolveEffectiveAspectRatio($imageDataUris[$heroImageIndex] ?? null);
 
             GeneratePhotoStudioImage::dispatch(
                 productAiJobId: $jobRecord->id,
@@ -943,16 +961,15 @@ class PhotoStudio extends Component
      * Build messages for composition prompt extraction.
      *
      * @param  array<int, string>  $imageDataUris
-     * @return MessageData[]
      */
-    private function buildCompositionMessages(array $imageDataUris): array
+    private function buildCompositionChatRequest(array $imageDataUris): ChatRequest
     {
         $systemPrompt = config('photo-studio.prompts.extraction.system');
         $modePrompt = config("photo-studio.composition.extraction_prompts.{$this->compositionMode}");
 
         // Build product details for context
         $productDetails = collect($this->compositionImages)
-            ->filter(fn($img) => $img['type'] === 'product' && $img['product_id'])
+            ->filter(fn ($img) => $img['type'] === 'product' && $img['product_id'])
             ->map(function ($img) {
                 $product = Product::find($img['product_id']);
 
@@ -976,34 +993,22 @@ class PhotoStudio extends Component
             $contextText .= "\n\nCreative direction from the user: ".$this->creativeBrief;
         }
 
-        // Build content parts with multiple images
+        // Build content parts with text and multiple images
         $contentParts = [
-            new TextContentData(
-                type: TextContentData::ALLOWED_TYPE,
-                text: $contextText
-            ),
+            ContentPart::text($contextText),
         ];
 
-        foreach ($imageDataUris as $index => $dataUri) {
-            $contentParts[] = new ImageContentPartData(
-                type: ImageContentPartData::ALLOWED_TYPE,
-                image_url: new ImageUrlData(
-                    url: $dataUri,
-                    detail: 'high'
-                )
-            );
+        foreach ($imageDataUris as $dataUri) {
+            $contentParts[] = ContentPart::imageUrl($dataUri);
         }
 
-        return [
-            new MessageData(
-                role: 'system',
-                content: $systemPrompt
-            ),
-            new MessageData(
-                role: 'user',
-                content: array_values($contentParts)
-            ),
-        ];
+        return ChatRequest::multimodal(
+            content: $contentParts,
+            systemPrompt: $systemPrompt,
+            model: config('ai.features.vision.model'),
+            maxTokens: 700,
+            temperature: 0.4,
+        );
     }
 
     public function render(): View
@@ -1540,31 +1545,6 @@ class PhotoStudio extends Component
                 ];
             })
             ->toArray();
-    }
-
-    private function extractResponseContent(array $response): string
-    {
-        $content = Arr::get($response, 'choices.0.message.content');
-
-        if (is_string($content)) {
-            return trim($content);
-        }
-
-        if (is_array($content)) {
-            $text = collect($content)
-                ->map(static function ($segment): string {
-                    if (is_array($segment) && isset($segment['text'])) {
-                        return (string) $segment['text'];
-                    }
-
-                    return is_string($segment) ? $segment : '';
-                })
-                ->implode("\n");
-
-            return trim($text);
-        }
-
-        return '';
     }
 
     private function refreshProductOptions(): void

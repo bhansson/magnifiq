@@ -192,15 +192,32 @@ Key components:
 - All authenticated routes require `['auth:sanctum', 'verified']` middleware
 - Horizon dashboard protected by same auth middleware
 
-### OpenRouter Integration
+### AI Provider Abstraction
 
-The application uses the `moe-mizrak/laravel-openrouter` package for AI provider access. Configure via:
-- `OPENROUTER_API_KEY` (required for AI features)
-- `OPENROUTER_MODEL` (default: `openrouter/auto`)
-- `OPENROUTER_PHOTO_STUDIO_MODEL` (vision model for prompt extraction, **required** for Photo Studio)
-- `OPENROUTER_PHOTO_STUDIO_IMAGE_MODEL` (image generation model, **required** for Photo Studio)
+The application uses a provider-agnostic AI abstraction layer (`App\Services\AI\AiManager`) that supports multiple backends. This enables per-feature provider selection and easy addition of new AI providers.
 
-**Important:** Photo Studio models have no defaults—the application will raise an error if these environment variables are not set. This ensures explicit model selection rather than silent fallbacks.
+**Architecture:**
+- **AiManager** (`app/Services/AI/AiManager.php`): Extends Laravel's Manager pattern for driver resolution
+- **AI Facade** (`App\Facades\AI`): Provides `AI::forFeature('chat')`, `AI::forFeature('vision')`, `AI::forFeature('image_generation')`
+- **Adapters** (`app/Services/AI/Adapters/`): Provider-specific implementations
+  - `OpenRouterAdapter`: Wraps the `moe-mizrak/laravel-openrouter` package
+  - `ReplicateAdapter`: Direct API integration with blocking poll for async predictions
+- **DTOs** (`app/DTO/AI/`): Normalized request/response objects (`ChatRequest`, `ChatResponse`, `ImageGenerationRequest`, `ImageGenerationResponse`, etc.)
+- **Contracts** (`app/Contracts/AI/`): `AiProviderContract`, `SupportsAsyncPollingContract`
+
+**Usage:**
+```php
+// Chat completion (Product AI templates)
+$response = AI::forFeature('chat')->chat($request);
+
+// Vision analysis (Photo Studio prompt extraction)
+$response = AI::forFeature('vision')->chat(ChatRequest::multimodal(...));
+
+// Image generation (Photo Studio renders)
+$response = AI::forFeature('image_generation')->generateImage($request);
+```
+
+**Configuration:** See `config/ai.php` for provider and model configuration. Each feature (chat, vision, image_generation) can use a different provider and model.
 
 ### Database and Migrations
 
@@ -236,7 +253,8 @@ docker compose exec octane php artisan test
 ### Testing Patterns
 
 - Use factories for test data setup (located in `database/factories/`)
-- Stub HTTP calls using `Http::fake()` for external services (OpenRouter, product feeds)
+- Stub HTTP calls using `Http::fake()` for external services (AI providers, product feeds)
+- AI calls can be stubbed via `Http::fake()` since all adapters use Laravel's HTTP client
 - Team scoping is critical—always create and authenticate users with teams in tests
 - Livewire component tests use `Livewire::test()` for interaction testing
 
@@ -246,15 +264,28 @@ docker compose exec octane php artisan test
 
 Key variables beyond standard Laravel config:
 
-**OpenRouter Configuration:**
-- `OPENROUTER_API_KEY`: Required for all AI features (required)
-- `OPENROUTER_MODEL`: Default model for product AI templates (default: `openrouter/auto`)
-- `OPENROUTER_PHOTO_STUDIO_MODEL`: Vision model for prompt extraction (**required** for Photo Studio, no default)
-- `OPENROUTER_PHOTO_STUDIO_IMAGE_MODEL`: Image generation model (**required** for Photo Studio, no default)
-- `OPENROUTER_API_ENDPOINT`: Custom API endpoint if needed (optional)
+**AI Provider Configuration:**
+- `AI_DEFAULT_PROVIDER`: Default AI provider (default: `openrouter`, options: `openrouter`, `replicate`)
+- `AI_CHAT_DRIVER`: Provider for chat/text completion (default: uses `AI_DEFAULT_PROVIDER`)
+- `AI_VISION_DRIVER`: Provider for vision/image analysis (default: uses `AI_DEFAULT_PROVIDER`)
+- `AI_IMAGE_GENERATION_DRIVER`: Provider for image generation (default: uses `AI_DEFAULT_PROVIDER`)
+- `AI_CHAT_MODEL`: Model for chat completion (default: `openrouter/auto`)
+- `AI_VISION_MODEL`: Model for vision analysis (**required** for Photo Studio)
+- `AI_IMAGE_GENERATION_MODEL`: Model for image generation (**required** for Photo Studio)
+
+**OpenRouter Provider:**
+- `OPENROUTER_API_KEY`: API key for OpenRouter (required if using OpenRouter)
+- `OPENROUTER_API_ENDPOINT`: Custom API endpoint (default: `https://openrouter.ai/api/v1/`)
+- `OPENROUTER_API_TIMEOUT`: Request timeout in seconds (default: `120`)
 - `OPENROUTER_API_TITLE`: App title for OpenRouter tracking (optional)
 - `OPENROUTER_API_REFERER`: Referer header for OpenRouter (optional)
-- `OPENROUTER_API_TIMEOUT`: Request timeout in seconds (optional)
+
+**Replicate Provider:**
+- `REPLICATE_API_KEY`: API key for Replicate (required if using Replicate)
+- `REPLICATE_API_ENDPOINT`: Custom API endpoint (default: `https://api.replicate.com/v1/`)
+- `REPLICATE_API_TIMEOUT`: Request timeout in seconds (default: `60`)
+- `REPLICATE_POLLING_TIMEOUT`: Max time to wait for async predictions (default: `300`)
+- `REPLICATE_POLLING_INTERVAL`: Seconds between status checks (default: `2.0`)
 
 **Storage:**
 - `PHOTO_STUDIO_GENERATION_DISK`: Storage disk for generated images (default: `s3`)
@@ -377,12 +408,24 @@ This ensures consistent development experience across the team without IDE lock-
 ### Adding a New AI Feature
 
 1. Create a job class extending `ShouldQueue` in `app/Jobs/`
-2. Update `ProductAiJob` model constants if needed
-3. Add queue dispatch in relevant Livewire component
-4. Create corresponding model for storing results
-5. Add migration for new table
-6. Update Horizon config if custom queue required
-7. Add monitoring in `AiJobsIndex` component
+2. Use the AI abstraction: `AI::forFeature('feature_name')->chat()` or `->generateImage()`
+3. Add feature configuration in `config/ai.php` under `features` array
+4. Update `ProductAiJob` model constants if needed
+5. Add queue dispatch in relevant Livewire component
+6. Create corresponding model for storing results
+7. Add migration for new table
+8. Update Horizon config if custom queue required
+9. Add monitoring in `AiJobsIndex` component
+
+### Adding a New AI Provider
+
+1. Create adapter class in `app/Services/AI/Adapters/` extending `AbstractAiAdapter`
+2. Implement `AiProviderContract` interface methods (`chat()`, `generateImage()`, etc.)
+3. For async APIs, implement `SupportsAsyncPollingContract` with polling logic
+4. Add driver creation method in `AiManager::create{Name}Driver()`
+5. Add provider configuration in `config/ai.php` under `providers` array
+6. Update `.env.example` with provider-specific environment variables
+7. Add tests using `Http::fake()` to stub provider API calls
 
 ### Adding Product Feed Support for New Format
 

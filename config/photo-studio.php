@@ -96,20 +96,27 @@ PROMPT,
 
     /*
     |--------------------------------------------------------------------------
-    | AI Models
+    | AI Models (Deprecated - Use config/ai.php)
     |--------------------------------------------------------------------------
     |
-    | Configure which OpenRouter models are used for prompt extraction (vision)
-    | and image generation. These settings are REQUIRED - the application will
-    | throw an error if they are not configured, ensuring explicit model choice.
+    | These settings are preserved for backwards compatibility but the AI
+    | abstraction layer now uses config/ai.php for provider and model selection.
+    |
+    | To configure AI providers and models, update config/ai.php or use
+    | environment variables:
+    |   - AI_VISION_DRIVER / AI_VISION_MODEL
+    |   - AI_IMAGE_GENERATION_DRIVER / AI_IMAGE_GENERATION_MODEL
+    |
+    | The application uses AI::forFeature('vision') and
+    | AI::forFeature('image_generation') to resolve the appropriate adapter.
     |
     */
     'models' => [
-        // Vision model for analyzing product images and extracting prompts
-        'vision' => env('OPENROUTER_PHOTO_STUDIO_MODEL'),
+        // Legacy: Vision model (now configured via AI_VISION_MODEL)
+        'vision' => env('AI_VISION_MODEL', env('OPENROUTER_PHOTO_STUDIO_MODEL')),
 
-        // Image generation model for creating photorealistic renders
-        'image_generation' => env('OPENROUTER_PHOTO_STUDIO_IMAGE_MODEL'),
+        // Legacy: Image generation model (now configured via AI_IMAGE_GENERATION_MODEL)
+        'image_generation' => env('AI_IMAGE_GENERATION_MODEL', env('OPENROUTER_PHOTO_STUDIO_IMAGE_MODEL')),
     ],
 
     /*
