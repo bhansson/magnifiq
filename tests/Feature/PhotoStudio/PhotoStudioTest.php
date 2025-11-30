@@ -41,6 +41,8 @@ class PhotoStudioTest extends TestCase
 
     public function test_user_can_extract_prompt_using_product_image(): void
     {
+        // Use sync queue so the vision job runs immediately
+        config()->set('queue.default', 'sync');
         config()->set('ai.features.vision.model', 'openai/gpt-4.1');
 
         $this->fakeProductImageFetch();
@@ -90,6 +92,7 @@ class PhotoStudioTest extends TestCase
         Livewire::test(PhotoStudio::class)
             ->set('productId', $product->id)
             ->call('extractPrompt')
+            ->call('pollVisionJobStatus')
             ->assertSet('promptResult', 'High-end studio prompt')
             ->assertSet('productImagePreview', $product->image_link);
     }
@@ -1171,6 +1174,8 @@ class PhotoStudioTest extends TestCase
 
     public function test_large_product_image_is_resized_before_ai_call(): void
     {
+        // Use sync queue so the vision job runs immediately
+        config()->set('queue.default', 'sync');
         config()->set('ai.providers.openrouter.api_key', 'test-key');
         config()->set('ai.features.vision.model', 'openai/gpt-4.1');
         config()->set('photo-studio.input.max_dimension', 512);
@@ -1227,6 +1232,7 @@ class PhotoStudioTest extends TestCase
         Livewire::test(PhotoStudio::class)
             ->set('productId', $product->id)
             ->call('extractPrompt')
+            ->call('pollVisionJobStatus')
             ->assertSet('promptResult', 'Resized image prompt');
 
         $this->assertNotNull($capturedImageSize, 'Image dimensions should have been captured.');
@@ -1236,6 +1242,8 @@ class PhotoStudioTest extends TestCase
 
     public function test_image_resize_preserves_aspect_ratio(): void
     {
+        // Use sync queue so the vision job runs immediately
+        config()->set('queue.default', 'sync');
         config()->set('photo-studio.input.max_dimension', 800);
 
         // Create a 1600x1200 image (4:3 aspect ratio)
@@ -1305,6 +1313,7 @@ class PhotoStudioTest extends TestCase
         Livewire::test(PhotoStudio::class)
             ->set('productId', $product->id)
             ->call('extractPrompt')
+            ->call('pollVisionJobStatus')
             ->assertSet('promptResult', 'Wide image prompt');
 
         $this->assertNotNull($capturedImageSize, 'Image dimensions should have been captured.');
@@ -1315,6 +1324,8 @@ class PhotoStudioTest extends TestCase
 
     public function test_small_images_are_not_resized(): void
     {
+        // Use sync queue so the vision job runs immediately
+        config()->set('queue.default', 'sync');
         config()->set('photo-studio.input.max_dimension', 1024);
 
         // Create a 512x512 image (smaller than max)
@@ -1384,6 +1395,7 @@ class PhotoStudioTest extends TestCase
         Livewire::test(PhotoStudio::class)
             ->set('productId', $product->id)
             ->call('extractPrompt')
+            ->call('pollVisionJobStatus')
             ->assertSet('promptResult', 'Small image prompt');
 
         $this->assertNotNull($capturedImageSize, 'Image dimensions should have been captured.');
@@ -1394,6 +1406,8 @@ class PhotoStudioTest extends TestCase
 
     public function test_resize_disabled_when_max_dimension_is_null(): void
     {
+        // Use sync queue so the vision job runs immediately
+        config()->set('queue.default', 'sync');
         config()->set('photo-studio.input.max_dimension', null);
 
         // Test image is 1200x1200
@@ -1450,6 +1464,7 @@ class PhotoStudioTest extends TestCase
         Livewire::test(PhotoStudio::class)
             ->set('productId', $product->id)
             ->call('extractPrompt')
+            ->call('pollVisionJobStatus')
             ->assertSet('promptResult', 'Full size prompt');
 
         $this->assertNotNull($capturedImageSize, 'Image dimensions should have been captured.');

@@ -3,6 +3,7 @@
 namespace App\Services\AI;
 
 use App\Contracts\AI\AiProviderContract;
+use App\Services\AI\Adapters\OpenAiAdapter;
 use App\Services\AI\Adapters\OpenRouterAdapter;
 use App\Services\AI\Adapters\ReplicateAdapter;
 use Illuminate\Support\Manager;
@@ -60,6 +61,26 @@ class AiManager extends Manager
         $featureConfig = $this->config->get("ai.features.{$feature}");
 
         return $featureConfig['driver'] ?? $this->getDefaultDriver();
+    }
+
+    /**
+     * Check if the configured provider for a feature has an API key.
+     */
+    public function hasApiKeyForFeature(string $feature): bool
+    {
+        $driver = $this->getDriverForFeature($feature);
+
+        return ! empty($this->config->get("ai.providers.{$driver}.api_key"));
+    }
+
+    /**
+     * Create the OpenAI driver.
+     */
+    protected function createOpenaiDriver(): OpenAiAdapter
+    {
+        $config = $this->config->get('ai.providers.openai', []);
+
+        return new OpenAiAdapter($config);
     }
 
     /**

@@ -319,23 +319,6 @@ class ReplicateAdapter extends AbstractAiAdapter implements SupportsAsyncPolling
     }
 
     /**
-     * Fetch image from URL.
-     */
-    private function fetchImageFromUrl(string $url): ImagePayload
-    {
-        $response = Http::timeout(60)->get($url);
-
-        if ($response->failed()) {
-            throw new RuntimeException('Unable to download the generated image.');
-        }
-
-        return ImagePayload::fromBinary(
-            (string) $response->body(),
-            $response->header('Content-Type')
-        );
-    }
-
-    /**
      * Get user-friendly error message based on status code.
      */
     private function getErrorMessage(int $status, ?string $detail = null): string

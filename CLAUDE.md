@@ -200,10 +200,18 @@ The application uses a provider-agnostic AI abstraction layer (`App\Services\AI\
 - **AiManager** (`app/Services/AI/AiManager.php`): Extends Laravel's Manager pattern for driver resolution
 - **AI Facade** (`App\Facades\AI`): Provides `AI::forFeature('chat')`, `AI::forFeature('vision')`, `AI::forFeature('image_generation')`
 - **Adapters** (`app/Services/AI/Adapters/`): Provider-specific implementations
-  - `OpenRouterAdapter`: Wraps the `moe-mizrak/laravel-openrouter` package
-  - `ReplicateAdapter`: Direct API integration with blocking poll for async predictions
+  - `OpenAiAdapter`: Uses `openai-php/laravel` package for direct OpenAI API access (chat, vision, DALL-E)
+  - `OpenRouterAdapter`: Wraps the `moe-mizrak/laravel-openrouter` package (fallback option)
+  - `ReplicateAdapter`: Direct API integration with blocking poll for async predictions (image generation)
 - **DTOs** (`app/DTO/AI/`): Normalized request/response objects (`ChatRequest`, `ChatResponse`, `ImageGenerationRequest`, `ImageGenerationResponse`, etc.)
 - **Contracts** (`app/Contracts/AI/`): `AiProviderContract`, `SupportsAsyncPollingContract`
+
+**Default Provider Strategy:**
+| Feature | Default Provider | Model |
+|---------|-----------------|-------|
+| Chat | OpenAI | openai/gpt-5 |
+| Vision | OpenAI | openai/gpt-4.1 |
+| Image Generation | Replicate | (configurable) |
 
 **Usage:**
 ```php
@@ -265,15 +273,19 @@ docker compose exec octane php artisan test
 Key variables beyond standard Laravel config:
 
 **AI Provider Configuration:**
-- `AI_DEFAULT_PROVIDER`: Default AI provider (default: `openrouter`, options: `openrouter`, `replicate`)
-- `AI_CHAT_DRIVER`: Provider for chat/text completion (default: uses `AI_DEFAULT_PROVIDER`)
-- `AI_VISION_DRIVER`: Provider for vision/image analysis (default: uses `AI_DEFAULT_PROVIDER`)
-- `AI_IMAGE_GENERATION_DRIVER`: Provider for image generation (default: uses `AI_DEFAULT_PROVIDER`)
-- `AI_CHAT_MODEL`: Model for chat completion (default: `openrouter/auto`)
-- `AI_VISION_MODEL`: Model for vision analysis (**required** for Photo Studio)
+- `AI_DEFAULT_PROVIDER`: Default AI provider (default: `openai`, options: `openai`, `openrouter`, `replicate`)
+- `AI_CHAT_DRIVER`: Provider for chat/text completion (default: `openai`)
+- `AI_VISION_DRIVER`: Provider for vision/image analysis (default: `openai`)
+- `AI_IMAGE_GENERATION_DRIVER`: Provider for image generation (default: `replicate`)
+- `AI_CHAT_MODEL`: Model for chat completion (default: `openai/gpt-5`)
+- `AI_VISION_MODEL`: Model for vision analysis (default: `openai/gpt-4.1`)
 - `AI_IMAGE_GENERATION_MODEL`: Model for image generation (**required** for Photo Studio)
 
-**OpenRouter Provider:**
+**OpenAI Provider:**
+- `OPENAI_API_KEY`: API key for OpenAI (**required** for chat/vision)
+- `OPENAI_REQUEST_TIMEOUT`: Request timeout in seconds (default: `120`)
+
+**OpenRouter Provider (fallback option):**
 - `OPENROUTER_API_KEY`: API key for OpenRouter (required if using OpenRouter)
 - `OPENROUTER_API_ENDPOINT`: Custom API endpoint (default: `https://openrouter.ai/api/v1/`)
 - `OPENROUTER_API_TIMEOUT`: Request timeout in seconds (default: `120`)
@@ -281,7 +293,7 @@ Key variables beyond standard Laravel config:
 - `OPENROUTER_API_REFERER`: Referer header for OpenRouter (optional)
 
 **Replicate Provider:**
-- `REPLICATE_API_KEY`: API key for Replicate (required if using Replicate)
+- `REPLICATE_API_KEY`: API key for Replicate (**required** for image generation)
 - `REPLICATE_API_ENDPOINT`: Custom API endpoint (default: `https://api.replicate.com/v1/`)
 - `REPLICATE_API_TIMEOUT`: Request timeout in seconds (default: `60`)
 - `REPLICATE_POLLING_TIMEOUT`: Max time to wait for async predictions (default: `300`)

@@ -55,13 +55,10 @@ class RunProductAiTemplateJob implements ShouldQueue
             throw new RuntimeException('The selected AI template is no longer available.');
         }
 
-        $jobRecord->forceFill([
-            'status' => ProductAiJob::STATUS_PROCESSING,
+        $jobRecord->markProcessing([], [
             'attempts' => $this->attempts(),
-            'started_at' => now(),
             'progress' => 10,
-            'last_error' => null,
-        ])->save();
+        ]);
 
         $product = Product::query()
             ->with(['team', 'feed'])
@@ -98,9 +95,7 @@ class RunProductAiTemplateJob implements ShouldQueue
                 throw new RuntimeException('Received empty content from the AI provider.');
             }
 
-            $jobRecord->forceFill([
-                'progress' => 80,
-            ])->save();
+            $jobRecord->updateProgress(80);
 
             $contentPayload = ProductAiContentParser::normalize($template->contentType(), $response->content);
 
@@ -122,22 +117,11 @@ class RunProductAiTemplateJob implements ShouldQueue
 
             $this->trimHistory($template, $product->id, max($template->historyLimit(), 1));
 
-            $meta = $jobRecord->meta ?? [];
-            $meta['generation_id'] = $record->id;
-
-            $jobRecord->forceFill([
-                'status' => ProductAiJob::STATUS_COMPLETED,
-                'progress' => 100,
-                'finished_at' => now(),
-                'meta' => $meta,
-            ])->save();
+            $jobRecord->markCompleted([
+                'generation_id' => $record->id,
+            ]);
         } catch (Throwable $e) {
-            $jobRecord->forceFill([
-                'status' => ProductAiJob::STATUS_FAILED,
-                'progress' => 0,
-                'finished_at' => now(),
-                'last_error' => Str::limit($e->getMessage(), 500),
-            ])->save();
+            $jobRecord->markFailed($e->getMessage());
 
             throw $e;
         }
@@ -151,12 +135,7 @@ class RunProductAiTemplateJob implements ShouldQueue
             return;
         }
 
-        $jobRecord->forceFill([
-            'status' => ProductAiJob::STATUS_FAILED,
-            'progress' => 0,
-            'finished_at' => now(),
-            'last_error' => Str::limit($exception->getMessage(), 500),
-        ])->save();
+        $jobRecord->markFailed($exception->getMessage());
     }
 
     /**
