@@ -111,6 +111,8 @@ class ReplicateAdapter extends AbstractAiAdapter implements SupportsAsyncPolling
      */
     private function buildModelInput(ImageGenerationRequest $request): array
     {
+        $model = $this->resolveModel($request->model, 'image_generation');
+
         $input = [
             'prompt' => $request->prompt,
         ];
@@ -132,17 +134,153 @@ class ReplicateAdapter extends AbstractAiAdapter implements SupportsAsyncPolling
         // Handle input images for img2img
         if ($request->hasInputImages()) {
             $images = $request->getInputImagesArray();
-            // Most Replicate models use 'image' for single input
-            $input['image'] = $images[0];
+            // Convert data URIs to Replicate file URLs
+            $processedImages = array_map(
+                fn (string $image) => $this->ensureImageUrl($image),
+                $images
+            );
 
-            // Some models support multiple images
-            if (count($images) > 1) {
-                $input['images'] = $images;
-            }
+            // Apply model-specific input parameter mapping
+            $imageParams = $this->getImageInputParams($model, $processedImages);
+            $input = array_merge($input, $imageParams);
         }
 
-        // Merge any extra options
+        // Merge any extra options (allows overriding auto-detected params)
         return array_merge($input, $request->extra);
+    }
+
+    /**
+     * Get the correct image input parameters for the specific model.
+     *
+     * Different Replicate models expect different parameter names:
+     * - google/gemini-*: uses 'image_input' (array)
+     * - Most others: use 'image' (single) or 'images' (multiple)
+     *
+     * @param  array<string>  $images
+     * @return array<string, mixed>
+     */
+    private function getImageInputParams(string $model, array $images): array
+    {
+        // Gemini models use 'image_input' as an array
+        if (str_contains($model, 'google/gemini')) {
+            $this->logDebug('Using Gemini image_input format', [
+                'model' => $model,
+                'image_count' => count($images),
+            ]);
+
+            return ['image_input' => $images];
+        }
+
+        // Default behavior for most models
+        $params = ['image' => $images[0]];
+
+        // Some models support multiple images via 'images' key
+        if (count($images) > 1) {
+            $params['images'] = $images;
+        }
+
+        return $params;
+    }
+
+    /**
+     * Ensure the image is a URL, uploading data URIs to Replicate's file storage.
+     *
+     * Replicate API only accepts URLs for image inputs, not data URIs.
+     * This method detects data URIs and uploads them to Replicate's /files endpoint.
+     */
+    private function ensureImageUrl(string $image): string
+    {
+        // If it's already a URL, return as-is
+        if (filter_var($image, FILTER_VALIDATE_URL)) {
+            return $image;
+        }
+
+        // Check if it's a data URI
+        if (! str_starts_with($image, 'data:')) {
+            // Not a URL and not a data URI - assume it's a URL anyway
+            return $image;
+        }
+
+        // Parse and upload data URI
+        return $this->uploadDataUriToReplicate($image);
+    }
+
+    /**
+     * Upload a data URI to Replicate's file storage and return the URL.
+     *
+     * @param  string  $dataUri  Data URI in format: data:image/jpeg;base64,...
+     * @return string The URL of the uploaded file
+     */
+    private function uploadDataUriToReplicate(string $dataUri): string
+    {
+        // Parse the data URI
+        if (! preg_match('/^data:([^;]+);base64,(.+)$/s', $dataUri, $matches)) {
+            throw new RuntimeException('Invalid data URI format for image input.');
+        }
+
+        $mimeType = $matches[1];
+        $base64Data = $matches[2];
+        $binaryData = base64_decode($base64Data, true);
+
+        if ($binaryData === false) {
+            throw new RuntimeException('Failed to decode base64 image data.');
+        }
+
+        // Determine file extension from MIME type
+        $extension = match ($mimeType) {
+            'image/jpeg', 'image/jpg' => 'jpg',
+            'image/png' => 'png',
+            'image/webp' => 'webp',
+            'image/gif' => 'gif',
+            default => 'jpg',
+        };
+
+        $filename = 'input_'.uniqid().'.'.$extension;
+
+        $this->logDebug('Uploading data URI to Replicate files', [
+            'mime_type' => $mimeType,
+            'size' => strlen($binaryData),
+            'filename' => $filename,
+        ]);
+
+        // Upload to Replicate's /files endpoint
+        $apiKey = $this->getApiKey();
+        $endpoint = $this->getApiEndpoint().'files';
+
+        $response = Http::withHeaders([
+            'Authorization' => "Bearer {$apiKey}",
+        ])
+            ->timeout($this->getTimeout())
+            ->attach('content', $binaryData, $filename)
+            ->post($endpoint);
+
+        if ($response->failed()) {
+            $this->logError('Failed to upload file to Replicate', [
+                'status' => $response->status(),
+                'body' => $response->body(),
+            ]);
+
+            throw new RuntimeException(
+                'Failed to upload image to Replicate: '.($response->json('detail') ?? $response->body())
+            );
+        }
+
+        $fileUrl = $response->json('urls.get') ?? $response->json('url');
+
+        if (! $fileUrl) {
+            $this->logError('Replicate file upload response missing URL', [
+                'response' => $response->json(),
+            ]);
+
+            throw new RuntimeException('Replicate file upload did not return a valid URL.');
+        }
+
+        $this->logDebug('Successfully uploaded file to Replicate', [
+            'file_id' => $response->json('id'),
+            'url' => $fileUrl,
+        ]);
+
+        return $fileUrl;
     }
 
     /**
