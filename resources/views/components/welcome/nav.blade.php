@@ -1,7 +1,7 @@
 <nav x-data="{ scrolled: false, mobileMenuOpen: false }"
      @scroll.window="scrolled = window.pageYOffset > 50"
      :class="scrolled ? 'bg-black/80 backdrop-blur-xl border-b border-white/5' : 'bg-transparent'"
-     class="fixed top-0 left-0 right-0 z-50 transition-all duration-500 [transform:translateZ(0)]">
+     class="fixed top-0 left-0 right-0 z-50 transition-all duration-500">
     <div class="mx-auto max-w-7xl px-6 lg:px-8">
         <div class="flex items-center justify-between py-5">
             <!-- Logo -->
