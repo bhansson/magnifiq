@@ -1,13 +1,14 @@
 <section class="relative min-h-[120vh] overflow-hidden bg-[#0a0a0a]">
     <!-- Neural Network Background -->
-    <div class="absolute inset-0 overflow-hidden neural-container">
+    <div class="absolute inset-0 overflow-hidden neural-container pointer-events-none">
         <!-- Ambient brain glow -->
         <div class="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[1000px] h-[800px]">
             <div class="absolute inset-0 bg-gradient-radial from-blue-500/10 via-sky-600/3 to-transparent blur-3xl"></div>
         </div>
 
         <!-- SVG Neural Network -->
-        <svg class="absolute inset-0 w-full h-full blur-[2px]" viewBox="0 0 1200 900" preserveAspectRatio="xMidYMid slice">
+        <div class="absolute inset-0">
+        <svg class="w-full h-full" viewBox="0 0 1200 900" preserveAspectRatio="xMidYMid slice">
             <defs>
                 <!-- Gradient for neural connections -->
                 <linearGradient id="synapseGradient" x1="0%" y1="0%" x2="100%" y2="0%">
@@ -15,6 +16,11 @@
                     <stop offset="50%" style="stop-color:rgb(251,191,36);stop-opacity:0.6" />
                     <stop offset="100%" style="stop-color:rgb(251,191,36);stop-opacity:0" />
                 </linearGradient>
+
+                <!-- Global soft blur for the entire neural network -->
+                <filter id="networkBlur" x="-10%" y="-10%" width="120%" height="120%">
+                    <feGaussianBlur stdDeviation="1" />
+                </filter>
 
                 <!-- Glow filter for neurons -->
                 <filter id="neuronGlow" x="-50%" y="-50%" width="200%" height="200%">
@@ -96,6 +102,9 @@
                     </stop>
                 </linearGradient>
             </defs>
+
+            <!-- Apply soft blur to entire network -->
+            <g filter="url(#networkBlur)">
 
             <!-- Neural connections (axons/dendrites) - organic curved paths -->
             <g class="neural-connections" stroke-width="1" fill="none" opacity="0.25">
@@ -188,7 +197,10 @@
                 <circle cx="1100" cy="500" r="1.5" fill="rgb(59,130,246)" opacity="0.3"/>
             </g>
 
+            </g><!-- End blur wrapper -->
+
         </svg>
+        </div>
 
     </div>
 
