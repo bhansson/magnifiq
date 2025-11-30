@@ -5,6 +5,7 @@ namespace App\Livewire;
 use App\DTO\AI\ChatRequest;
 use App\DTO\AI\ContentPart;
 use App\Facades\AI;
+use App\Jobs\ExtractVisionPromptJob;
 use App\Jobs\GeneratePhotoStudioImage;
 use App\Models\PhotoStudioGeneration;
 use App\Models\Product;
@@ -144,6 +145,21 @@ class PhotoStudio extends Component
      * Detected aspect ratio from the input image (when aspectRatio is 'match_input').
      */
     public ?string $detectedAspectRatio = null;
+
+    /**
+     * ID of the pending vision/prompt extraction job for polling.
+     */
+    public ?int $pendingVisionJobId = null;
+
+    /**
+     * Whether we're waiting for a vision job to complete.
+     */
+    public bool $isAwaitingVisionJob = false;
+
+    /**
+     * Status message shown while extracting prompt.
+     */
+    public ?string $visionJobStatus = null;
 
     public function mount(): void
     {
@@ -455,7 +471,7 @@ class PhotoStudio extends Component
             return;
         }
 
-        if (! config('ai.providers.openrouter.api_key') && ! config('ai.providers.replicate.api_key')) {
+        if (! AI::hasApiKeyForFeature('image_generation')) {
             $this->editSubmitting = false;
             $this->addError('editInstruction', 'Configure an AI provider API key before generating images.');
 
@@ -723,6 +739,7 @@ class PhotoStudio extends Component
         $this->resetErrorBag();
         $this->errorMessage = null;
         $this->promptResult = null;
+        $this->visionJobStatus = null;
         $this->resetGenerationPreview();
 
         if (! $this->canGenerate()) {
@@ -740,10 +757,16 @@ class PhotoStudio extends Component
             return;
         }
 
-        if (! config('ai.providers.openrouter.api_key') && ! config('ai.providers.replicate.api_key')) {
+        if (! AI::hasApiKeyForFeature('vision')) {
             $this->errorMessage = 'Configure an AI provider API key before extracting prompts.';
 
             return;
+        }
+
+        $team = Auth::user()?->currentTeam;
+
+        if (! $team) {
+            abort(403, 'Join or create a team to access the Photo Studio.');
         }
 
         $this->isProcessing = true;
@@ -751,33 +774,106 @@ class PhotoStudio extends Component
         try {
             $imageDataUris = $this->resolveCompositionImageSources();
 
-            $request = $this->buildCompositionChatRequest($imageDataUris);
+            // Get first product ID for association (if any products in composition)
+            $firstProductId = collect($this->compositionImages)
+                ->where('type', 'product')
+                ->pluck('product_id')
+                ->first();
 
-            $response = AI::forFeature('vision')->chat($request);
+            $visionModel = config('ai.features.vision.model');
+            $visionDriver = AI::getDriverForFeature('vision');
 
-            if ($response->content === '') {
-                throw new RuntimeException('Received an empty response from the AI provider.');
-            }
+            // Create job record for tracking
+            $jobRecord = ProductAiJob::create([
+                'team_id' => $team->id,
+                'product_id' => $firstProductId,
+                'sku' => $firstProductId ? Product::find($firstProductId)?->sku : null,
+                'product_ai_template_id' => null,
+                'job_type' => ProductAiJob::TYPE_VISION_PROMPT,
+                'status' => ProductAiJob::STATUS_QUEUED,
+                'progress' => 0,
+                'queued_at' => now(),
+                'meta' => [
+                    'composition_mode' => $this->compositionMode,
+                    'image_count' => count($this->compositionImages),
+                    'creative_brief' => $this->creativeBrief,
+                    'model' => $visionModel,
+                    'ai_driver' => $visionDriver,
+                ],
+            ]);
 
-            $this->promptResult = $response->content;
+            // Dispatch to high-priority vision queue
+            ExtractVisionPromptJob::dispatch(
+                productAiJobId: $jobRecord->id,
+                teamId: $team->id,
+                userId: Auth::id(),
+                imageDataUris: $imageDataUris,
+                compositionMode: $this->compositionMode,
+                compositionImages: $this->compositionImages,
+                creativeBrief: $this->creativeBrief,
+            );
+
+            $this->pendingVisionJobId = $jobRecord->id;
+            $this->isAwaitingVisionJob = true;
+            $this->visionJobStatus = 'Analyzing images…';
         } catch (Throwable $exception) {
-            $context = [
+            Log::error('Photo Studio composition prompt extraction dispatch failed', [
                 'user_id' => Auth::id(),
                 'composition_mode' => $this->compositionMode,
                 'image_count' => count($this->compositionImages),
                 'exception' => $exception,
-            ];
+            ]);
 
-            if ($exception instanceof \GuzzleHttp\Exception\ClientException) {
-                $context['response_body'] = (string) $exception->getResponse()?->getBody();
-            }
-
-            Log::error('Photo Studio composition prompt extraction failed', $context);
-
-            $this->errorMessage = 'Unable to extract a prompt right now. Please try again in a moment.';
-        } finally {
+            $this->errorMessage = 'Unable to start prompt extraction. Please try again.';
             $this->isProcessing = false;
         }
+    }
+
+    /**
+     * Poll for vision job completion.
+     */
+    public function pollVisionJobStatus(): void
+    {
+        if (! $this->isAwaitingVisionJob || ! $this->pendingVisionJobId) {
+            return;
+        }
+
+        $jobRecord = ProductAiJob::find($this->pendingVisionJobId);
+
+        if (! $jobRecord) {
+            $this->resetVisionJobState();
+            $this->errorMessage = 'Vision job not found.';
+
+            return;
+        }
+
+        if ($jobRecord->status === ProductAiJob::STATUS_COMPLETED) {
+            $this->promptResult = $jobRecord->meta['prompt_result'] ?? '';
+            $this->visionJobStatus = 'Prompt extracted successfully.';
+            $this->resetVisionJobState();
+
+            return;
+        }
+
+        if ($jobRecord->status === ProductAiJob::STATUS_FAILED) {
+            $this->errorMessage = $jobRecord->meta['error'] ?? 'Prompt extraction failed. Please try again.';
+            $this->resetVisionJobState();
+
+            return;
+        }
+
+        // Still processing
+        $this->visionJobStatus = 'Analyzing images…';
+    }
+
+    /**
+     * Reset vision job tracking state.
+     */
+    private function resetVisionJobState(): void
+    {
+        $this->pendingVisionJobId = null;
+        $this->isAwaitingVisionJob = false;
+        $this->isProcessing = false;
     }
 
     /**
@@ -789,7 +885,7 @@ class PhotoStudio extends Component
         $this->errorMessage = null;
         $this->generationStatus = null;
 
-        if (! config('ai.providers.openrouter.api_key') && ! config('ai.providers.replicate.api_key')) {
+        if (! AI::hasApiKeyForFeature('image_generation')) {
             $this->errorMessage = 'Configure an AI provider API key before generating images.';
 
             return;

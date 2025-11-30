@@ -69,13 +69,10 @@ class GeneratePhotoStudioImage implements ShouldQueue
         $jobRecord = ProductAiJob::query()->findOrFail($this->productAiJobId);
 
         try {
-            $jobRecord->forceFill([
-                'status' => ProductAiJob::STATUS_PROCESSING,
+            $jobRecord->markProcessing([], [
                 'attempts' => $this->attempts(),
-                'started_at' => now(),
                 'progress' => 10,
-                'last_error' => null,
-            ])->save();
+            ]);
 
             $this->ensureDiskIsConfigured();
 
@@ -105,9 +102,7 @@ class GeneratePhotoStudioImage implements ShouldQueue
                 $response->image->extension
             );
 
-            $jobRecord->forceFill([
-                'progress' => 60,
-            ])->save();
+            $jobRecord->updateProgress(60);
 
             $path = $this->storeGeneratedImage(
                 binary: $preparedImage['binary'],
@@ -142,23 +137,12 @@ class GeneratePhotoStudioImage implements ShouldQueue
                 'response_metadata' => $metadata ?: null,
             ]);
 
-            $meta = $jobRecord->meta ?? [];
-            $meta['photo_studio_generation_id'] = $generation->id;
-            $meta['ai_driver'] = $aiDriver;
-
-            $jobRecord->forceFill([
-                'status' => ProductAiJob::STATUS_COMPLETED,
-                'progress' => 100,
-                'finished_at' => now(),
-                'meta' => $meta,
-            ])->save();
+            $jobRecord->markCompleted([
+                'photo_studio_generation_id' => $generation->id,
+                'ai_driver' => $aiDriver,
+            ]);
         } catch (Throwable $exception) {
-            $jobRecord->forceFill([
-                'status' => ProductAiJob::STATUS_FAILED,
-                'progress' => 0,
-                'finished_at' => now(),
-                'last_error' => Str::limit($exception->getMessage(), 500),
-            ])->save();
+            $jobRecord->markFailed($exception->getMessage());
 
             Log::error('Photo Studio job failed', [
                 'team_id' => $this->teamId,
@@ -186,12 +170,7 @@ class GeneratePhotoStudioImage implements ShouldQueue
             return;
         }
 
-        $jobRecord->forceFill([
-            'status' => ProductAiJob::STATUS_FAILED,
-            'progress' => 0,
-            'finished_at' => now(),
-            'last_error' => Str::limit($exception->getMessage(), 500),
-        ])->save();
+        $jobRecord->markFailed($exception->getMessage());
 
         Log::warning('Photo Studio job permanently failed', [
             'team_id' => $this->teamId,

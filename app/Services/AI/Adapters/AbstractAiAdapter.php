@@ -7,6 +7,8 @@ use App\DTO\AI\ChatRequest;
 use App\DTO\AI\ChatResponse;
 use App\DTO\AI\ImageGenerationRequest;
 use App\DTO\AI\ImageGenerationResponse;
+use App\DTO\AI\ImagePayload;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
 
@@ -100,6 +102,31 @@ abstract class AbstractAiAdapter implements AiProviderContract
 
         throw new RuntimeException(
             "No model specified for {$feature} and no default configured."
+        );
+    }
+
+    /**
+     * Fetch image from URL with optional authentication headers.
+     *
+     * @param  array<string, string>  $headers  Optional headers to include in the request
+     */
+    protected function fetchImageFromUrl(string $url, array $headers = []): ImagePayload
+    {
+        $http = Http::timeout(60);
+
+        if (! empty($headers)) {
+            $http = $http->withHeaders($headers);
+        }
+
+        $response = $http->get($url);
+
+        if ($response->failed()) {
+            throw new RuntimeException('Unable to download the generated image asset.');
+        }
+
+        return ImagePayload::fromBinary(
+            (string) $response->body(),
+            $response->header('Content-Type')
         );
     }
 

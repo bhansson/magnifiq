@@ -73,6 +73,8 @@
                 :generation-status="$generationStatus"
                 :is-processing="$isProcessing"
                 :is-awaiting-generation="$isAwaitingGeneration"
+                :is-awaiting-vision-job="$isAwaitingVisionJob"
+                :vision-job-status="$visionJobStatus"
                 :can-generate="$canGenerate"
                 :composition-image-count="$compositionImageCount"
                 :min-images="$minImages"

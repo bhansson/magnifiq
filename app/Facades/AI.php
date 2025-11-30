@@ -12,6 +12,8 @@ use Illuminate\Support\Facades\Facade;
  * @method static AiProviderContract driver(string|null $driver = null)
  * @method static AiProviderContract forFeature(string $feature)
  * @method static string|null getModelForFeature(string $feature)
+ * @method static string getDriverForFeature(string $feature)
+ * @method static bool hasApiKeyForFeature(string $feature)
  * @method static string getDefaultDriver()
  * @method static AiManager extend(string $driver, \Closure $callback)
  *

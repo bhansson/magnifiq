@@ -7,6 +7,8 @@
     'generationStatus' => null,
     'isProcessing' => false,
     'isAwaitingGeneration' => false,
+    'isAwaitingVisionJob' => false,
+    'visionJobStatus' => null,
     'canGenerate' => false,
     'compositionImageCount' => 0,
     'minImages' => 1,
@@ -84,11 +86,15 @@
         type="button"
         wire:click="extractPrompt"
         wire:loading.attr="disabled"
-        :disabled="! $canGenerate"
+        :disabled="! $canGenerate || $isAwaitingVisionJob"
         class="flex items-center gap-2 whitespace-nowrap"
     >
         <span wire:loading.remove wire:target="extractPrompt,compositionUploads">
-            Craft prompt
+            @if ($isAwaitingVisionJob)
+                Analyzing…
+            @else
+                Craft prompt
+            @endif
         </span>
         <span wire:loading.flex wire:target="extractPrompt" class="flex items-center gap-2">
             <x-loading-spinner class="size-4" />
@@ -96,6 +102,25 @@
         </span>
     </x-button>
 </div>
+
+{{-- Vision Job Status (with fast polling) --}}
+@if ($isAwaitingVisionJob)
+    <div class="rounded-md bg-amber-50 dark:bg-amber-500/10 p-4 text-sm text-amber-800 dark:text-amber-400" wire:poll.500ms="pollVisionJobStatus">
+        <div class="flex items-center gap-2">
+            <x-loading-spinner class="size-4" />
+            <span>{{ $visionJobStatus ?? 'Analyzing images…' }}</span>
+        </div>
+    </div>
+@elseif ($visionJobStatus && ! $errorMessage)
+    <div class="rounded-md bg-emerald-50 dark:bg-emerald-500/10 p-4 text-sm text-emerald-800 dark:text-emerald-400">
+        <div class="flex items-center gap-2">
+            <svg class="size-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+            </svg>
+            <span>{{ $visionJobStatus }}</span>
+        </div>
+    </div>
+@endif
 
 {{-- Prompt Workspace --}}
 <div class="space-y-5 border-t border-gray-100 dark:border-zinc-800 pt-6">

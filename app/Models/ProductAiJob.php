@@ -14,12 +14,18 @@ class ProductAiJob extends Model
     use HasFactory;
 
     public const STATUS_QUEUED = 'queued';
+
     public const STATUS_PROCESSING = 'processing';
+
     public const STATUS_COMPLETED = 'completed';
+
     public const STATUS_FAILED = 'failed';
 
     public const TYPE_TEMPLATE = 'template';
+
     public const TYPE_PHOTO_STUDIO = 'photo_studio';
+
+    public const TYPE_VISION_PROMPT = 'vision_prompt';
 
     protected $fillable = [
         'team_id',
@@ -106,5 +112,71 @@ class ProductAiJob extends Model
             Str::contains($error, ['503', 'no available provider']) => 'No AI provider is currently available for the selected model.',
             default => 'Something went wrong while generating the content. Please try again.',
         };
+    }
+
+    /**
+     * Mark the job as processing.
+     *
+     * @param  array<string, mixed>  $meta  Additional metadata to merge
+     * @param  array<string, mixed>  $additional  Additional fields to set (e.g., attempts, progress)
+     */
+    public function markProcessing(array $meta = [], array $additional = []): void
+    {
+        $data = [
+            'status' => self::STATUS_PROCESSING,
+            'started_at' => now(),
+            'last_error' => null,
+        ];
+
+        if (! empty($meta)) {
+            $data['meta'] = array_merge($this->meta ?? [], $meta);
+        }
+
+        $this->forceFill(array_merge($data, $additional))->save();
+    }
+
+    /**
+     * Mark the job as completed.
+     *
+     * @param  array<string, mixed>  $meta  Additional metadata to merge
+     */
+    public function markCompleted(array $meta = []): void
+    {
+        $this->forceFill([
+            'status' => self::STATUS_COMPLETED,
+            'progress' => 100,
+            'finished_at' => now(),
+            'meta' => array_merge($this->meta ?? [], $meta),
+        ])->save();
+    }
+
+    /**
+     * Mark the job as failed.
+     *
+     * @param  array<string, mixed>  $meta  Additional metadata to merge
+     */
+    public function markFailed(string $error, array $meta = []): void
+    {
+        $this->forceFill([
+            'status' => self::STATUS_FAILED,
+            'progress' => 0,
+            'finished_at' => now(),
+            'last_error' => Str::limit($error, 500),
+            'meta' => array_merge($this->meta ?? [], $meta),
+        ])->save();
+    }
+
+    /**
+     * Update the job progress.
+     */
+    public function updateProgress(int $progress, array $meta = []): void
+    {
+        $data = ['progress' => min(100, max(0, $progress))];
+
+        if (! empty($meta)) {
+            $data['meta'] = array_merge($this->meta ?? [], $meta);
+        }
+
+        $this->forceFill($data)->save();
     }
 }

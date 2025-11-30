@@ -792,34 +792,15 @@ class OpenRouterAdapter extends AbstractAiAdapter
     }
 
     /**
-     * Fetch image from URL.
+     * Fetch image from URL, adding OpenRouter auth headers when needed.
      */
-    private function fetchImageFromUrl(string $url): ImagePayload
+    protected function fetchImageFromUrl(string $url, array $headers = []): ImagePayload
     {
-        $http = Http::timeout(60);
-
-        if ($this->requiresOpenRouterHeaders($url)) {
-            $http = $http->withHeaders($this->getOpenRouterHeaders());
+        if (str_starts_with($url, 'https://openrouter.ai/')) {
+            $headers = array_merge($this->getOpenRouterHeaders(), $headers);
         }
 
-        $response = $http->get($url);
-
-        if ($response->failed()) {
-            throw new RuntimeException('Unable to download the generated image asset.');
-        }
-
-        return ImagePayload::fromBinary(
-            (string) $response->body(),
-            $response->header('Content-Type')
-        );
-    }
-
-    /**
-     * Check if URL requires OpenRouter authentication headers.
-     */
-    private function requiresOpenRouterHeaders(string $url): bool
-    {
-        return str_starts_with($url, 'https://openrouter.ai/');
+        return parent::fetchImageFromUrl($url, $headers);
     }
 
     /**

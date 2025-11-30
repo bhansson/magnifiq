@@ -8,11 +8,11 @@ return [
     |--------------------------------------------------------------------------
     |
     | This option controls the default AI provider that will be used when
-    | no specific provider is requested. Supported: "openrouter", "replicate"
+    | no specific provider is requested. Supported: "openai", "openrouter", "replicate"
     |
     */
 
-    'default' => env('AI_DEFAULT_PROVIDER', 'openrouter'),
+    'default' => env('AI_DEFAULT_PROVIDER', 'openai'),
 
     /*
     |--------------------------------------------------------------------------
@@ -29,17 +29,17 @@ return [
     'features' => [
 
         'chat' => [
-            'driver' => env('AI_CHAT_DRIVER', 'openrouter'),
-            'model' => env('AI_CHAT_MODEL', 'openrouter/auto'),
+            'driver' => env('AI_CHAT_DRIVER', 'openai'),
+            'model' => env('AI_CHAT_MODEL', 'openai/gpt-5'),
         ],
 
         'vision' => [
-            'driver' => env('AI_VISION_DRIVER', 'openrouter'),
-            'model' => env('AI_VISION_MODEL'),
+            'driver' => env('AI_VISION_DRIVER', 'openai'),
+            'model' => env('AI_VISION_MODEL', 'openai/gpt-4.1'),
         ],
 
         'image_generation' => [
-            'driver' => env('AI_IMAGE_GENERATION_DRIVER', 'openrouter'),
+            'driver' => env('AI_IMAGE_GENERATION_DRIVER', 'replicate'),
             'model' => env('AI_IMAGE_GENERATION_MODEL'),
         ],
 
@@ -55,6 +55,11 @@ return [
     */
 
     'providers' => [
+
+        'openai' => [
+            'api_key' => env('OPENAI_API_KEY'),
+            'timeout' => env('OPENAI_REQUEST_TIMEOUT', 120),
+        ],
 
         'openrouter' => [
             'api_key' => env('OPENROUTER_API_KEY'),
