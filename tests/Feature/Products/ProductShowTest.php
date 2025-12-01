@@ -24,8 +24,12 @@ class ProductShowTest extends TestCase
         $user = User::factory()->withPersonalTeam()->create();
         $team = $user->currentTeam;
 
+        $catalog = ProductCatalog::factory()->create(['team_id' => $team->id]);
+
         $feed = ProductFeed::factory()->create([
             'team_id' => $team->id,
+            'product_catalog_id' => $catalog->id,
+            'language' => 'en',
         ]);
 
         $product = Product::factory()
@@ -34,12 +38,15 @@ class ProductShowTest extends TestCase
                 'team_id' => $team->id,
                 'title' => 'Example Product Title',
                 'brand' => 'Acme',
+                'sku' => 'TEST-001',
             ]);
 
         $this->actingAs($user);
 
-        // Product without catalog uses legacy route
-        $this->get(route('products.show.legacy', $product))
+        $this->get(route('products.show', [
+            'catalog' => $catalog->slug,
+            'sku' => 'TEST-001',
+        ]))
             ->assertOk()
             ->assertSeeText('Example Product Title')
             ->assertSeeText('Summary');
@@ -50,8 +57,12 @@ class ProductShowTest extends TestCase
         $user = User::factory()->withPersonalTeam()->create();
         $otherUser = User::factory()->withPersonalTeam()->create();
 
+        $catalog = ProductCatalog::factory()->create(['team_id' => $otherUser->currentTeam->id]);
+
         $foreignFeed = ProductFeed::factory()->create([
             'team_id' => $otherUser->currentTeam->id,
+            'product_catalog_id' => $catalog->id,
+            'language' => 'en',
         ]);
 
         $foreignProduct = Product::factory()
@@ -59,12 +70,15 @@ class ProductShowTest extends TestCase
             ->create([
                 'team_id' => $otherUser->currentTeam->id,
                 'brand' => 'Acme',
+                'sku' => 'FOREIGN-001',
             ]);
 
         $this->actingAs($user);
 
-        // Product without catalog uses legacy route
-        $this->get(route('products.show.legacy', $foreignProduct))
+        $this->get(route('products.show', [
+            'catalog' => $catalog->slug,
+            'sku' => 'FOREIGN-001',
+        ]))
             ->assertNotFound();
     }
 
@@ -216,16 +230,21 @@ class ProductShowTest extends TestCase
         $feed = ProductFeed::factory()->create([
             'team_id' => $team->id,
             'product_catalog_id' => $catalog->id,
+            'language' => 'en',
         ]);
 
         $product = Product::factory()->create([
             'team_id' => $team->id,
             'product_feed_id' => $feed->id,
+            'sku' => 'CATALOG-001',
         ]);
 
         $this->actingAs($user);
 
-        Livewire::test(ProductShow::class, ['productId' => $product->id])
+        Livewire::test(ProductShow::class, [
+            'productId' => $product->id,
+            'catalogSlug' => $catalog->slug,
+        ])
             ->assertSee('My Test Catalog');
     }
 
@@ -307,37 +326,6 @@ class ProductShowTest extends TestCase
             ->assertSeeText('Swedish Title');
     }
 
-    public function test_legacy_url_redirects_to_semantic_url_for_catalog_products(): void
-    {
-        $user = User::factory()->withPersonalTeam()->create();
-        $team = $user->currentTeam;
-
-        $catalog = ProductCatalog::factory()->create(['team_id' => $team->id]);
-
-        $feed = ProductFeed::factory()->create([
-            'team_id' => $team->id,
-            'product_catalog_id' => $catalog->id,
-            'language' => 'en',
-        ]);
-
-        $product = Product::factory()->create([
-            'team_id' => $team->id,
-            'product_feed_id' => $feed->id,
-            'sku' => 'REDIRECT-001',
-        ]);
-
-        $this->actingAs($user);
-
-        $expectedUrl = route('products.show', [
-            'catalog' => $catalog->slug,
-            'sku' => 'REDIRECT-001',
-            'lang' => 'en',
-        ]);
-
-        $this->get(route('products.show.legacy', $product))
-            ->assertRedirect($expectedUrl);
-    }
-
     public function test_product_get_url_returns_semantic_url_for_catalog_products(): void
     {
         $user = User::factory()->withPersonalTeam()->create();
@@ -366,7 +354,7 @@ class ProductShowTest extends TestCase
         $this->assertStringNotContainsString('?lang=', $url);
     }
 
-    public function test_product_get_url_returns_legacy_url_for_standalone_products(): void
+    public function test_product_get_url_returns_null_for_standalone_products(): void
     {
         $user = User::factory()->withPersonalTeam()->create();
         $team = $user->currentTeam;
@@ -382,8 +370,7 @@ class ProductShowTest extends TestCase
             'sku' => 'STANDALONE-001',
         ]);
 
-        $url = $product->getUrl();
-
-        $this->assertStringContainsString('/products/'.$product->id, $url);
+        $this->assertNull($product->getUrl());
+        $this->assertFalse($product->hasSemanticUrl());
     }
 }

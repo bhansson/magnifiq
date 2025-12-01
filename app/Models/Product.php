@@ -136,7 +136,7 @@ class Product extends Model
             ->where('sku', $this->sku)
             ->where('team_id', $this->team_id)
             ->whereHas('feed', fn ($q) => $q->where('product_catalog_id', $this->feed->product_catalog_id))
-            ->with('feed:id,name,language')
+            ->with(['feed:id,name,language,product_catalog_id', 'feed.catalog:id,slug'])
             ->get()
             ->sortBy(fn ($product) => $product->feed?->language ?? 'zzz');
     }
@@ -158,25 +158,33 @@ class Product extends Model
     }
 
     /**
-     * Get the URL for this product.
-     * Uses semantic URL if product is in a catalog with a SKU, otherwise falls back to legacy route.
+     * Check if this product has a semantic URL (not legacy).
      */
-    public function getUrl(): string
+    public function hasSemanticUrl(): bool
     {
-        if ($this->isInCatalog() && $this->sku && $this->feed?->catalog?->slug) {
-            $params = [
-                'catalog' => $this->feed->catalog->slug,
-                'sku' => $this->sku,
-            ];
+        return $this->isInCatalog() && $this->sku && $this->feed?->catalog?->slug;
+    }
 
-            // Only include language in URL if product has one
-            if ($this->feed->language) {
-                $params['lang'] = $this->feed->language;
-            }
-
-            return route('products.show', $params);
+    /**
+     * Get the URL for this product.
+     * Returns a semantic URL if product is in a catalog with a SKU, otherwise null.
+     */
+    public function getUrl(): ?string
+    {
+        if (! $this->hasSemanticUrl()) {
+            return null;
         }
 
-        return route('products.show.legacy', ['product' => $this->id]);
+        $params = [
+            'catalog' => $this->feed->catalog->slug,
+            'sku' => $this->sku,
+        ];
+
+        // Only include language in URL if product has one
+        if ($this->feed->language) {
+            $params['lang'] = $this->feed->language;
+        }
+
+        return route('products.show', $params);
     }
 }
