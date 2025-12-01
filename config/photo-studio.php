@@ -23,14 +23,6 @@ return [
                 'min_images' => 1,
                 'max_images' => 1,
             ],
-            'products_together' => [
-                'label' => 'Product Group Image',
-                'description' => 'All products appear in one cohesive scene',
-                'icon' => 'user-group',
-                'example_hint' => 'Perfect for: outfit combinations, product bundles, room setups',
-                'example_image' => 'images/composition-examples/products-together.svg',
-                'min_images' => 2,
-            ],
             'lifestyle_context' => [
                 'label' => 'Lifestyle Context',
                 'description' => 'Show product being used by people in real-world scenarios',
@@ -38,6 +30,14 @@ return [
                 'example_hint' => 'Perfect for: product-in-use shots, lifestyle marketing, social media content',
                 'example_image' => 'images/composition-examples/lifestyle-context.svg',
                 'min_images' => 1,
+            ],
+            'products_together' => [
+                'label' => 'Product Group Image',
+                'description' => 'All products appear in one cohesive scene',
+                'icon' => 'user-group',
+                'example_hint' => 'Perfect for: outfit combinations, product bundles, room setups',
+                'example_image' => 'images/composition-examples/products-together.svg',
+                'min_images' => 2,
             ],
             'reference_hero' => [
                 'label' => 'Reference + Hero',
@@ -61,16 +61,6 @@ the environment to fit it.
 Output only the prompt, no explanations or commentary.
 PROMPT,
 
-            'products_together' => <<<'PROMPT'
-Analyze the provided product images to understand each item: its size, materials, intended use, and style.
-Create a unified scene prompt where ALL products naturally coexist in the same environment.
-Consider how these products would realistically be used or displayed together.
-Choose an environment, lighting, and composition that makes sense for the entire collection.
-Each product should be clearly visible and well-positioned relative to the others.
-Do not describe individual products in detail - focus on the scene, arrangement, and atmosphere.
-Output only the prompt, no explanations or commentary.
-PROMPT,
-
             'lifestyle_context' => <<<'PROMPT'
 Analyze the product image to understand what it is, how it's used, and who would use it.
 Create a lifestyle scene prompt showing the product being actively used or interacted with by a person.
@@ -78,6 +68,16 @@ The person should be naturally engaged with the product in a realistic, relatabl
 Focus on creating an authentic "product-in-use" moment that tells a story.
 The product must remain clearly visible and identifiable as the focal point.
 Choose an appropriate setting, lighting, and mood that matches the product's target audience.
+Output only the prompt, no explanations or commentary.
+PROMPT,
+
+            'products_together' => <<<'PROMPT'
+Analyze the provided product images to understand each item: its size, materials, intended use, and style.
+Create a unified scene prompt where ALL products naturally coexist in the same environment.
+Consider how these products would realistically be used or displayed together.
+Choose an environment, lighting, and composition that makes sense for the entire collection.
+Each product should be clearly visible and well-positioned relative to the others.
+Do not describe individual products in detail - focus on the scene, arrangement, and atmosphere.
 Output only the prompt, no explanations or commentary.
 PROMPT,
 

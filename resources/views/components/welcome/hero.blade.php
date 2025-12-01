@@ -298,15 +298,13 @@
                         <div class="lg:col-span-4 border-r border-zinc-800/80 p-6">
                             <!-- Product card -->
                             <div class="bg-zinc-800/40 rounded-xl border border-zinc-700/50 overflow-hidden">
-                                <!-- Product image placeholder -->
-                                <div class="aspect-square bg-gradient-to-br from-zinc-700/50 to-zinc-800/50 relative">
-                                    <div class="absolute inset-0 flex items-center justify-center">
-                                        <div class="w-32 h-32 rounded-2xl bg-gradient-to-br from-amber-400/20 to-orange-500/20 border border-amber-500/30 flex items-center justify-center">
-                                            <svg class="w-12 h-12 text-amber-400/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
-                                            </svg>
-                                        </div>
-                                    </div>
+                                <!-- Product image -->
+                                <div class="aspect-square bg-zinc-800 relative overflow-hidden">
+                                    <img
+                                        src="{{ asset('images/dashboardproductmain.jpg') }}"
+                                        alt="Premium Wireless Headphones"
+                                        class="w-full h-full object-cover"
+                                    >
                                     <!-- AI generating badge -->
                                     <div class="absolute top-3 right-3 px-2.5 py-1 bg-amber-500/20 backdrop-blur-sm border border-amber-500/30 rounded-full">
                                         <span class="flex items-center gap-1.5 text-xs font-medium text-amber-400">
@@ -440,20 +438,26 @@
 
                             <!-- Generated images grid -->
                             <div class="grid grid-cols-2 gap-3 mb-4">
-                                <div class="aspect-square bg-gradient-to-br from-amber-500/10 to-orange-500/10 rounded-xl border border-amber-500/20 flex items-center justify-center">
-                                    <svg class="w-8 h-8 text-amber-400/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                                    </svg>
+                                <div class="aspect-square rounded-xl border border-amber-500/20 overflow-hidden">
+                                    <img
+                                        src="{{ asset('images/dashboardproduct_1.jpg') }}"
+                                        alt="AI Generated Product Image"
+                                        class="w-full h-full object-cover"
+                                    >
                                 </div>
-                                <div class="aspect-square bg-gradient-to-br from-zinc-700/30 to-zinc-800/30 rounded-xl border border-zinc-700/50 flex items-center justify-center">
-                                    <svg class="w-8 h-8 text-zinc-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                                    </svg>
+                                <div class="aspect-square rounded-xl border border-zinc-700/50 overflow-hidden">
+                                    <img
+                                        src="{{ asset('images/dashboardproduct_2.jpg') }}"
+                                        alt="AI Generated Product Image"
+                                        class="w-full h-full object-cover"
+                                    >
                                 </div>
-                                <div class="aspect-square bg-gradient-to-br from-zinc-700/30 to-zinc-800/30 rounded-xl border border-zinc-700/50 flex items-center justify-center">
-                                    <svg class="w-8 h-8 text-zinc-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                                    </svg>
+                                <div class="aspect-square rounded-xl border border-zinc-700/50 overflow-hidden">
+                                    <img
+                                        src="{{ asset('images/dashboardproduct_3.jpg') }}"
+                                        alt="AI Generated Product Image"
+                                        class="w-full h-full object-cover"
+                                    >
                                 </div>
                                 <div class="aspect-square bg-zinc-800/40 rounded-xl border border-dashed border-zinc-700 flex items-center justify-center">
                                     <svg class="w-6 h-6 text-zinc-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
