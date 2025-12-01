@@ -336,7 +336,7 @@
                             type="button"
                             wire:click="confirmMoveFeed"
                             wire:loading.attr="disabled"
-                            class="w-full sm:col-start-2">
+                            class="w-full justify-center sm:col-start-2">
                             <span wire:loading.remove wire:target="confirmMoveFeed">Move Feed</span>
                             <span wire:loading wire:target="confirmMoveFeed">Moving…</span>
                         </x-button>
@@ -370,7 +370,7 @@
                         No feeds imported yet. Submit a feed above to get started.
                     </p>
                 @else
-                    <div class="overflow-x-auto">
+                    <div class="overflow-x-auto min-h-[200px]">
                         <table class="min-w-full divide-y divide-gray-200 dark:divide-zinc-800 text-sm">
                             <thead class="bg-gray-50 dark:bg-zinc-800/50">
                                 <tr>
@@ -429,10 +429,16 @@
                                             {{ $feed->updated_at->diffForHumans() }}
                                         </td>
                                         <td class="px-4 py-3 text-right">
-                                            <div class="relative inline-block text-left" x-data="{ open: false }" @click.away="open = false">
+                                            <div class="relative inline-block text-left" x-data="{ open: false, dropup: false }" @click.away="open = false">
                                                 <button
                                                     type="button"
-                                                    @click="open = !open"
+                                                    x-ref="trigger"
+                                                    @click="
+                                                        const rect = $refs.trigger.getBoundingClientRect();
+                                                        const spaceBelow = window.innerHeight - rect.bottom;
+                                                        dropup = spaceBelow < 160;
+                                                        open = !open;
+                                                    "
                                                     class="inline-flex items-center justify-center w-8 h-8 rounded-lg text-gray-400 dark:text-zinc-500 hover:text-gray-600 dark:hover:text-zinc-300 hover:bg-gray-100/80 dark:hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-amber-500/50 transition-all opacity-0 group-hover:opacity-100"
                                                     :class="{ 'opacity-100 text-gray-600 dark:text-zinc-300 bg-gray-100 dark:bg-zinc-800': open }">
                                                     <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
@@ -448,7 +454,8 @@
                                                     x-transition:leave="transition ease-in duration-75"
                                                     x-transition:leave-start="transform opacity-100 scale-100"
                                                     x-transition:leave-end="transform opacity-0 scale-95"
-                                                    class="absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-xl bg-white dark:bg-zinc-800 shadow-lg dark:shadow-none ring-1 ring-black/5 dark:ring-white/10 border border-gray-200 dark:border-zinc-700 focus:outline-none"
+                                                    class="absolute right-0 z-10 w-48 rounded-xl bg-white dark:bg-zinc-800 shadow-lg dark:shadow-none ring-1 ring-black/5 dark:ring-white/10 border border-gray-200 dark:border-zinc-700 focus:outline-none"
+                                                    :class="dropup ? 'bottom-full mb-2 origin-bottom-right' : 'top-full mt-2 origin-top-right'"
                                                     style="display: none;">
                                                     <div class="py-1">
                                                         <button
