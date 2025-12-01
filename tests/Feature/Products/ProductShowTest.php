@@ -38,7 +38,8 @@ class ProductShowTest extends TestCase
 
         $this->actingAs($user);
 
-        $this->get(route('products.show', $product))
+        // Product without catalog uses legacy route
+        $this->get(route('products.show.legacy', $product))
             ->assertOk()
             ->assertSeeText('Example Product Title')
             ->assertSeeText('Summary');
@@ -62,7 +63,8 @@ class ProductShowTest extends TestCase
 
         $this->actingAs($user);
 
-        $this->get(route('products.show', $foreignProduct))
+        // Product without catalog uses legacy route
+        $this->get(route('products.show.legacy', $foreignProduct))
             ->assertNotFound();
     }
 
@@ -153,10 +155,24 @@ class ProductShowTest extends TestCase
 
         $this->actingAs($user);
 
-        Livewire::test(ProductShow::class, ['productId' => $productEn->id])
+        // Products in catalog use semantic URL: /products/{catalog}/{sku}/{lang}
+        $expectedUrl = route('products.show', [
+            'catalog' => $catalog->slug,
+            'sku' => 'SKU-001',
+            'lang' => 'sv',
+        ]);
+
+        // URL should be path-based, not query string
+        $this->assertStringContainsString('/sv', $expectedUrl);
+        $this->assertStringNotContainsString('?lang=', $expectedUrl);
+
+        Livewire::test(ProductShow::class, [
+            'productId' => $productEn->id,
+            'catalogSlug' => $catalog->slug,
+        ])
             ->assertSee('EN')
             ->assertSee('SV')
-            ->assertSeeHtml('href="'.route('products.show', $productSv->id).'"');
+            ->assertSeeHtml('href="'.$expectedUrl.'"');
     }
 
     public function test_product_does_not_show_language_tabs_when_standalone(): void
@@ -211,5 +227,163 @@ class ProductShowTest extends TestCase
 
         Livewire::test(ProductShow::class, ['productId' => $product->id])
             ->assertSee('My Test Catalog');
+    }
+
+    public function test_semantic_url_shows_product_by_catalog_and_sku(): void
+    {
+        $user = User::factory()->withPersonalTeam()->create();
+        $team = $user->currentTeam;
+
+        $catalog = ProductCatalog::factory()->create([
+            'team_id' => $team->id,
+            'name' => 'Winter Collection',
+        ]);
+
+        $feed = ProductFeed::factory()->create([
+            'team_id' => $team->id,
+            'product_catalog_id' => $catalog->id,
+            'language' => 'en',
+        ]);
+
+        $product = Product::factory()->create([
+            'team_id' => $team->id,
+            'product_feed_id' => $feed->id,
+            'sku' => 'WINTER-001',
+            'title' => 'Cozy Winter Jacket',
+        ]);
+
+        $this->actingAs($user);
+
+        $this->get(route('products.show', [
+            'catalog' => $catalog->slug,
+            'sku' => 'WINTER-001',
+        ]))
+            ->assertOk()
+            ->assertSeeText('Cozy Winter Jacket');
+    }
+
+    public function test_semantic_url_with_lang_parameter_shows_correct_language_version(): void
+    {
+        $user = User::factory()->withPersonalTeam()->create();
+        $team = $user->currentTeam;
+
+        $catalog = ProductCatalog::factory()->create(['team_id' => $team->id]);
+
+        $feedEn = ProductFeed::factory()->create([
+            'team_id' => $team->id,
+            'product_catalog_id' => $catalog->id,
+            'language' => 'en',
+        ]);
+
+        $feedSv = ProductFeed::factory()->create([
+            'team_id' => $team->id,
+            'product_catalog_id' => $catalog->id,
+            'language' => 'sv',
+        ]);
+
+        Product::factory()->create([
+            'team_id' => $team->id,
+            'product_feed_id' => $feedEn->id,
+            'sku' => 'MULTI-001',
+            'title' => 'English Title',
+        ]);
+
+        Product::factory()->create([
+            'team_id' => $team->id,
+            'product_feed_id' => $feedSv->id,
+            'sku' => 'MULTI-001',
+            'title' => 'Swedish Title',
+        ]);
+
+        $this->actingAs($user);
+
+        // Request Swedish version via lang parameter
+        $this->get(route('products.show', [
+            'catalog' => $catalog->slug,
+            'sku' => 'MULTI-001',
+            'lang' => 'sv',
+        ]))
+            ->assertOk()
+            ->assertSeeText('Swedish Title');
+    }
+
+    public function test_legacy_url_redirects_to_semantic_url_for_catalog_products(): void
+    {
+        $user = User::factory()->withPersonalTeam()->create();
+        $team = $user->currentTeam;
+
+        $catalog = ProductCatalog::factory()->create(['team_id' => $team->id]);
+
+        $feed = ProductFeed::factory()->create([
+            'team_id' => $team->id,
+            'product_catalog_id' => $catalog->id,
+            'language' => 'en',
+        ]);
+
+        $product = Product::factory()->create([
+            'team_id' => $team->id,
+            'product_feed_id' => $feed->id,
+            'sku' => 'REDIRECT-001',
+        ]);
+
+        $this->actingAs($user);
+
+        $expectedUrl = route('products.show', [
+            'catalog' => $catalog->slug,
+            'sku' => 'REDIRECT-001',
+            'lang' => 'en',
+        ]);
+
+        $this->get(route('products.show.legacy', $product))
+            ->assertRedirect($expectedUrl);
+    }
+
+    public function test_product_get_url_returns_semantic_url_for_catalog_products(): void
+    {
+        $user = User::factory()->withPersonalTeam()->create();
+        $team = $user->currentTeam;
+
+        $catalog = ProductCatalog::factory()->create(['team_id' => $team->id]);
+
+        $feed = ProductFeed::factory()->create([
+            'team_id' => $team->id,
+            'product_catalog_id' => $catalog->id,
+            'language' => 'de',
+        ]);
+
+        $product = Product::factory()->create([
+            'team_id' => $team->id,
+            'product_feed_id' => $feed->id,
+            'sku' => 'URL-001',
+        ]);
+
+        $url = $product->getUrl();
+
+        $this->assertStringContainsString($catalog->slug, $url);
+        $this->assertStringContainsString('URL-001', $url);
+        // Language should be a path segment, not query parameter
+        $this->assertStringContainsString('/de', $url);
+        $this->assertStringNotContainsString('?lang=', $url);
+    }
+
+    public function test_product_get_url_returns_legacy_url_for_standalone_products(): void
+    {
+        $user = User::factory()->withPersonalTeam()->create();
+        $team = $user->currentTeam;
+
+        $feed = ProductFeed::factory()->create([
+            'team_id' => $team->id,
+            'product_catalog_id' => null,
+        ]);
+
+        $product = Product::factory()->create([
+            'team_id' => $team->id,
+            'product_feed_id' => $feed->id,
+            'sku' => 'STANDALONE-001',
+        ]);
+
+        $url = $product->getUrl();
+
+        $this->assertStringContainsString('/products/'.$product->id, $url);
     }
 }

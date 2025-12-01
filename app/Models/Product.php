@@ -156,4 +156,27 @@ class Product extends Model
     {
         return $this->feed?->product_catalog_id !== null;
     }
+
+    /**
+     * Get the URL for this product.
+     * Uses semantic URL if product is in a catalog with a SKU, otherwise falls back to legacy route.
+     */
+    public function getUrl(): string
+    {
+        if ($this->isInCatalog() && $this->sku && $this->feed?->catalog?->slug) {
+            $params = [
+                'catalog' => $this->feed->catalog->slug,
+                'sku' => $this->sku,
+            ];
+
+            // Only include language in URL if product has one
+            if ($this->feed->language) {
+                $params['lang'] = $this->feed->language;
+            }
+
+            return route('products.show', $params);
+        }
+
+        return route('products.show.legacy', ['product' => $this->id]);
+    }
 }

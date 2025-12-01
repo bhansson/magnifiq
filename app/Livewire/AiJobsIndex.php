@@ -36,7 +36,9 @@ class AiJobsIndex extends Component
 
         $jobsQuery = ProductAiJob::query()
             ->with([
-                'product:id,title,sku',
+                'product:id,product_feed_id,title,sku',
+                'product.feed:id,language,product_catalog_id',
+                'product.feed.catalog:id,slug',
                 'template:id,name,slug',
                 'photoStudioGeneration:id,product_ai_job_id,storage_path,storage_disk',
             ])

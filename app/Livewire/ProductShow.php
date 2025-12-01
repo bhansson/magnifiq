@@ -16,16 +16,25 @@ class ProductShow extends Component
 {
     public int $productId;
 
+    public ?string $catalogSlug = null;
+
+    public ?string $currentLanguage = null;
+
     public array $generationStatus = [];
+
     public array $generationError = [];
+
     public array $generationLoading = [];
+
     public array $generationContent = [];
 
     protected ?Collection $templateCache = null;
 
-    public function mount(int $productId): void
+    public function mount(int $productId, ?string $catalogSlug = null, ?string $currentLanguage = null): void
     {
         $this->productId = $productId;
+        $this->catalogSlug = $catalogSlug;
+        $this->currentLanguage = $currentLanguage;
     }
 
     public function render()
@@ -45,6 +54,7 @@ class ProductShow extends Component
             'generationContent' => $this->generationContent,
             'languageLabels' => ProductFeed::languageOptions(),
             'languageVersions' => $languageVersions,
+            'catalogSlug' => $this->catalogSlug,
         ]);
     }
 
@@ -288,7 +298,7 @@ class ProductShow extends Component
     /**
      * Get all language versions of the product for tab navigation.
      *
-     * @return Collection<int, array{id: int, language: string, is_current: bool}>
+     * @return Collection<int, array{id: int, language: string, is_current: bool, url: string}>
      */
     protected function languageVersions(Product $product): Collection
     {
@@ -296,18 +306,37 @@ class ProductShow extends Component
             return collect();
         }
 
-        $labels = ProductFeed::languageOptions();
-
         return $product->allLanguageVersions()
             ->filter(fn (Product $p) => $p->feed?->language)
-            ->sortBy(function (Product $p) use ($labels) {
-                return $labels[$p->feed->language] ?? $p->feed->language;
-            }, SORT_NATURAL | SORT_FLAG_CASE)
-            ->map(fn (Product $p) => [
-                'id' => $p->id,
-                'language' => $p->feed->language,
-                'is_current' => $p->id === $product->id,
-            ])
+            ->sortBy(fn (Product $p) => $p->feed->language)
+            ->map(function (Product $p) use ($product) {
+                $language = $p->feed->language;
+                $isCurrent = $p->id === $product->id;
+
+                // Build URL using semantic routing if catalog slug is available
+                if ($this->catalogSlug && $p->sku) {
+                    $params = [
+                        'catalog' => $this->catalogSlug,
+                        'sku' => $p->sku,
+                    ];
+
+                    if ($language) {
+                        $params['lang'] = $language;
+                    }
+
+                    $url = route('products.show', $params);
+                } else {
+                    // Fallback to legacy route
+                    $url = route('products.show.legacy', ['product' => $p->id]);
+                }
+
+                return [
+                    'id' => $p->id,
+                    'language' => $language,
+                    'is_current' => $isCurrent,
+                    'url' => $url,
+                ];
+            })
             ->values();
     }
 }
