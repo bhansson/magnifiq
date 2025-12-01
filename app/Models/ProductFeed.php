@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ProductFeed extends Model
 {
@@ -40,6 +42,7 @@ class ProductFeed extends Model
 
     protected $fillable = [
         'team_id',
+        'product_catalog_id',
         'name',
         'feed_url',
         'language',
@@ -60,13 +63,26 @@ class ProductFeed extends Model
         return $code !== null ? (self::LANGUAGE_OPTIONS[$code] ?? null) : null;
     }
 
-    public function team()
+    public function team(): BelongsTo
     {
         return $this->belongsTo(Team::class);
     }
 
-    public function products()
+    public function catalog(): BelongsTo
+    {
+        return $this->belongsTo(ProductCatalog::class, 'product_catalog_id');
+    }
+
+    public function products(): HasMany
     {
         return $this->hasMany(Product::class);
+    }
+
+    /**
+     * Check if this feed is part of a catalog.
+     */
+    public function isInCatalog(): bool
+    {
+        return $this->product_catalog_id !== null;
     }
 }

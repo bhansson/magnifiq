@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Collection;
 
 class Product extends Model
 {
@@ -100,5 +101,59 @@ class Product extends Model
                 $query->where('slug', $slug);
             })
             ->latest();
+    }
+
+    /**
+     * Get sibling products with the same SKU in other feeds of the same catalog.
+     * Returns empty collection if product is not in a catalog.
+     */
+    public function siblingProducts(): Collection
+    {
+        if (! $this->feed?->product_catalog_id) {
+            return collect();
+        }
+
+        return Product::query()
+            ->where('sku', $this->sku)
+            ->where('team_id', $this->team_id)
+            ->where('id', '!=', $this->id)
+            ->whereHas('feed', fn ($q) => $q->where('product_catalog_id', $this->feed->product_catalog_id))
+            ->with('feed:id,name,language')
+            ->get();
+    }
+
+    /**
+     * Get all language versions of this product (including self).
+     * Returns collection with only self if product is not in a catalog.
+     */
+    public function allLanguageVersions(): Collection
+    {
+        if (! $this->feed?->product_catalog_id) {
+            return collect([$this]);
+        }
+
+        return Product::query()
+            ->where('sku', $this->sku)
+            ->where('team_id', $this->team_id)
+            ->whereHas('feed', fn ($q) => $q->where('product_catalog_id', $this->feed->product_catalog_id))
+            ->with('feed:id,name,language')
+            ->get()
+            ->sortBy(fn ($product) => $product->feed?->language ?? 'zzz');
+    }
+
+    /**
+     * Check if this product has sibling products in other languages.
+     */
+    public function hasLanguageSiblings(): bool
+    {
+        return $this->siblingProducts()->isNotEmpty();
+    }
+
+    /**
+     * Check if this product is part of a catalog.
+     */
+    public function isInCatalog(): bool
+    {
+        return $this->feed?->product_catalog_id !== null;
     }
 }

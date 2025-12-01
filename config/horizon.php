@@ -241,10 +241,10 @@ return [
 
         'local' => [
             'supervisor-default' => [
-                'maxProcesses' => 3,
+                'maxProcesses' => 5,
             ],
             'supervisor-ai' => [
-                'maxProcesses' => 2,
+                'maxProcesses' => 10,
             ],
         ],
     ],

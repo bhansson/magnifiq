@@ -36,6 +36,29 @@
                                 <span>Updated {{ $product->updated_at->diffForHumans() }}</span>
                                 <span>Created {{ $product->created_at->diffForHumans() }}</span>
                             </div>
+                            @if ($languageVersions->count() > 1)
+                                <div class="mt-4 flex flex-wrap items-center gap-2">
+                                    <span class="text-xs font-medium text-gray-500 dark:text-zinc-500 uppercase tracking-wide">Language:</span>
+                                    @foreach ($languageVersions as $version)
+                                        @php
+                                            $versionLabel = $languageLabels[$version['language']] ?? Str::upper($version['language']);
+                                        @endphp
+                                        @if ($version['is_current'])
+                                            <span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-400 ring-1 ring-amber-200 dark:ring-amber-500/30" title="Currently viewing {{ $versionLabel }}">
+                                                {{ Str::upper($version['language']) }}
+                                                <span class="ml-1.5 text-amber-600 dark:text-amber-500">•</span>
+                                            </span>
+                                        @else
+                                            <a href="{{ route('products.show', $version['id']) }}"
+                                               class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-zinc-700 text-gray-600 dark:text-zinc-400 hover:bg-gray-200 dark:hover:bg-zinc-600 hover:text-gray-900 dark:hover:text-zinc-200 transition-colors"
+                                               title="View {{ $versionLabel }} version"
+                                            >
+                                                {{ Str::upper($version['language']) }}
+                                            </a>
+                                        @endif
+                                    @endforeach
+                                </div>
+                            @endif
                         </div>
 
                         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -430,6 +453,17 @@
                                 {{ $product->feed?->name ?: '—' }}
                             </span>
                         </div>
+                        @if ($product->feed?->catalog)
+                            <div class="flex items-center justify-between">
+                                <span class="text-gray-500 dark:text-zinc-500">Catalog</span>
+                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-purple-100 dark:bg-purple-500/20 text-purple-700 dark:text-purple-400 font-medium text-xs">
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
+                                    </svg>
+                                    {{ $product->feed->catalog->name }}
+                                </span>
+                            </div>
+                        @endif
                         <div class="flex items-center justify-between">
                             <span class="text-gray-500 dark:text-zinc-500">Created</span>
                             <span class="font-medium dark:text-white">{{ $product->created_at->format('M j, Y g:i A') }}</span>

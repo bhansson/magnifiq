@@ -29,6 +29,12 @@ class TeamActivity extends Model
 
     public const TYPE_TEAM_MEMBER_REMOVED = 'team.member_removed';
 
+    public const TYPE_CATALOG_CREATED = 'catalog.created';
+
+    public const TYPE_CATALOG_DELETED = 'catalog.deleted';
+
+    public const TYPE_FEED_MOVED = 'feed.moved';
+
     protected $fillable = [
         'team_id',
         'user_id',
@@ -111,6 +117,22 @@ class TeamActivity extends Model
                 '%s left the team',
                 $props['member_name'] ?? 'A member'
             ),
+            self::TYPE_CATALOG_CREATED => sprintf(
+                '%s created catalog "%s"',
+                $userName,
+                $props['catalog_name'] ?? 'Unknown'
+            ),
+            self::TYPE_CATALOG_DELETED => sprintf(
+                '%s deleted catalog "%s"',
+                $userName,
+                $props['catalog_name'] ?? 'Unknown'
+            ),
+            self::TYPE_FEED_MOVED => sprintf(
+                '%s moved feed "%s" to catalog "%s"',
+                $userName,
+                $props['feed_name'] ?? 'Unknown',
+                $props['to_catalog'] ?? 'standalone'
+            ),
             default => 'Activity recorded',
         };
     }
@@ -122,9 +144,10 @@ class TeamActivity extends Model
     {
         return match ($this->type) {
             self::TYPE_JOB_QUEUED, self::TYPE_JOB_COMPLETED, self::TYPE_JOB_FAILED => 'cpu-chip',
-            self::TYPE_FEED_IMPORTED, self::TYPE_FEED_REFRESHED, self::TYPE_FEED_DELETED => 'document-arrow-down',
+            self::TYPE_FEED_IMPORTED, self::TYPE_FEED_REFRESHED, self::TYPE_FEED_DELETED, self::TYPE_FEED_MOVED => 'document-arrow-down',
             self::TYPE_PHOTO_STUDIO_GENERATED => 'photo',
             self::TYPE_TEAM_MEMBER_ADDED, self::TYPE_TEAM_MEMBER_REMOVED => 'user-group',
+            self::TYPE_CATALOG_CREATED, self::TYPE_CATALOG_DELETED => 'folder',
             default => 'bolt',
         };
     }
@@ -139,9 +162,11 @@ class TeamActivity extends Model
             self::TYPE_JOB_FAILED => 'red',
             self::TYPE_JOB_QUEUED => 'yellow',
             self::TYPE_FEED_IMPORTED, self::TYPE_FEED_REFRESHED => 'blue',
-            self::TYPE_FEED_DELETED => 'orange',
+            self::TYPE_FEED_DELETED, self::TYPE_CATALOG_DELETED => 'orange',
             self::TYPE_TEAM_MEMBER_ADDED => 'indigo',
             self::TYPE_TEAM_MEMBER_REMOVED => 'gray',
+            self::TYPE_CATALOG_CREATED => 'purple',
+            self::TYPE_FEED_MOVED => 'cyan',
             default => 'gray',
         };
     }
