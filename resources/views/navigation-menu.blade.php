@@ -34,6 +34,9 @@
                     <x-nav-link href="{{ route('dashboard') }}" :active="request()->routeIs('dashboard')">
                         {{ __('Dashboard') }}
                     </x-nav-link>
+                    <x-nav-link href="{{ route('catalog.index') }}" :active="request()->routeIs('catalog.index')">
+                        {{ __('Catalog') }}
+                    </x-nav-link>
                     <x-nav-link href="{{ route('products.index') }}" :active="request()->routeIs('products.index')">
                         {{ __('Products') }}
                     </x-nav-link>
@@ -46,15 +49,6 @@
                     <x-nav-link href="{{ route('photo-studio.index') }}" :active="request()->routeIs('photo-studio.index')">
                         {{ __('Photo Studio') }}
                     </x-nav-link>
-
-                    @if (Auth::user()->isSuperAdmin())
-                        <x-nav-link href="{{ route('admin.partners') }}" :active="request()->routeIs('admin.partners')">
-                            {{ __('Partners') }}
-                        </x-nav-link>
-                        <x-nav-link href="{{ route('admin.revenue') }}" :active="request()->routeIs('admin.revenue')">
-                            {{ __('Revenue') }}
-                        </x-nav-link>
-                    @endif
                 </div>
             </div>
 
@@ -150,6 +144,21 @@
                                 </x-dropdown-link>
                             @endif
 
+                            @if (Auth::user()->isSuperAdmin())
+                                <div class="border-t border-gray-200 dark:border-zinc-700"></div>
+
+                                <div class="block px-4 py-2 text-xs text-gray-400 dark:text-zinc-500 uppercase tracking-wider">
+                                    {{ __('Administration') }}
+                                </div>
+
+                                <x-dropdown-link href="{{ route('admin.partners') }}">
+                                    {{ __('Partners') }}
+                                </x-dropdown-link>
+                                <x-dropdown-link href="{{ route('admin.revenue') }}">
+                                    {{ __('Revenue') }}
+                                </x-dropdown-link>
+                            @endif
+
                             <div class="border-t border-gray-200 dark:border-zinc-700"></div>
 
                             <!-- Authentication -->
@@ -187,6 +196,9 @@
             <x-responsive-nav-link href="{{ route('dashboard') }}" :active="request()->routeIs('dashboard')">
                 {{ __('Dashboard') }}
             </x-responsive-nav-link>
+            <x-responsive-nav-link href="{{ route('catalog.index') }}" :active="request()->routeIs('catalog.index')">
+                {{ __('Catalog') }}
+            </x-responsive-nav-link>
             <x-responsive-nav-link href="{{ route('products.index') }}" :active="request()->routeIs('products.index')">
                 {{ __('Products') }}
             </x-responsive-nav-link>
@@ -199,15 +211,6 @@
             <x-responsive-nav-link href="{{ route('photo-studio.index') }}" :active="request()->routeIs('photo-studio.index')">
                 {{ __('Photo Studio') }}
             </x-responsive-nav-link>
-
-            @if (Auth::user()->isSuperAdmin())
-                <x-responsive-nav-link href="{{ route('admin.partners') }}" :active="request()->routeIs('admin.partners')">
-                    {{ __('Partners') }}
-                </x-responsive-nav-link>
-                <x-responsive-nav-link href="{{ route('admin.revenue') }}" :active="request()->routeIs('admin.revenue')">
-                    {{ __('Revenue') }}
-                </x-responsive-nav-link>
-            @endif
         </div>
 
         <!-- Responsive Settings Options -->
@@ -234,6 +237,21 @@
                 @if (Laravel\Jetstream\Jetstream::hasApiFeatures())
                     <x-responsive-nav-link href="{{ route('api-tokens.index') }}" :active="request()->routeIs('api-tokens.index')">
                         {{ __('API Tokens') }}
+                    </x-responsive-nav-link>
+                @endif
+
+                @if (Auth::user()->isSuperAdmin())
+                    <div class="border-t border-gray-200 dark:border-zinc-800"></div>
+
+                    <div class="block px-4 py-2 text-xs text-gray-400 dark:text-zinc-500 uppercase tracking-wider">
+                        {{ __('Administration') }}
+                    </div>
+
+                    <x-responsive-nav-link href="{{ route('admin.partners') }}" :active="request()->routeIs('admin.partners')">
+                        {{ __('Partners') }}
+                    </x-responsive-nav-link>
+                    <x-responsive-nav-link href="{{ route('admin.revenue') }}" :active="request()->routeIs('admin.revenue')">
+                        {{ __('Revenue') }}
                     </x-responsive-nav-link>
                 @endif
 
