@@ -332,6 +332,10 @@
                                     <p class="text-xs text-zinc-500">Products</p>
                                 </div>
                                 <div class="bg-zinc-800/40 rounded-xl p-4 border border-zinc-700/50">
+                                    <!-- Progress bar -->
+                                    <div class="h-1 bg-zinc-700/30 rounded-full overflow-hidden mb-2">
+                                        <div class="h-full w-[94%] bg-amber-500/70 rounded-full"></div>
+                                    </div>
                                     <p class="text-2xl font-bold text-amber-400">94%</p>
                                     <p class="text-xs text-zinc-500">AI Optimized</p>
                                 </div>
@@ -475,11 +479,11 @@
                             </div>
 
                             <!-- Generate button -->
-                            <button class="w-full mt-4 flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-amber-400 to-orange-500 text-black text-sm font-semibold rounded-xl">
+                            <button class="w-full mt-4 flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-amber-500/80 to-orange-500/80 text-black/80 text-sm font-semibold rounded-xl">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
                                 </svg>
-                                Generate Images
+                                Generate Image
                             </button>
                         </div>
                     </div>

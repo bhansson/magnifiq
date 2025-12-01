@@ -135,8 +135,8 @@
                                 </svg>
                             @endfor
                         </div>
-                        <p class="text-3xl font-bold text-white">4.9/5</p>
-                        <p class="text-sm text-zinc-500 mt-1">Average rating from users</p>
+                        <p class="text-3xl font-bold text-white">5/5</p>
+                        <p class="text-sm text-zinc-500 mt-1">Rave reviews from users</p>
                     </div>
                     <div>
                         <p class="text-3xl font-bold bg-gradient-to-r from-amber-400 to-orange-400 bg-clip-text text-transparent">95%</p>
@@ -144,7 +144,7 @@
                     </div>
                     <div>
                         <p class="text-3xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">500K+</p>
-                        <p class="text-sm text-zinc-500 mt-1">Products managed monthly</p>
+                        <p class="text-sm text-zinc-500 mt-1">Generations processed</p>
                     </div>
                 </div>
             </div>
