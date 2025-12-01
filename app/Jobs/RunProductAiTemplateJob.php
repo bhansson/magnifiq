@@ -9,6 +9,7 @@ use App\Models\Product;
 use App\Models\ProductAiGeneration;
 use App\Models\ProductAiJob;
 use App\Models\ProductAiTemplate;
+use App\Models\TeamActivity;
 use App\Support\ProductAiContentParser;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -120,6 +121,8 @@ class RunProductAiTemplateJob implements ShouldQueue
             $jobRecord->markCompleted([
                 'generation_id' => $record->id,
             ]);
+
+            TeamActivity::recordJobCompleted($jobRecord);
         } catch (Throwable $e) {
             $jobRecord->markFailed($e->getMessage());
 
@@ -136,6 +139,8 @@ class RunProductAiTemplateJob implements ShouldQueue
         }
 
         $jobRecord->markFailed($exception->getMessage());
+
+        TeamActivity::recordJobFailed($jobRecord);
     }
 
     /**

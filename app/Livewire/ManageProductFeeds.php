@@ -4,6 +4,7 @@ namespace App\Livewire;
 
 use App\Models\Product;
 use App\Models\ProductFeed;
+use App\Models\TeamActivity;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
@@ -59,9 +60,13 @@ class ManageProductFeeds extends Component
     ];
 
     protected ?string $lastContentType = null;
+
     protected ?string $lastContentSample = null;
+
     protected array $lastFetchInfo = [];
+
     protected bool $isRefreshing = false;
+
     protected array $refreshStatus = [];
 
     public function mount(): void
@@ -93,6 +98,7 @@ class ManageProductFeeds extends Component
 
         if (! $feed->feed_url) {
             $this->errorMessage = 'Cannot refresh uploaded feeds without a URL.';
+
             return;
         }
 
@@ -140,7 +146,7 @@ class ManageProductFeeds extends Component
 
             foreach (['sku', 'title', 'url'] as $required) {
                 if (empty($mapping[$required])) {
-                    throw new \RuntimeException('Feed is missing a mapping for ' . $required . '.');
+                    throw new \RuntimeException('Feed is missing a mapping for '.$required.'.');
                 }
             }
 
@@ -211,9 +217,21 @@ class ManageProductFeeds extends Component
             });
 
             $this->statusMessage = 'Feed refreshed successfully.';
+
+            TeamActivity::create([
+                'team_id' => $feed->team_id,
+                'user_id' => Auth::id(),
+                'type' => TeamActivity::TYPE_FEED_REFRESHED,
+                'subject_type' => ProductFeed::class,
+                'subject_id' => $feed->id,
+                'properties' => [
+                    'feed_name' => $feed->name,
+                ],
+            ]);
+
             $this->loadFeeds();
         } catch (\Throwable $e) {
-            $this->errorMessage = 'Unable to refresh feed: ' . $e->getMessage();
+            $this->errorMessage = 'Unable to refresh feed: '.$e->getMessage();
         } finally {
             $this->feedUrl = $previousUrl;
             $this->feedFile = $previousFile;
@@ -229,10 +247,26 @@ class ManageProductFeeds extends Component
             ->withCount('products')
             ->findOrFail($feedId);
 
+        $feedName = $feed->name;
+        $productCount = $feed->products_count;
+        $teamId = $feed->team_id;
+
         DB::transaction(function () use ($feed): void {
             $feed->products()->delete();
             $feed->delete();
         });
+
+        TeamActivity::create([
+            'team_id' => $teamId,
+            'user_id' => Auth::id(),
+            'type' => TeamActivity::TYPE_FEED_DELETED,
+            'subject_type' => null,
+            'subject_id' => null,
+            'properties' => [
+                'feed_name' => $feedName,
+                'product_count' => $productCount,
+            ],
+        ]);
 
         $this->statusMessage = 'Feed deleted successfully.';
         $this->loadFeeds();
@@ -249,6 +283,7 @@ class ManageProductFeeds extends Component
 
         if (! $this->feedUrl && ! $this->feedFile) {
             $this->errorMessage = 'Provide a feed URL or upload a feed file.';
+
             return;
         }
 
@@ -264,6 +299,7 @@ class ManageProductFeeds extends Component
 
             if ($parsed['items']->isEmpty()) {
                 $this->errorMessage = 'No products were found in the supplied feed.';
+
                 return;
             }
 
@@ -271,6 +307,7 @@ class ManageProductFeeds extends Component
 
             if (empty($fields)) {
                 $this->errorMessage = 'Could not determine available fields in the feed.';
+
                 return;
             }
 
@@ -299,6 +336,7 @@ class ManageProductFeeds extends Component
 
         if (! $this->feedUrl && ! $this->feedFile) {
             $this->errorMessage = 'Provide a feed URL or upload a feed file.';
+
             return;
         }
 
@@ -306,6 +344,7 @@ class ManageProductFeeds extends Component
             foreach (['sku', 'title', 'url'] as $required) {
                 if (empty($this->mapping[$required])) {
                     $this->errorMessage = 'Please select a field for '.$required.'.';
+
                     return;
                 }
             }
@@ -320,13 +359,17 @@ class ManageProductFeeds extends Component
 
             if ($items->isEmpty()) {
                 $this->errorMessage = 'No products found to import.';
+
                 return;
             }
 
             $language = $this->normalizedLanguage();
             $this->language = $language;
 
-            DB::transaction(function () use ($team, $items, $parsed, $language): void {
+            $importedFeed = null;
+            $importedCount = 0;
+
+            DB::transaction(function () use ($team, $items, $parsed, $language, &$importedFeed, &$importedCount): void {
                 $feed = $this->findOrCreateFeed($team->id, $language);
 
                 $feed->forceFill([
@@ -380,9 +423,16 @@ class ManageProductFeeds extends Component
                             ['team_id', 'sku', 'product_feed_id'],
                             ['gtin', 'title', 'brand', 'description', 'url', 'image_link', 'additional_image_link', 'updated_at']
                         );
+                        $importedCount += count($payload);
                     }
                 }
+
+                $importedFeed = $feed;
             });
+
+            if ($importedFeed) {
+                TeamActivity::recordFeedImported($importedFeed, Auth::id(), $importedCount);
+            }
 
             $this->reset(['feedFile']);
             $this->statusMessage = 'Feed imported successfully.';
@@ -527,6 +577,7 @@ class ManageProductFeeds extends Component
             if ($errors->isNotEmpty()) {
                 logger()->debug('XML parse errors', ['errors' => $errors->take(5)]);
             }
+
             return ['type' => 'xml', 'items' => collect(), 'namespaces' => []];
         }
 
@@ -589,6 +640,7 @@ class ManageProductFeeds extends Component
 
         if ($firstLine === '') {
             fclose($handle);
+
             return ['type' => 'csv', 'items' => collect(), 'namespaces' => []];
         }
 
@@ -610,11 +662,13 @@ class ManageProductFeeds extends Component
 
         if ($maxColumns === 0) {
             fclose($handle);
+
             return ['type' => 'csv', 'items' => collect(), 'namespaces' => []];
         }
 
         $headers = array_map(function ($header) {
             $clean = trim((string) $header);
+
             return ltrim($clean, "\xEF\xBB\xBF");
         }, $headerCandidates);
 

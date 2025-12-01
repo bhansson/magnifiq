@@ -7,6 +7,7 @@ use App\DTO\AI\ImageGenerationRequest;
 use App\Facades\AI;
 use App\Models\PhotoStudioGeneration;
 use App\Models\ProductAiJob;
+use App\Models\TeamActivity;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -141,6 +142,8 @@ class GeneratePhotoStudioImage implements ShouldQueue
                 'photo_studio_generation_id' => $generation->id,
                 'ai_driver' => $aiDriver,
             ]);
+
+            TeamActivity::recordPhotoStudioGenerated($generation, $this->userId);
         } catch (Throwable $exception) {
             $jobRecord->markFailed($exception->getMessage());
 
@@ -171,6 +174,8 @@ class GeneratePhotoStudioImage implements ShouldQueue
         }
 
         $jobRecord->markFailed($exception->getMessage());
+
+        TeamActivity::recordJobFailed($jobRecord, $this->userId);
 
         Log::warning('Photo Studio job permanently failed', [
             'team_id' => $this->teamId,

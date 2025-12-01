@@ -19,6 +19,9 @@ Route::middleware([
         return view('dashboard');
     })->name('dashboard');
 
+    Route::view('/catalog', 'catalog.index')
+        ->name('catalog.index');
+
     Route::view('/products', 'products.index')
         ->name('products.index');
 
