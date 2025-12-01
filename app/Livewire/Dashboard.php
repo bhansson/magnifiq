@@ -7,15 +7,11 @@ use App\Models\TeamActivity;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
-use Livewire\WithPagination;
-
 class Dashboard extends Component
 {
-    use WithPagination;
-
     public int $recentJobsLimit = 10;
 
-    public int $activityPerPage = 15;
+    public int $activityLimit = 100;
 
     public function render(): View
     {
@@ -53,8 +49,13 @@ class Dashboard extends Component
         $activities = TeamActivity::query()
             ->with(['user:id,name,profile_photo_path'])
             ->where('team_id', $team->id)
+            ->whereNotIn('type', [
+                TeamActivity::TYPE_JOB_QUEUED,
+                TeamActivity::TYPE_JOB_FAILED,
+            ])
             ->orderByDesc('created_at')
-            ->paginate($this->activityPerPage);
+            ->limit($this->activityLimit)
+            ->get();
 
         return view('livewire.dashboard', [
             'recentJobs' => $recentJobs,

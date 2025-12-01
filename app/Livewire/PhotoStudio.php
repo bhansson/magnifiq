@@ -506,6 +506,7 @@ class PhotoStudio extends Component
 
             $jobRecord = ProductAiJob::create([
                 'team_id' => $team->id,
+                'user_id' => auth()->id(),
                 'product_id' => $parentGeneration->product_id,
                 'sku' => $parentGeneration->product?->sku,
                 'product_ai_template_id' => null,
@@ -786,6 +787,7 @@ class PhotoStudio extends Component
             // Create job record for tracking
             $jobRecord = ProductAiJob::create([
                 'team_id' => $team->id,
+                'user_id' => auth()->id(),
                 'product_id' => $firstProductId,
                 'sku' => $firstProductId ? Product::find($firstProductId)?->sku : null,
                 'product_ai_template_id' => null,
@@ -980,6 +982,7 @@ class PhotoStudio extends Component
 
             $jobRecord = ProductAiJob::create([
                 'team_id' => $team->id,
+                'user_id' => auth()->id(),
                 'product_id' => $firstProductId,
                 'sku' => $firstProductId ? Product::find($firstProductId)?->sku : null,
                 'product_ai_template_id' => null,

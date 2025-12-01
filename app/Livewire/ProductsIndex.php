@@ -168,6 +168,7 @@ class ProductsIndex extends Component
 
                 $jobRecord = ProductAiJob::create([
                     'team_id' => $team->id,
+                    'user_id' => auth()->id(),
                     'product_id' => $product->id,
                     'sku' => $product->sku,
                     'product_ai_template_id' => $template->id,
@@ -446,6 +447,7 @@ class ProductsIndex extends Component
             foreach ($templates as $template) {
                 $jobRecord = ProductAiJob::create([
                     'team_id' => $team->id,
+                    'user_id' => auth()->id(),
                     'product_id' => $product->id,
                     'sku' => $product->sku,
                     'product_ai_template_id' => $template->id,

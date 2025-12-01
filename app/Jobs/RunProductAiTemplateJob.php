@@ -139,8 +139,6 @@ class RunProductAiTemplateJob implements ShouldQueue
         }
 
         $jobRecord->markFailed($exception->getMessage());
-
-        TeamActivity::recordJobFailed($jobRecord);
     }
 
     /**

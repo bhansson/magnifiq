@@ -68,47 +68,31 @@ class TeamActivity extends Model
      */
     public function getDescriptionAttribute(): string
     {
-        $userName = $this->user?->name ?? 'System';
+        $userName = $this->user?->name;
         $props = $this->properties ?? [];
 
         return match ($this->type) {
-            self::TYPE_JOB_QUEUED => sprintf(
-                '%s queued a %s job for "%s"',
-                $userName,
-                $props['job_type'] ?? 'AI',
-                $props['product_title'] ?? 'a product'
-            ),
-            self::TYPE_JOB_COMPLETED => sprintf(
-                '%s job completed for "%s"',
-                ucfirst($props['job_type'] ?? 'AI'),
-                $props['product_title'] ?? 'a product'
-            ),
-            self::TYPE_JOB_FAILED => sprintf(
-                '%s job failed for "%s"',
-                ucfirst($props['job_type'] ?? 'AI'),
-                $props['product_title'] ?? 'a product'
-            ),
-            self::TYPE_FEED_IMPORTED => sprintf(
-                '%s imported feed "%s" with %d products',
-                $userName,
-                $props['feed_name'] ?? 'Unknown',
-                $props['product_count'] ?? 0
-            ),
-            self::TYPE_FEED_REFRESHED => sprintf(
-                '%s refreshed feed "%s"',
-                $userName,
-                $props['feed_name'] ?? 'Unknown'
-            ),
-            self::TYPE_FEED_DELETED => sprintf(
-                '%s deleted feed "%s"',
-                $userName,
-                $props['feed_name'] ?? 'Unknown'
-            ),
-            self::TYPE_PHOTO_STUDIO_GENERATED => sprintf(
-                '%s generated a new image%s',
-                $userName,
-                isset($props['product_title']) ? ' for "'.$props['product_title'].'"' : ''
-            ),
+            self::TYPE_JOB_QUEUED => $userName
+                ? sprintf('%s queued %s for "%s"', $userName, $props['template_name'] ?? 'AI job', $props['product_title'] ?? 'a product')
+                : sprintf('%s queued for "%s"', $props['template_name'] ?? 'AI job', $props['product_title'] ?? 'a product'),
+            self::TYPE_JOB_COMPLETED => $userName
+                ? sprintf('%s generated %s for "%s"', $userName, $props['template_name'] ?? 'content', $props['product_title'] ?? 'a product')
+                : sprintf('%s generated for "%s"', $props['template_name'] ?? 'Content', $props['product_title'] ?? 'a product'),
+            self::TYPE_JOB_FAILED => $userName
+                ? sprintf('%s generation failed for "%s"', $props['template_name'] ?? 'Content', $props['product_title'] ?? 'a product')
+                : sprintf('%s generation failed for "%s"', $props['template_name'] ?? 'Content', $props['product_title'] ?? 'a product'),
+            self::TYPE_FEED_IMPORTED => $userName
+                ? sprintf('%s imported feed "%s" with %d products', $userName, $props['feed_name'] ?? 'Unknown', $props['product_count'] ?? 0)
+                : sprintf('Feed "%s" imported with %d products', $props['feed_name'] ?? 'Unknown', $props['product_count'] ?? 0),
+            self::TYPE_FEED_REFRESHED => $userName
+                ? sprintf('%s refreshed feed "%s"', $userName, $props['feed_name'] ?? 'Unknown')
+                : sprintf('Feed "%s" refreshed', $props['feed_name'] ?? 'Unknown'),
+            self::TYPE_FEED_DELETED => $userName
+                ? sprintf('%s deleted feed "%s"', $userName, $props['feed_name'] ?? 'Unknown')
+                : sprintf('Feed "%s" deleted', $props['feed_name'] ?? 'Unknown'),
+            self::TYPE_PHOTO_STUDIO_GENERATED => $userName
+                ? sprintf('%s generated an image%s', $userName, isset($props['product_title']) ? ' for "'.$props['product_title'].'"' : '')
+                : sprintf('Image generated%s', isset($props['product_title']) ? ' for "'.$props['product_title'].'"' : ''),
             self::TYPE_TEAM_MEMBER_ADDED => sprintf(
                 '%s joined the team',
                 $props['member_name'] ?? 'A new member'
@@ -117,22 +101,15 @@ class TeamActivity extends Model
                 '%s left the team',
                 $props['member_name'] ?? 'A member'
             ),
-            self::TYPE_CATALOG_CREATED => sprintf(
-                '%s created catalog "%s"',
-                $userName,
-                $props['catalog_name'] ?? 'Unknown'
-            ),
-            self::TYPE_CATALOG_DELETED => sprintf(
-                '%s deleted catalog "%s"',
-                $userName,
-                $props['catalog_name'] ?? 'Unknown'
-            ),
-            self::TYPE_FEED_MOVED => sprintf(
-                '%s moved feed "%s" to catalog "%s"',
-                $userName,
-                $props['feed_name'] ?? 'Unknown',
-                $props['to_catalog'] ?? 'standalone'
-            ),
+            self::TYPE_CATALOG_CREATED => $userName
+                ? sprintf('%s created catalog "%s"', $userName, $props['catalog_name'] ?? 'Unknown')
+                : sprintf('Catalog "%s" created', $props['catalog_name'] ?? 'Unknown'),
+            self::TYPE_CATALOG_DELETED => $userName
+                ? sprintf('%s deleted catalog "%s"', $userName, $props['catalog_name'] ?? 'Unknown')
+                : sprintf('Catalog "%s" deleted', $props['catalog_name'] ?? 'Unknown'),
+            self::TYPE_FEED_MOVED => $userName
+                ? sprintf('%s moved feed "%s" to catalog "%s"', $userName, $props['feed_name'] ?? 'Unknown', $props['to_catalog'] ?? 'standalone')
+                : sprintf('Feed "%s" moved to catalog "%s"', $props['feed_name'] ?? 'Unknown', $props['to_catalog'] ?? 'standalone'),
             default => 'Activity recorded',
         };
     }
@@ -174,11 +151,11 @@ class TeamActivity extends Model
     /**
      * Record a job completion activity.
      */
-    public static function recordJobCompleted(ProductAiJob $job, ?int $userId = null): self
+    public static function recordJobCompleted(ProductAiJob $job): self
     {
         return static::create([
             'team_id' => $job->team_id,
-            'user_id' => $userId,
+            'user_id' => $job->user_id,
             'type' => self::TYPE_JOB_COMPLETED,
             'subject_type' => ProductAiJob::class,
             'subject_id' => $job->id,
@@ -193,17 +170,18 @@ class TeamActivity extends Model
     /**
      * Record a job failure activity.
      */
-    public static function recordJobFailed(ProductAiJob $job, ?int $userId = null): self
+    public static function recordJobFailed(ProductAiJob $job): self
     {
         return static::create([
             'team_id' => $job->team_id,
-            'user_id' => $userId,
+            'user_id' => $job->user_id,
             'type' => self::TYPE_JOB_FAILED,
             'subject_type' => ProductAiJob::class,
             'subject_id' => $job->id,
             'properties' => [
                 'job_type' => $job->job_type,
                 'product_title' => $job->product?->title,
+                'template_name' => $job->template?->name,
                 'error' => $job->last_error,
             ],
         ]);
