@@ -2,8 +2,7 @@
 
 use App\Http\Controllers\DownloadPhotoStudioGenerationController;
 use App\Http\Controllers\PhotoStudioSourceImageController;
-use App\Models\Product;
-use Illuminate\Support\Facades\Auth;
+use App\Http\Controllers\ProductController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -25,15 +24,11 @@ Route::middleware([
     Route::view('/products', 'products.index')
         ->name('products.index');
 
-    Route::get('/products/{product}', function (Product $product) {
-        $team = Auth::user()->currentTeam;
-
-        abort_if(! $team || $product->team_id !== $team->id, 404);
-
-        return view('products.show', [
-            'product' => $product,
-        ]);
-    })->name('products.show');
+    // Semantic product URL: /products/{catalog-slug}/{sku}/{lang?}
+    Route::get('/products/{catalog}/{sku}/{lang?}', [ProductController::class, 'show'])
+        ->name('products.show')
+        ->where('sku', '[^/]+') // SKU can contain special chars but not slashes
+        ->where('lang', '[a-z]{2}'); // Language codes are 2 lowercase letters
 
     Route::view('/ai-jobs', 'ai-jobs.index')
         ->name('ai-jobs.index');

@@ -49,7 +49,7 @@
                                                 <span class="ml-1.5 text-amber-600 dark:text-amber-500">•</span>
                                             </span>
                                         @else
-                                            <a href="{{ route('products.show', $version['id']) }}"
+                                            <a href="{{ $version['url'] }}"
                                                class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-zinc-700 text-gray-600 dark:text-zinc-400 hover:bg-gray-200 dark:hover:bg-zinc-600 hover:text-gray-900 dark:hover:text-zinc-200 transition-colors"
                                                title="View {{ $versionLabel }} version"
                                             >

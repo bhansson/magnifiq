@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 
 class ProductCatalog extends Model
 {
@@ -16,7 +17,59 @@ class ProductCatalog extends Model
     protected $fillable = [
         'team_id',
         'name',
+        'slug',
     ];
+
+    protected static function booted(): void
+    {
+        static::creating(function (ProductCatalog $catalog) {
+            if (empty($catalog->slug)) {
+                $catalog->slug = $catalog->generateUniqueSlug($catalog->name);
+            }
+        });
+
+        static::updating(function (ProductCatalog $catalog) {
+            // Regenerate slug if name changed and slug wasn't explicitly set
+            if ($catalog->isDirty('name') && ! $catalog->isDirty('slug')) {
+                $catalog->slug = $catalog->generateUniqueSlug($catalog->name);
+            }
+        });
+    }
+
+    /**
+     * Get the route key name for Laravel route model binding.
+     */
+    public function getRouteKeyName(): string
+    {
+        return 'slug';
+    }
+
+    /**
+     * Generate a unique slug within the team.
+     */
+    public function generateUniqueSlug(string $name): string
+    {
+        $baseSlug = Str::slug($name) ?: 'catalog';
+        $slug = $baseSlug;
+        $counter = 1;
+
+        $query = static::where('team_id', $this->team_id)->where('slug', $slug);
+
+        if ($this->exists) {
+            $query->where('id', '!=', $this->id);
+        }
+
+        while ($query->exists()) {
+            $slug = $baseSlug . '-' . $counter++;
+            $query = static::where('team_id', $this->team_id)->where('slug', $slug);
+
+            if ($this->exists) {
+                $query->where('id', '!=', $this->id);
+            }
+        }
+
+        return $slug;
+    }
 
     public function team(): BelongsTo
     {
@@ -88,5 +141,39 @@ class ProductCatalog extends Model
     public function isEmpty(): bool
     {
         return $this->feeds()->count() === 0;
+    }
+
+    /**
+     * Find a product by SKU within this catalog.
+     * Optionally prefer a specific language, otherwise returns the first match.
+     */
+    public function findProductBySku(string $sku, ?string $preferredLanguage = null): ?Product
+    {
+        $query = $this->products()->where('products.sku', $sku);
+
+        if ($preferredLanguage) {
+            // Try to find product in preferred language first
+            $product = (clone $query)
+                ->whereHas('feed', fn ($q) => $q->where('language', $preferredLanguage))
+                ->first();
+
+            if ($product) {
+                return $product;
+            }
+        }
+
+        // Fall back to first available product with this SKU
+        return $query->first();
+    }
+
+    /**
+     * Get all products matching a SKU (all language versions).
+     */
+    public function getProductsBySku(string $sku): Collection
+    {
+        return $this->products()
+            ->where('products.sku', $sku)
+            ->with('feed:id,name,language')
+            ->get();
     }
 }

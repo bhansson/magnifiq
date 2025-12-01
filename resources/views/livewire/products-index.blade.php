@@ -74,11 +74,11 @@
             </div>
         </div>
 
-        <div class="flex items-center justify-between mb-4 text-xs text-gray-500 dark:text-zinc-500">
-            <div wire:loading.inline wire:target="search,page,brand,language,catalogId">
+        <div class="relative h-5 mb-4 text-xs text-gray-500 dark:text-zinc-500">
+            <div wire:loading.class="opacity-100" wire:loading.class.remove="opacity-0" wire:target="search,page,brand,language,catalogId" class="absolute inset-0 opacity-0 transition-opacity duration-150">
                 Searching…
             </div>
-            <div wire:loading.remove>
+            <div wire:loading.class="opacity-0" wire:loading.class.remove="opacity-100" wire:target="search,page,brand,language,catalogId" class="absolute inset-0 opacity-100 transition-opacity duration-150">
                 Showing {{ $products->total() }} {{ Str::plural('result', $products->total()) }}
             </div>
         </div>
@@ -197,24 +197,29 @@
                                             $productLanguageCode = $product->feed?->language;
                                             $isInCatalog = $product->feed?->product_catalog_id !== null;
                                             $catalogName = $product->feed?->catalog?->name;
+
+                                            // Collect all languages (current + siblings) and sort alphabetically
+                                            $allLanguages = collect([$productLanguageCode])
+                                                ->when($isInCatalog, fn ($col) => $col->merge(
+                                                    $product->siblingProducts()->pluck('feed.language')
+                                                ))
+                                                ->filter()
+                                                ->unique()
+                                                ->sort()
+                                                ->values();
                                         @endphp
-                                        {{-- Current language badge --}}
-                                        @if ($productLanguageCode)
-                                            <span class="inline-flex items-center px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-400 font-medium">
-                                                {{ Str::upper($productLanguageCode) }}
-                                            </span>
-                                        @endif
-                                        {{-- Sibling language badges (only for products in catalogs) --}}
-                                        @if ($isInCatalog)
-                                            @php
-                                                $siblingLanguages = $product->siblingProducts()->pluck('feed.language')->filter()->unique()->sort();
-                                            @endphp
-                                            @foreach ($siblingLanguages as $siblingLang)
-                                                <span class="inline-flex items-center px-1.5 py-0.5 rounded bg-gray-100 dark:bg-zinc-700 text-gray-600 dark:text-zinc-400 font-medium" title="Also available in {{ $languageLabels[$siblingLang] ?? Str::upper($siblingLang) }}">
-                                                    {{ Str::upper($siblingLang) }}
+                                        {{-- Language badges in alphabetical order --}}
+                                        @foreach ($allLanguages as $lang)
+                                            @if ($lang === $productLanguageCode)
+                                                <span class="inline-flex items-center px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-400 font-medium">
+                                                    {{ Str::upper($lang) }}
                                                 </span>
-                                            @endforeach
-                                        @endif
+                                            @else
+                                                <span class="inline-flex items-center px-1.5 py-0.5 rounded bg-gray-100 dark:bg-zinc-700 text-gray-600 dark:text-zinc-400 font-medium" title="Also available in {{ $languageLabels[$lang] ?? Str::upper($lang) }}">
+                                                    {{ Str::upper($lang) }}
+                                                </span>
+                                            @endif
+                                        @endforeach
                                         {{-- Catalog badge --}}
                                         @if ($catalogName)
                                             <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-purple-100 dark:bg-purple-500/20 text-purple-700 dark:text-purple-400 font-medium" title="In catalog: {{ $catalogName }}">
@@ -243,7 +248,7 @@
                             @endif
                         </div>
                         <div class="sm:col-span-2 flex flex-col gap-2 sm:items-end">
-                            <a href="{{ route('products.show', $product) }}" class="text-sm font-medium text-amber-600 dark:text-amber-400 hover:text-amber-500 dark:hover:text-amber-300">
+                            <a href="{{ $product->getUrl() }}" class="text-sm font-medium text-amber-600 dark:text-amber-400 hover:text-amber-500 dark:hover:text-amber-300">
                                 View details
                                 <span class="sr-only">for {{ $product->title ?: 'Untitled product' }}</span>
                             </a>

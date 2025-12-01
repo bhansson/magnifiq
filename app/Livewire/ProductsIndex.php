@@ -316,7 +316,7 @@ class ProductsIndex extends Component
         return Product::query()
             ->with([
                 'feed:id,name,language,product_catalog_id',
-                'feed.catalog:id,name',
+                'feed.catalog:id,name,slug',
                 'latestAiDescriptionSummary',
                 'latestAiDescription',
                 'latestAiUsp',
