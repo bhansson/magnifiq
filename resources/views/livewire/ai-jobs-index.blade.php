@@ -58,13 +58,19 @@
                 <div wire:key="job-{{ $job->id }}" class="grid grid-cols-12 gap-2 px-4 py-3 text-sm text-gray-700 dark:text-zinc-300 border-t border-gray-100 dark:border-zinc-800">
                     <div class="col-span-4">
                         @if ($job->product)
-                            <a href="{{ $job->product->getUrl() }}" class="font-medium text-gray-900 dark:text-white hover:text-amber-600 dark:hover:text-amber-400 transition-colors">
-                                {{ $job->product->title ?: 'Untitled product' }}
-                            </a>
+                            @if ($job->product->hasSemanticUrl())
+                                <a href="{{ $job->product->getUrl() }}" class="font-medium text-gray-900 dark:text-white hover:text-amber-600 dark:hover:text-amber-400 transition-colors">
+                                    {{ $job->product->title ?: 'Untitled product' }}
+                                </a>
+                            @else
+                                <span class="font-medium text-gray-900 dark:text-white">
+                                    {{ $job->product->title ?: 'Untitled product' }}
+                                </span>
+                            @endif
                         @else
-                            <div class="font-medium text-gray-900 dark:text-white">
+                            <span class="font-medium text-gray-900 dark:text-white">
                                 Unknown product
-                            </div>
+                            </span>
                         @endif
                         <div class="text-xs text-gray-500 dark:text-zinc-500">
                             SKU: {{ $job->sku ?? '—' }}

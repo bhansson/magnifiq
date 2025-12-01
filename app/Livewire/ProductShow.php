@@ -308,34 +308,17 @@ class ProductShow extends Component
         }
 
         return $product->allLanguageVersions()
-            ->filter(fn (Product $p) => $p->feed?->language)
+            ->filter(fn (Product $p) => $p->feed?->language && $p->hasSemanticUrl())
             ->sortBy(fn (Product $p) => $p->feed->language)
             ->map(function (Product $p) use ($product) {
                 $language = $p->feed->language;
                 $isCurrent = $p->id === $product->id;
 
-                // Build URL using semantic routing if catalog slug is available
-                if ($this->catalogSlug && $p->sku) {
-                    $params = [
-                        'catalog' => $this->catalogSlug,
-                        'sku' => $p->sku,
-                    ];
-
-                    if ($language) {
-                        $params['lang'] = $language;
-                    }
-
-                    $url = route('products.show', $params);
-                } else {
-                    // Fallback to legacy route
-                    $url = route('products.show.legacy', ['product' => $p->id]);
-                }
-
                 return [
                     'id' => $p->id,
                     'language' => $language,
                     'is_current' => $isCurrent,
-                    'url' => $url,
+                    'url' => $p->getUrl(),
                 ];
             })
             ->values();

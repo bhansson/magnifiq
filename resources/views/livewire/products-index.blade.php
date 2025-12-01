@@ -248,10 +248,16 @@
                             @endif
                         </div>
                         <div class="sm:col-span-2 flex flex-col gap-2 sm:items-end">
-                            <a href="{{ $product->getUrl() }}" class="text-sm font-medium text-amber-600 dark:text-amber-400 hover:text-amber-500 dark:hover:text-amber-300">
-                                View details
-                                <span class="sr-only">for {{ $product->title ?: 'Untitled product' }}</span>
-                            </a>
+                            @if ($product->hasSemanticUrl())
+                                <a href="{{ $product->getUrl() }}" class="text-sm font-medium text-amber-600 dark:text-amber-400 hover:text-amber-500 dark:hover:text-amber-300">
+                                    View details
+                                    <span class="sr-only">for {{ $product->title ?: 'Untitled product' }}</span>
+                                </a>
+                            @else
+                                <span class="text-sm text-gray-400 dark:text-zinc-500">
+                                    Add to catalog to view
+                                </span>
+                            @endif
                         </div>
                     </div>
                 @empty
