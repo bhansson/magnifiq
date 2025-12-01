@@ -86,7 +86,7 @@
             <div class="px-4 py-3 border-b border-gray-200 dark:border-zinc-800">
                 <h2 class="text-lg font-medium text-gray-900 dark:text-white">Team Activity</h2>
             </div>
-            <div class="divide-y divide-gray-100 dark:divide-zinc-800 max-h-[500px] overflow-y-auto">
+            <div class="divide-y divide-gray-100 dark:divide-zinc-800 max-h-[600px] overflow-y-auto">
                 @forelse ($activities as $activity)
                     <div wire:key="activity-{{ $activity->id }}" class="px-4 py-3">
                         <div class="flex gap-3">
@@ -117,11 +117,6 @@
                     </div>
                 @endforelse
             </div>
-            @if ($activities->hasPages())
-                <div class="px-4 py-3 border-t border-gray-200 dark:border-zinc-800">
-                    {{ $activities->links() }}
-                </div>
-            @endif
         </div>
     </div>
 </div>

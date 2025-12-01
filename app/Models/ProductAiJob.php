@@ -29,6 +29,7 @@ class ProductAiJob extends Model
 
     protected $fillable = [
         'team_id',
+        'user_id',
         'product_id',
         'sku',
         'product_ai_template_id',
@@ -62,6 +63,11 @@ class ProductAiJob extends Model
     public function team(): BelongsTo
     {
         return $this->belongsTo(Team::class);
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
     }
 
     public function template(): BelongsTo

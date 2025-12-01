@@ -53,12 +53,25 @@ class TeamActivityTest extends TestCase
 
     public function test_activity_description_for_job_completed(): void
     {
+        $user = User::factory()->create();
         $activity = TeamActivity::factory()->jobCompleted()->create([
-            'properties' => ['job_type' => 'template', 'product_title' => 'Cool Gadget'],
+            'user_id' => $user->id,
+            'properties' => ['job_type' => 'template', 'template_name' => 'FAQ', 'product_title' => 'Cool Gadget'],
         ]);
 
-        $this->assertStringContainsString('Template', $activity->description);
+        $this->assertStringContainsString($user->name, $activity->description);
+        $this->assertStringContainsString('generated FAQ', $activity->description);
         $this->assertStringContainsString('Cool Gadget', $activity->description);
+    }
+
+    public function test_activity_description_for_job_completed_without_user(): void
+    {
+        $activity = TeamActivity::factory()->jobCompleted()->create([
+            'user_id' => null,
+            'properties' => ['job_type' => 'template', 'template_name' => 'Summary', 'product_title' => 'Test Product'],
+        ]);
+
+        $this->assertEquals('Summary generated for "Test Product"', $activity->description);
     }
 
     public function test_activity_description_for_feed_imported(): void
@@ -76,13 +89,17 @@ class TeamActivityTest extends TestCase
 
     public function test_record_job_completed_creates_activity(): void
     {
-        $job = ProductAiJob::factory()->completed()->create();
+        $user = User::factory()->create();
+        $job = ProductAiJob::factory()->completed()->create([
+            'user_id' => $user->id,
+        ]);
 
         $activity = TeamActivity::recordJobCompleted($job);
 
         $this->assertDatabaseHas('team_activities', [
             'id' => $activity->id,
             'team_id' => $job->team_id,
+            'user_id' => $user->id,
             'type' => TeamActivity::TYPE_JOB_COMPLETED,
             'subject_type' => ProductAiJob::class,
             'subject_id' => $job->id,
@@ -91,7 +108,9 @@ class TeamActivityTest extends TestCase
 
     public function test_record_job_failed_creates_activity(): void
     {
+        $user = User::factory()->create();
         $job = ProductAiJob::factory()->failed()->create([
+            'user_id' => $user->id,
             'last_error' => 'Test error message',
         ]);
 
@@ -100,6 +119,7 @@ class TeamActivityTest extends TestCase
         $this->assertDatabaseHas('team_activities', [
             'id' => $activity->id,
             'team_id' => $job->team_id,
+            'user_id' => $user->id,
             'type' => TeamActivity::TYPE_JOB_FAILED,
             'subject_type' => ProductAiJob::class,
             'subject_id' => $job->id,

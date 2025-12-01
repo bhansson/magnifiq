@@ -175,8 +175,6 @@ class GeneratePhotoStudioImage implements ShouldQueue
 
         $jobRecord->markFailed($exception->getMessage());
 
-        TeamActivity::recordJobFailed($jobRecord, $this->userId);
-
         Log::warning('Photo Studio job permanently failed', [
             'team_id' => $this->teamId,
             'user_id' => $this->userId,
