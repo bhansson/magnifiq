@@ -34,32 +34,4 @@ class ProductController extends Controller
             'currentLanguage' => $lang,
         ]);
     }
-
-    /**
-     * Legacy route: redirect old ID-based URLs to new semantic URLs.
-     * Falls back to showing product directly if not in a catalog.
-     */
-    public function showLegacy(Product $product): View|RedirectResponse
-    {
-        $team = Auth::user()->currentTeam;
-        abort_if(! $team || $product->team_id !== $team->id, 404);
-
-        // If product is in a catalog and has a SKU, redirect to semantic URL
-        if ($product->isInCatalog() && $product->sku) {
-            $catalog = $product->feed->catalog;
-
-            return redirect()->route('products.show', [
-                'catalog' => $catalog->slug,
-                'sku' => $product->sku,
-                'lang' => $product->feed->language,
-            ], 301);
-        }
-
-        // Products not in catalogs or without SKU: show directly (no redirect)
-        return view('products.show', [
-            'product' => $product,
-            'catalog' => null,
-            'currentLanguage' => null,
-        ]);
-    }
 }
