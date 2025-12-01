@@ -136,6 +136,37 @@ The `ManageProductFeeds` Livewire component (`app/Livewire/ManageProductFeeds.ph
 
 **Key architectural detail**: When importing or refreshing a feed, all existing products for that feed are deleted and replaced. Products are inserted in batches of 100 for performance.
 
+### Product Catalog System
+
+Product Catalogs allow grouping multiple product feeds together, enabling multi-language and multi-market product management. Products with the same SKU across feeds in the same catalog are recognized as different language versions of the same logical product.
+
+**Architecture:**
+- **ProductCatalog** (`app/Models/ProductCatalog.php`): Groups feeds by team, representing a single product line across multiple languages/markets
+- **ProductFeed** has optional `product_catalog_id` foreign key (nullable for backward compatibility)
+- Products are matched across feeds by SKU within the same catalog
+
+**Key Relationships:**
+- `ProductCatalog->feeds()`: All feeds in the catalog
+- `ProductCatalog->products()`: All products across all feeds (HasManyThrough)
+- `ProductFeed->catalog()`: The catalog this feed belongs to (nullable)
+- `Product->siblingProducts()`: Other language versions of the same SKU in the catalog
+- `Product->allLanguageVersions()`: All language versions including self
+
+**Helper Methods:**
+- `ProductCatalog::distinctProducts($primaryLanguage)`: Get one product per SKU, preferring the primary language
+- `ProductCatalog::languages()`: Get all unique languages in the catalog
+- `Product::isInCatalog()`, `ProductFeed::isInCatalog()`: Check if in a catalog
+
+**UI Components:**
+- `ManageProductFeeds`: Now supports creating/editing/deleting catalogs, moving feeds between catalogs
+- `ProductsIndex`: Catalog filter dropdown, language badges showing all available versions
+- `ProductShow`: Language tabs to switch between language versions of the same product
+
+**Activity Logging:**
+- `TeamActivity::TYPE_CATALOG_CREATED`: When a catalog is created
+- `TeamActivity::TYPE_CATALOG_DELETED`: When a catalog is deleted
+- `TeamActivity::TYPE_FEED_MOVED`: When a feed is moved to/from a catalog
+
 ### AI Content Generation System
 
 The AI generation system supports two primary workflows:
@@ -237,7 +268,7 @@ $response = AI::forFeature('image_generation')->generateImage($request);
 
 Key tables:
 - `users`, `teams`, `team_user`, `team_invitations` (Jetstream)
-- `product_feeds`, `products` (catalog system)
+- `product_catalogs`, `product_feeds`, `products` (catalog system)
 - `product_ai_templates`, `product_ai_generations`, `product_ai_jobs` (AI content)
 - `photo_studio_generations` (Photo Studio)
 
@@ -248,6 +279,7 @@ Tests are organized in `tests/Feature/` and `tests/Unit/`. Feature tests cover:
 - Team management (creation, invitations, member removal)
 - API token management
 - Product feed parsing and import
+- Product catalog management and language versions
 - AI template management
 - Photo Studio workflows
 - Product browsing and search

@@ -33,6 +33,7 @@ class ProductShow extends Component
         $product = $this->product;
         $templates = $this->templates();
         $templatePayload = $this->buildTemplatePayload($product, $templates);
+        $languageVersions = $this->languageVersions($product);
 
         return view('livewire.product-show', [
             'product' => $product,
@@ -43,6 +44,7 @@ class ProductShow extends Component
             'generationLoading' => $this->generationLoading,
             'generationContent' => $this->generationContent,
             'languageLabels' => ProductFeed::languageOptions(),
+            'languageVersions' => $languageVersions,
         ]);
     }
 
@@ -154,7 +156,8 @@ class ProductShow extends Component
 
         return Product::query()
             ->with([
-                'feed:id,name,language',
+                'feed:id,name,language,product_catalog_id',
+                'feed.catalog:id,name',
                 'aiGenerations' => static function ($query) use ($templateIds, $historyLimit, $multiplier) {
                     $query->with('template')
                         ->whereIn('product_ai_template_id', $templateIds)
@@ -280,5 +283,31 @@ class ProductShow extends Component
         }
 
         return trim((string) $content) !== '';
+    }
+
+    /**
+     * Get all language versions of the product for tab navigation.
+     *
+     * @return Collection<int, array{id: int, language: string, is_current: bool}>
+     */
+    protected function languageVersions(Product $product): Collection
+    {
+        if (! $product->isInCatalog()) {
+            return collect();
+        }
+
+        $labels = ProductFeed::languageOptions();
+
+        return $product->allLanguageVersions()
+            ->filter(fn (Product $p) => $p->feed?->language)
+            ->sortBy(function (Product $p) use ($labels) {
+                return $labels[$p->feed->language] ?? $p->feed->language;
+            }, SORT_NATURAL | SORT_FLAG_CASE)
+            ->map(fn (Product $p) => [
+                'id' => $p->id,
+                'language' => $p->feed->language,
+                'is_current' => $p->id === $product->id,
+            ])
+            ->values();
     }
 }

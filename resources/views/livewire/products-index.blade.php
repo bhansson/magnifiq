@@ -42,6 +42,21 @@
                     </select>
                 </div>
 
+                <div class="flex-1 sm:flex-none sm:w-44">
+                    <label for="catalog-filter" class="sr-only">Filter by catalog</label>
+                    <select
+                        id="catalog-filter"
+                        wire:model.live="catalogId"
+                        class="w-full rounded-xl border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-800/50 text-gray-900 dark:text-zinc-100 shadow-sm focus:border-amber-500 dark:focus:border-amber-500 focus:ring-amber-500/20 dark:focus:ring-amber-500/20 text-sm"
+                        aria-label="Filter by catalog"
+                    >
+                        <option value="">All catalogs</option>
+                        @foreach ($catalogs as $catalogOption)
+                            <option value="{{ $catalogOption->id }}">{{ $catalogOption->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
                 <div class="flex-1 sm:flex-none sm:w-56">
                     <label for="brand-filter" class="sr-only">Filter by brand</label>
                     <select
@@ -60,7 +75,7 @@
         </div>
 
         <div class="flex items-center justify-between mb-4 text-xs text-gray-500 dark:text-zinc-500">
-            <div wire:loading.inline wire:target="search,page,brand">
+            <div wire:loading.inline wire:target="search,page,brand,language,catalogId">
                 Searching…
             </div>
             <div wire:loading.remove>
@@ -176,11 +191,39 @@
                                         <span>SKU: {{ $product->sku ?: '—' }}</span>
                                         <span>GTIN: {{ $product->gtin ?: '—' }}</span>
                                         <span>Updated {{ $product->updated_at->diffForHumans() }}</span>
+                                    </div>
+                                    <div class="mt-1 flex flex-wrap items-center gap-2 text-xs">
                                         @php
                                             $productLanguageCode = $product->feed?->language;
-                                            $productLanguageLabel = $productLanguageCode ? ($languageLabels[$productLanguageCode] ?? Str::upper($productLanguageCode)) : null;
+                                            $isInCatalog = $product->feed?->product_catalog_id !== null;
+                                            $catalogName = $product->feed?->catalog?->name;
                                         @endphp
-                                        <span>Language: {{ $productLanguageLabel ? $productLanguageLabel.' ('.Str::upper($productLanguageCode).')' : '—' }}</span>
+                                        {{-- Current language badge --}}
+                                        @if ($productLanguageCode)
+                                            <span class="inline-flex items-center px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-400 font-medium">
+                                                {{ Str::upper($productLanguageCode) }}
+                                            </span>
+                                        @endif
+                                        {{-- Sibling language badges (only for products in catalogs) --}}
+                                        @if ($isInCatalog)
+                                            @php
+                                                $siblingLanguages = $product->siblingProducts()->pluck('feed.language')->filter()->unique()->sort();
+                                            @endphp
+                                            @foreach ($siblingLanguages as $siblingLang)
+                                                <span class="inline-flex items-center px-1.5 py-0.5 rounded bg-gray-100 dark:bg-zinc-700 text-gray-600 dark:text-zinc-400 font-medium" title="Also available in {{ $languageLabels[$siblingLang] ?? Str::upper($siblingLang) }}">
+                                                    {{ Str::upper($siblingLang) }}
+                                                </span>
+                                            @endforeach
+                                        @endif
+                                        {{-- Catalog badge --}}
+                                        @if ($catalogName)
+                                            <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-purple-100 dark:bg-purple-500/20 text-purple-700 dark:text-purple-400 font-medium" title="In catalog: {{ $catalogName }}">
+                                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
+                                                </svg>
+                                                {{ $catalogName }}
+                                            </span>
+                                        @endif
                                     </div>
                                     @if ($product->feed?->name)
                                         <div class="mt-1 text-xs text-gray-500 dark:text-zinc-500">
@@ -208,7 +251,7 @@
                     </div>
                 @empty
                     <div class="p-6 text-sm text-gray-600 dark:text-zinc-400">
-                        @if (trim($search) !== '' || $brand !== '')
+                        @if (trim($search) !== '' || $brand !== '' || $language !== '' || $catalogId !== null)
                             No products match your current filters.
                         @else
                             No products imported yet.

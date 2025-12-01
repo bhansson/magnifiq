@@ -3,6 +3,7 @@
 namespace App\Livewire;
 
 use App\Models\Product;
+use App\Models\ProductCatalog;
 use App\Models\ProductFeed;
 use App\Models\TeamActivity;
 use Illuminate\Support\Arr;
@@ -53,6 +54,24 @@ class ManageProductFeeds extends Component
 
     public Collection $feeds;
 
+    public Collection $catalogs;
+
+    #[Validate('nullable|integer|exists:product_catalogs,id')]
+    public ?int $selectedCatalogId = null;
+
+    #[Validate('nullable|string|max:255')]
+    public string $newCatalogName = '';
+
+    public bool $showCreateCatalog = false;
+
+    public ?int $editingCatalogId = null;
+
+    public string $editingCatalogName = '';
+
+    public ?int $movingFeedId = null;
+
+    public ?int $moveToCatalogId = null;
+
     protected array $lastParsed = [
         'type' => 'xml',
         'items' => null,
@@ -71,6 +90,7 @@ class ManageProductFeeds extends Component
 
     public function mount(): void
     {
+        $this->loadCatalogs();
         $this->loadFeeds();
     }
 
@@ -79,12 +99,27 @@ class ManageProductFeeds extends Component
         $this->reset(['statusMessage', 'errorMessage', 'availableFields', 'showMapping']);
     }
 
+    public function loadCatalogs(): void
+    {
+        $team = $this->currentTeam();
+
+        $this->catalogs = ProductCatalog::query()
+            ->where('team_id', $team->id)
+            ->withCount('feeds')
+            ->with(['feeds' => function ($query) {
+                $query->withCount('products');
+            }])
+            ->orderBy('name')
+            ->get();
+    }
+
     public function loadFeeds(): void
     {
         $team = $this->currentTeam();
 
         $this->feeds = ProductFeed::query()
             ->withCount('products')
+            ->with('catalog:id,name')
             ->where('team_id', $team->id)
             ->latest()
             ->get();
@@ -905,6 +940,183 @@ class ManageProductFeeds extends Component
     {
         $this->statusMessage = null;
         $this->errorMessage = null;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Catalog Management
+    // ─────────────────────────────────────────────────────────────────────────
+
+    public function createCatalog(): void
+    {
+        $this->resetMessages();
+
+        $this->validate([
+            'newCatalogName' => 'required|string|max:255',
+        ]);
+
+        $team = $this->currentTeam();
+
+        $catalog = ProductCatalog::create([
+            'team_id' => $team->id,
+            'name' => $this->newCatalogName,
+        ]);
+
+        TeamActivity::create([
+            'team_id' => $team->id,
+            'user_id' => Auth::id(),
+            'type' => TeamActivity::TYPE_CATALOG_CREATED,
+            'subject_type' => ProductCatalog::class,
+            'subject_id' => $catalog->id,
+            'properties' => [
+                'catalog_name' => $catalog->name,
+            ],
+        ]);
+
+        $this->statusMessage = 'Catalog "'.$catalog->name.'" created successfully.';
+        $this->newCatalogName = '';
+        $this->showCreateCatalog = false;
+        $this->loadCatalogs();
+    }
+
+    public function startEditCatalog(int $catalogId): void
+    {
+        $catalog = ProductCatalog::query()
+            ->where('team_id', $this->currentTeam()->id)
+            ->findOrFail($catalogId);
+
+        $this->editingCatalogId = $catalog->id;
+        $this->editingCatalogName = $catalog->name;
+    }
+
+    public function cancelEditCatalog(): void
+    {
+        $this->editingCatalogId = null;
+        $this->editingCatalogName = '';
+    }
+
+    public function updateCatalog(): void
+    {
+        if (! $this->editingCatalogId) {
+            return;
+        }
+
+        $this->validate([
+            'editingCatalogName' => 'required|string|max:255',
+        ]);
+
+        $catalog = ProductCatalog::query()
+            ->where('team_id', $this->currentTeam()->id)
+            ->findOrFail($this->editingCatalogId);
+
+        $oldName = $catalog->name;
+        $catalog->update(['name' => $this->editingCatalogName]);
+
+        $this->statusMessage = 'Catalog renamed from "'.$oldName.'" to "'.$catalog->name.'".';
+        $this->editingCatalogId = null;
+        $this->editingCatalogName = '';
+        $this->loadCatalogs();
+    }
+
+    public function deleteCatalog(int $catalogId): void
+    {
+        $this->resetMessages();
+
+        $catalog = ProductCatalog::query()
+            ->where('team_id', $this->currentTeam()->id)
+            ->withCount('feeds')
+            ->findOrFail($catalogId);
+
+        $catalogName = $catalog->name;
+        $feedCount = $catalog->feeds_count;
+
+        // Feeds will be set to standalone (null) due to nullOnDelete constraint
+        $catalog->delete();
+
+        TeamActivity::create([
+            'team_id' => $this->currentTeam()->id,
+            'user_id' => Auth::id(),
+            'type' => TeamActivity::TYPE_CATALOG_DELETED,
+            'subject_type' => null,
+            'subject_id' => null,
+            'properties' => [
+                'catalog_name' => $catalogName,
+                'feed_count' => $feedCount,
+            ],
+        ]);
+
+        $this->statusMessage = 'Catalog "'.$catalogName.'" deleted. '.$feedCount.' '.Str::plural('feed', $feedCount).' moved to uncategorized.';
+        $this->loadCatalogs();
+        $this->loadFeeds();
+    }
+
+    public function startMoveFeed(int $feedId): void
+    {
+        $feed = ProductFeed::query()
+            ->where('team_id', $this->currentTeam()->id)
+            ->findOrFail($feedId);
+
+        $this->movingFeedId = $feed->id;
+        $this->moveToCatalogId = $feed->product_catalog_id;
+    }
+
+    public function cancelMoveFeed(): void
+    {
+        $this->movingFeedId = null;
+        $this->moveToCatalogId = null;
+    }
+
+    public function confirmMoveFeed(): void
+    {
+        if (! $this->movingFeedId) {
+            return;
+        }
+
+        $this->resetMessages();
+
+        $feed = ProductFeed::query()
+            ->where('team_id', $this->currentTeam()->id)
+            ->findOrFail($this->movingFeedId);
+
+        $oldCatalog = $feed->catalog;
+        $newCatalog = null;
+
+        if ($this->moveToCatalogId) {
+            $newCatalog = ProductCatalog::query()
+                ->where('team_id', $this->currentTeam()->id)
+                ->find($this->moveToCatalogId);
+        }
+
+        $feed->update(['product_catalog_id' => $newCatalog?->id]);
+
+        $fromName = $oldCatalog?->name ?? 'Uncategorized';
+        $toName = $newCatalog?->name ?? 'Uncategorized';
+
+        TeamActivity::create([
+            'team_id' => $feed->team_id,
+            'user_id' => Auth::id(),
+            'type' => TeamActivity::TYPE_FEED_MOVED,
+            'subject_type' => ProductFeed::class,
+            'subject_id' => $feed->id,
+            'properties' => [
+                'feed_name' => $feed->name,
+                'from_catalog' => $fromName,
+                'to_catalog' => $toName,
+            ],
+        ]);
+
+        $this->statusMessage = 'Feed "'.$feed->name.'" moved from "'.$fromName.'" to "'.$toName.'".';
+        $this->movingFeedId = null;
+        $this->moveToCatalogId = null;
+        $this->loadCatalogs();
+        $this->loadFeeds();
+    }
+
+    public function toggleCreateCatalog(): void
+    {
+        $this->showCreateCatalog = ! $this->showCreateCatalog;
+        if (! $this->showCreateCatalog) {
+            $this->newCatalogName = '';
+        }
     }
 
     public function render()

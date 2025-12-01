@@ -4,9 +4,10 @@ namespace App\Livewire;
 
 use App\Jobs\RunProductAiTemplateJob;
 use App\Models\Product;
-use App\Models\ProductFeed;
 use App\Models\ProductAiJob;
 use App\Models\ProductAiTemplate;
+use App\Models\ProductCatalog;
+use App\Models\ProductFeed;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
@@ -19,25 +20,42 @@ class ProductsIndex extends Component
     use WithPagination;
 
     public int $perPage = 100;
+
     public string $search = '';
+
     public string $brand = '';
+
     public string $language = '';
+
+    public ?int $catalogId = null;
+
     public array $summaries = [];
+
     public array $summaryErrors = [];
+
     public array $summaryStatuses = [];
+
     public array $loadingSummary = [];
+
     public array $selectedProducts = [];
+
     public array $visibleProductIds = [];
+
     public bool $bulkSelectAll = false;
+
     public ?int $selectedTemplateId = null;
+
     public ?string $bulkStatusMessage = null;
+
     public ?string $bulkErrorMessage = null;
+
     public bool $bulkGenerating = false;
 
     protected $queryString = [
         'search' => ['except' => ''],
         'brand' => ['except' => ''],
         'language' => ['except' => ''],
+        'catalogId' => ['except' => null, 'as' => 'catalog'],
     ];
 
     public function mount(): void
@@ -69,6 +87,12 @@ class ProductsIndex extends Component
         $this->resetSelectionState();
     }
 
+    public function updatingCatalogId(): void
+    {
+        $this->resetPage();
+        $this->resetSelectionState();
+    }
+
     public function updatedBulkSelectAll(bool $value): void
     {
         if ($value) {
@@ -92,16 +116,19 @@ class ProductsIndex extends Component
         try {
             if (empty($selectedIds)) {
                 $this->bulkErrorMessage = 'Select at least one product to queue generation.';
+
                 return;
             }
 
             if (! $this->selectedTemplateId) {
                 $this->bulkErrorMessage = 'Choose a template before queuing AI jobs.';
+
                 return;
             }
 
             if (! config('laravel-openrouter.api_key')) {
                 $this->bulkErrorMessage = 'AI provider API key is not configured, unable to queue AI jobs.';
+
                 return;
             }
 
@@ -114,6 +141,7 @@ class ProductsIndex extends Component
 
             if (! $template) {
                 $this->bulkErrorMessage = 'The selected template is no longer available.';
+
                 return;
             }
 
@@ -124,6 +152,7 @@ class ProductsIndex extends Component
 
             if ($products->isEmpty()) {
                 $this->bulkErrorMessage = 'Selected products are no longer available.';
+
                 return;
             }
 
@@ -133,6 +162,7 @@ class ProductsIndex extends Component
             foreach ($products as $product) {
                 if (! $product->sku) {
                     $skippedForSku++;
+
                     continue;
                 }
 
@@ -258,6 +288,7 @@ class ProductsIndex extends Component
             'templates' => $this->availableTemplates($team->id),
             'languages' => $this->languagesForTeam($team->id),
             'languageLabels' => ProductFeed::languageOptions(),
+            'catalogs' => $this->catalogsForTeam($team->id),
         ]);
     }
 
@@ -284,7 +315,8 @@ class ProductsIndex extends Component
 
         return Product::query()
             ->with([
-                'feed:id,name,language',
+                'feed:id,name,language,product_catalog_id',
+                'feed.catalog:id,name',
                 'latestAiDescriptionSummary',
                 'latestAiDescription',
                 'latestAiUsp',
@@ -298,6 +330,11 @@ class ProductsIndex extends Component
             ->when($this->language !== '', function ($query): void {
                 $query->whereHas('feed', function ($feedQuery): void {
                     $feedQuery->where('language', $this->language);
+                });
+            })
+            ->when($this->catalogId !== null, function ($query): void {
+                $query->whereHas('feed', function ($feedQuery): void {
+                    $feedQuery->where('product_catalog_id', $this->catalogId);
                 });
             })
             ->when($tokens->isNotEmpty(), function ($query) use ($tokens) {
@@ -351,6 +388,14 @@ class ProductsIndex extends Component
                 return $labels[$code] ?? $code;
             }, SORT_NATURAL | SORT_FLAG_CASE)
             ->values();
+    }
+
+    protected function catalogsForTeam(int $teamId): Collection
+    {
+        return ProductCatalog::query()
+            ->where('team_id', $teamId)
+            ->orderBy('name')
+            ->get(['id', 'name']);
     }
 
     public function summarizeProduct(int $productId): void
