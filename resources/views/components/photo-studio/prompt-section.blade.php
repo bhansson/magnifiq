@@ -12,6 +12,12 @@
     'canGenerate' => false,
     'compositionImageCount' => 0,
     'minImages' => 1,
+    'selectedModel' => '',
+    'selectedResolution' => null,
+    'availableModels' => [],
+    'modelSupportsResolution' => false,
+    'availableResolutions' => [],
+    'estimatedCost' => null,
 ])
 
 @php
@@ -158,16 +164,61 @@
             This prompt is sent to the image model when you choose Generate image.
         </p>
 
-        {{-- Aspect Ratio Select --}}
-        <div class="mt-4">
-            <label for="photo-studio-aspect-ratio" class="block text-sm font-medium text-gray-700 dark:text-zinc-300">
-                Output aspect ratio
-            </label>
-            <div class="mt-1 flex items-center gap-3">
+        {{-- Generation Settings Grid --}}
+        <div class="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {{-- Model Selector --}}
+            <div>
+                <label for="photo-studio-model" class="block text-sm font-medium text-gray-700 dark:text-zinc-300">
+                    AI Model
+                </label>
+                <select
+                    id="photo-studio-model"
+                    wire:model.live="selectedModel"
+                    class="mt-1 block w-full rounded-xl border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-800/50 text-sm text-gray-900 dark:text-zinc-100 shadow-sm focus:border-amber-500 dark:focus:border-amber-500 focus:ring-amber-500/20"
+                >
+                    @foreach ($availableModels as $modelId => $modelConfig)
+                        <option value="{{ $modelId }}">{{ $modelConfig['name'] }}</option>
+                    @endforeach
+                </select>
+                @if (! empty($availableModels[$selectedModel]['description']))
+                    <p class="mt-1 text-xs text-gray-500 dark:text-zinc-500">
+                        {{ $availableModels[$selectedModel]['description'] }}
+                    </p>
+                @endif
+            </div>
+
+            {{-- Resolution Selector (conditional) --}}
+            @if ($modelSupportsResolution && ! empty($availableResolutions))
+                <div>
+                    <label for="photo-studio-resolution" class="block text-sm font-medium text-gray-700 dark:text-zinc-300">
+                        Output Resolution
+                    </label>
+                    <select
+                        id="photo-studio-resolution"
+                        wire:model.live="selectedResolution"
+                        class="mt-1 block w-full rounded-xl border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-800/50 text-sm text-gray-900 dark:text-zinc-100 shadow-sm focus:border-amber-500 dark:focus:border-amber-500 focus:ring-amber-500/20"
+                    >
+                        @foreach ($availableResolutions as $resId => $resConfig)
+                            <option value="{{ $resId }}">{{ $resConfig['label'] }}</option>
+                        @endforeach
+                    </select>
+                    @if (! empty($availableResolutions[$selectedResolution]['description']))
+                        <p class="mt-1 text-xs text-gray-500 dark:text-zinc-500">
+                            {{ $availableResolutions[$selectedResolution]['description'] }}
+                        </p>
+                    @endif
+                </div>
+            @endif
+
+            {{-- Aspect Ratio Select --}}
+            <div>
+                <label for="photo-studio-aspect-ratio" class="block text-sm font-medium text-gray-700 dark:text-zinc-300">
+                    Aspect Ratio
+                </label>
                 <select
                     id="photo-studio-aspect-ratio"
                     wire:model.live="aspectRatio"
-                    class="block w-full max-w-xs rounded-xl border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-800/50 text-sm text-gray-900 dark:text-zinc-100 shadow-sm focus:border-amber-500 dark:focus:border-amber-500 focus:ring-amber-500/20"
+                    class="mt-1 block w-full rounded-xl border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-800/50 text-sm text-gray-900 dark:text-zinc-100 shadow-sm focus:border-amber-500 dark:focus:border-amber-500 focus:ring-amber-500/20"
                 >
                     @foreach ($aspectRatios as $ratio => $config)
                         <option value="{{ $ratio }}">
@@ -176,18 +227,15 @@
                     @endforeach
                 </select>
                 @if ($currentAspectRatio === 'match_input' && $detectedRatioLabel)
-                    <span class="text-xs text-gray-500 dark:text-zinc-500">
+                    <p class="mt-1 text-xs text-gray-500 dark:text-zinc-500">
                         Detected: <span class="font-medium text-amber-600 dark:text-amber-400">{{ $detectedRatioLabel }}</span>
-                    </span>
+                    </p>
+                @elseif (isset($aspectRatios[$currentAspectRatio]['description']))
+                    <p class="mt-1 text-xs text-gray-500 dark:text-zinc-500">
+                        {{ $aspectRatios[$currentAspectRatio]['description'] }}
+                    </p>
                 @endif
             </div>
-            <p class="mt-1 text-xs text-gray-500 dark:text-zinc-500">
-                @if ($currentAspectRatio === 'match_input')
-                    The output will match your source image's aspect ratio.
-                @else
-                    {{ $aspectRatios[$currentAspectRatio]['description'] ?? '' }}
-                @endif
-            </p>
         </div>
 
         {{-- Generation Status --}}
@@ -230,6 +278,18 @@
                     Generating...
                 </span>
             </x-button>
+
+            {{-- Cost Estimate Badge --}}
+            @if ($estimatedCost)
+                <div class="inline-flex items-center gap-1.5 rounded-full bg-amber-50 dark:bg-amber-500/10 px-3 py-1.5 text-sm">
+                    <svg class="size-4 text-amber-600 dark:text-amber-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m-3-2.818.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                    </svg>
+                    <span class="text-amber-800 dark:text-amber-300">
+                        Est. <strong>{{ $estimatedCost }}</strong>
+                    </span>
+                </div>
+            @endif
             <button
                 type="button"
                 class="inline-flex items-center rounded-full border border-gray-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 px-3 py-2 text-sm font-medium text-gray-700 dark:text-zinc-300 shadow-sm transition hover:bg-gray-50 dark:hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-50"

@@ -60,6 +60,8 @@ class GeneratePhotoStudioImage implements ShouldQueue
         public ?string $compositionMode = null,
         public ?array $sourceReferences = null,
         public ?string $aspectRatio = null,
+        public ?string $resolution = null,
+        public ?float $estimatedCost = null,
     ) {
         // Capture the AI driver at dispatch time for Horizon visibility
         $this->aiDriver = AI::getDriverForFeature('image_generation');
@@ -89,6 +91,7 @@ class GeneratePhotoStudioImage implements ShouldQueue
                 imageConfig: $imageConfig,
                 temperature: 0.85,
                 maxTokens: 2048,
+                extra: $this->buildModelSpecificParams(),
             );
 
             // Get the driver name for tracking (visible in Horizon)
@@ -129,6 +132,8 @@ class GeneratePhotoStudioImage implements ShouldQueue
                 'prompt' => $this->prompt,
                 'edit_instruction' => $this->editInstruction,
                 'model' => $this->model,
+                'resolution' => $this->resolution,
+                'estimated_cost' => $this->estimatedCost,
                 'storage_disk' => $this->disk,
                 'storage_path' => $path,
                 'image_width' => $preparedImage['width'],
@@ -196,6 +201,58 @@ class GeneratePhotoStudioImage implements ShouldQueue
         }
 
         return $this->prompt;
+    }
+
+    /**
+     * Build model-specific parameters for resolution handling.
+     *
+     * Different models accept resolution in different formats:
+     * - Nano Banana Pro: 'resolution' => '1K', '2K', '4K'
+     * - Seedream 4: 'size' => '1K', '2K', '4K'
+     * - FLUX 2 Flex: 'megapixels' => 0.5, 1.0, 2.0, 4.0
+     *
+     * Resolution keys in config match the API values directly (e.g., '1K', '2K').
+     *
+     * @return array<string, mixed>
+     */
+    private function buildModelSpecificParams(): array
+    {
+        if (! $this->resolution) {
+            return [];
+        }
+
+        // Use array access because model keys contain forward slashes
+        // which break Laravel's dot notation config lookup
+        $models = config('photo-studio.image_models', []);
+        $modelConfig = $models[$this->model] ?? null;
+
+        if (! $modelConfig || ! ($modelConfig['supports_resolution'] ?? false)) {
+            return [];
+        }
+
+        $resConfig = $modelConfig['resolutions'][$this->resolution] ?? null;
+        if (! $resConfig) {
+            return [];
+        }
+
+        // FLUX models use megapixels from config
+        if (str_contains($this->model, 'flux')) {
+            return isset($resConfig['megapixels'])
+                ? ['megapixels' => $resConfig['megapixels']]
+                : [];
+        }
+
+        // Seedream uses 'size' parameter - resolution key is the value
+        if (str_contains($this->model, 'seedream')) {
+            return ['size' => $this->resolution];
+        }
+
+        // Nano Banana Pro uses 'resolution' parameter - resolution key is the value
+        if (str_contains($this->model, 'nano-banana')) {
+            return ['resolution' => $this->resolution];
+        }
+
+        return [];
     }
 
     /**

@@ -404,4 +404,201 @@ class ReplicateAdapterTest extends TestCase
 
         return base64_encode($png);
     }
+
+    public function test_nano_banana_model_uses_image_input_array_parameter(): void
+    {
+        $testDataUri = 'data:image/jpeg;base64,'.$this->createMinimalJpegBase64();
+
+        Http::fake([
+            'api.replicate.com/v1/files' => Http::response([
+                'id' => 'file-nano-123',
+                'url' => 'https://replicate.delivery/files/nano-upload.jpg',
+            ]),
+            'api.replicate.com/v1/models/*' => Http::response([
+                'latest_version' => ['id' => 'nano-version'],
+            ]),
+            'api.replicate.com/v1/predictions' => Http::response([
+                'id' => 'pred-nano',
+                'status' => 'starting',
+            ]),
+            'api.replicate.com/v1/predictions/pred-nano' => Http::response([
+                'id' => 'pred-nano',
+                'status' => 'succeeded',
+                'output' => 'https://replicate.delivery/nano-output.jpg',
+            ]),
+            'replicate.delivery/*' => Http::response(
+                $this->createMinimalJpeg(),
+                200,
+                ['Content-Type' => 'image/jpeg']
+            ),
+        ]);
+
+        $adapter = $this->createAdapter();
+
+        $request = new ImageGenerationRequest(
+            prompt: 'Generate a product photo',
+            model: 'google/nano-banana-pro',
+            inputImages: $testDataUri,
+        );
+
+        $response = $adapter->generateImage($request);
+
+        $this->assertNotNull($response->image);
+
+        // Verify Nano Banana uses 'image_input' as an array (like Gemini)
+        Http::assertSent(function ($request) {
+            if (! str_contains($request->url(), '/predictions')) {
+                return false;
+            }
+
+            $body = json_decode($request->body(), true);
+
+            return isset($body['input']['image_input'])
+                && is_array($body['input']['image_input'])
+                && ! isset($body['input']['image']);
+        });
+    }
+
+    public function test_qwen_model_uses_image_array_parameter(): void
+    {
+        Http::fake([
+            'api.replicate.com/v1/models/*' => Http::response([
+                'latest_version' => ['id' => 'qwen-version'],
+            ]),
+            'api.replicate.com/v1/predictions' => Http::response([
+                'id' => 'pred-qwen',
+                'status' => 'starting',
+            ]),
+            'api.replicate.com/v1/predictions/pred-qwen' => Http::response([
+                'id' => 'pred-qwen',
+                'status' => 'succeeded',
+                'output' => 'https://replicate.delivery/qwen-output.jpg',
+            ]),
+            'replicate.delivery/*' => Http::response(
+                $this->createMinimalJpeg(),
+                200,
+                ['Content-Type' => 'image/jpeg']
+            ),
+        ]);
+
+        $adapter = $this->createAdapter();
+
+        $request = new ImageGenerationRequest(
+            prompt: 'Edit this image',
+            model: 'qwen/qwen-image-edit-plus',
+            inputImages: 'https://example.com/input.jpg',
+        );
+
+        $response = $adapter->generateImage($request);
+
+        $this->assertNotNull($response->image);
+
+        // Verify Qwen uses 'image' as an array
+        Http::assertSent(function ($request) {
+            if (! str_contains($request->url(), '/predictions')) {
+                return false;
+            }
+
+            $body = json_decode($request->body(), true);
+
+            return isset($body['input']['image'])
+                && is_array($body['input']['image']);
+        });
+    }
+
+    public function test_seedream_model_uses_single_image_parameter(): void
+    {
+        Http::fake([
+            'api.replicate.com/v1/models/*' => Http::response([
+                'latest_version' => ['id' => 'seedream-version'],
+            ]),
+            'api.replicate.com/v1/predictions' => Http::response([
+                'id' => 'pred-seedream',
+                'status' => 'starting',
+            ]),
+            'api.replicate.com/v1/predictions/pred-seedream' => Http::response([
+                'id' => 'pred-seedream',
+                'status' => 'succeeded',
+                'output' => 'https://replicate.delivery/seedream-output.jpg',
+            ]),
+            'replicate.delivery/*' => Http::response(
+                $this->createMinimalJpeg(),
+                200,
+                ['Content-Type' => 'image/jpeg']
+            ),
+        ]);
+
+        $adapter = $this->createAdapter();
+
+        $request = new ImageGenerationRequest(
+            prompt: 'Generate an image',
+            model: 'bytedance/seedream-4',
+            inputImages: 'https://example.com/input.jpg',
+        );
+
+        $response = $adapter->generateImage($request);
+
+        $this->assertNotNull($response->image);
+
+        // Verify Seedream uses 'image' as a single string (when only one image)
+        Http::assertSent(function ($request) {
+            if (! str_contains($request->url(), '/predictions')) {
+                return false;
+            }
+
+            $body = json_decode($request->body(), true);
+
+            return isset($body['input']['image'])
+                && is_string($body['input']['image']);
+        });
+    }
+
+    public function test_extra_params_are_passed_to_prediction(): void
+    {
+        Http::fake([
+            'api.replicate.com/v1/models/*' => Http::response([
+                'latest_version' => ['id' => 'test-version'],
+            ]),
+            'api.replicate.com/v1/predictions' => Http::response([
+                'id' => 'pred-extra',
+                'status' => 'starting',
+            ]),
+            'api.replicate.com/v1/predictions/pred-extra' => Http::response([
+                'id' => 'pred-extra',
+                'status' => 'succeeded',
+                'output' => 'https://replicate.delivery/output.jpg',
+            ]),
+            'replicate.delivery/*' => Http::response(
+                $this->createMinimalJpeg(),
+                200,
+                ['Content-Type' => 'image/jpeg']
+            ),
+        ]);
+
+        $adapter = $this->createAdapter();
+
+        // Test that extra params (like resolution settings) are passed through
+        $request = new ImageGenerationRequest(
+            prompt: 'Generate at 4K',
+            model: 'google/nano-banana-pro',
+            inputImages: 'https://example.com/input.jpg',
+            extra: ['resolution' => '4K'],
+        );
+
+        $response = $adapter->generateImage($request);
+
+        $this->assertNotNull($response->image);
+
+        // Verify 'resolution' parameter was passed
+        Http::assertSent(function ($request) {
+            if (! str_contains($request->url(), '/predictions')) {
+                return false;
+            }
+
+            $body = json_decode($request->body(), true);
+
+            return isset($body['input']['resolution'])
+                && $body['input']['resolution'] === '4K';
+        });
+    }
 }

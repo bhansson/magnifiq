@@ -154,6 +154,10 @@ class ReplicateAdapter extends AbstractAiAdapter implements SupportsAsyncPolling
      *
      * Different Replicate models expect different parameter names:
      * - google/gemini-*: uses 'image_input' (array)
+     * - google/nano-banana-*: uses 'image_input' (array)
+     * - bytedance/seedream-*: uses 'image' (single/array)
+     * - black-forest-labs/flux-*: uses 'image' (single)
+     * - qwen/*: uses 'image' (array)
      * - Most others: use 'image' (single) or 'images' (multiple)
      *
      * @param  array<string>  $images
@@ -161,14 +165,45 @@ class ReplicateAdapter extends AbstractAiAdapter implements SupportsAsyncPolling
      */
     private function getImageInputParams(string $model, array $images): array
     {
-        // Gemini models use 'image_input' as an array
-        if (str_contains($model, 'google/gemini')) {
-            $this->logDebug('Using Gemini image_input format', [
+        // Google models (Gemini, Nano Banana) use 'image_input' as an array
+        if (str_contains($model, 'google/gemini') || str_contains($model, 'google/nano-banana')) {
+            $this->logDebug('Using Google image_input format', [
                 'model' => $model,
                 'image_count' => count($images),
             ]);
 
             return ['image_input' => $images];
+        }
+
+        // Qwen uses 'image' as an array
+        if (str_contains($model, 'qwen/')) {
+            $this->logDebug('Using Qwen image array format', [
+                'model' => $model,
+                'image_count' => count($images),
+            ]);
+
+            return ['image' => $images];
+        }
+
+        // Seedream supports multiple images via 'image' array
+        if (str_contains($model, 'seedream')) {
+            $this->logDebug('Using Seedream image format', [
+                'model' => $model,
+                'image_count' => count($images),
+            ]);
+
+            return count($images) === 1
+                ? ['image' => $images[0]]
+                : ['image' => $images];
+        }
+
+        // FLUX models use single 'image' input
+        if (str_contains($model, 'flux')) {
+            $this->logDebug('Using FLUX image format', [
+                'model' => $model,
+            ]);
+
+            return ['image' => $images[0]];
         }
 
         // Default behavior for most models

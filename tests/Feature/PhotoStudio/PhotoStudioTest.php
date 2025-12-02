@@ -1166,7 +1166,7 @@ class PhotoStudioTest extends TestCase
         $this->actingAs($user);
 
         Livewire::test(PhotoStudio::class)
-            ->assertSee('Output aspect ratio')
+            ->assertSee('Aspect Ratio')
             ->assertSee('Match input image')
             ->assertSee('Square (1:1)')
             ->assertSee('Widescreen (16:9)');
@@ -1471,5 +1471,247 @@ class PhotoStudioTest extends TestCase
         // Image should remain at original size when resize is disabled
         $this->assertSame(1200, $capturedImageSize[0], 'Width should remain at original size when resize disabled.');
         $this->assertSame(1200, $capturedImageSize[1], 'Height should remain at original size when resize disabled.');
+    }
+
+    public function test_model_selector_shows_available_models(): void
+    {
+        $user = User::factory()->withPersonalTeam()->create();
+
+        $this->actingAs($user);
+
+        Livewire::test(PhotoStudio::class)
+            ->assertSee('AI Model')
+            ->assertSee('Gemini Flash Image')
+            ->assertSee('Nano Banana Pro')
+            ->assertSee('Seedream 4')
+            ->assertSee('FLUX 2 Flex')
+            ->assertSee('Qwen Image Edit Plus');
+    }
+
+    public function test_resolution_selector_shows_for_supported_models(): void
+    {
+        $user = User::factory()->withPersonalTeam()->create();
+
+        $this->actingAs($user);
+
+        // Nano Banana Pro supports resolution
+        $component = Livewire::test(PhotoStudio::class)
+            ->set('selectedModel', 'google/nano-banana-pro');
+
+        $this->assertTrue($component->invade()->modelSupportsResolution());
+        $component->assertSee('Output Resolution');
+    }
+
+    public function test_resolution_selector_hidden_for_unsupported_models(): void
+    {
+        $user = User::factory()->withPersonalTeam()->create();
+
+        $this->actingAs($user);
+
+        // Gemini Flash Image does not support resolution
+        $component = Livewire::test(PhotoStudio::class)
+            ->set('selectedModel', 'google/gemini-2.5-flash-image');
+
+        $this->assertFalse($component->invade()->modelSupportsResolution());
+    }
+
+    public function test_resolution_resets_when_model_changes(): void
+    {
+        $user = User::factory()->withPersonalTeam()->create();
+
+        $this->actingAs($user);
+
+        $component = Livewire::test(PhotoStudio::class)
+            ->set('selectedModel', 'google/nano-banana-pro')
+            ->set('selectedResolution', '4K')
+            ->assertSet('selectedResolution', '4K');
+
+        // Change to FLUX which has different resolution options
+        $component
+            ->set('selectedModel', 'black-forest-labs/flux-2-flex')
+            ->assertSet('selectedResolution', '1mp'); // Default for FLUX
+    }
+
+    public function test_cost_calculation_per_image_pricing(): void
+    {
+        $user = User::factory()->withPersonalTeam()->create();
+
+        $this->actingAs($user);
+
+        // Gemini Flash Image: $0.039/image
+        $component = Livewire::test(PhotoStudio::class)
+            ->set('selectedModel', 'google/gemini-2.5-flash-image');
+
+        $this->assertSame('$0.039', $component->invade()->getFormattedCost());
+    }
+
+    public function test_cost_calculation_per_resolution_pricing(): void
+    {
+        $user = User::factory()->withPersonalTeam()->create();
+
+        $this->actingAs($user);
+
+        // Nano Banana Pro: $0.15 for 1K/2K, $0.30 for 4K (formatted with 3 decimals)
+        $component = Livewire::test(PhotoStudio::class)
+            ->set('selectedModel', 'google/nano-banana-pro')
+            ->set('selectedResolution', '1K');
+
+        $this->assertSame('$0.150', $component->invade()->getFormattedCost());
+
+        $component->set('selectedResolution', '4K');
+        $this->assertSame('$0.300', $component->invade()->getFormattedCost());
+    }
+
+    public function test_cost_calculation_per_megapixel_pricing(): void
+    {
+        $user = User::factory()->withPersonalTeam()->create();
+
+        $this->actingAs($user);
+
+        // FLUX 2 Flex: $0.06/megapixel (cost includes input + output, so 2x megapixels)
+        $component = Livewire::test(PhotoStudio::class)
+            ->set('selectedModel', 'black-forest-labs/flux-2-flex')
+            ->set('selectedResolution', '1mp');
+
+        // (1MP input + 1MP output) * $0.06 = $0.12
+        $this->assertSame('$0.120', $component->invade()->getFormattedCost());
+
+        $component->set('selectedResolution', '4mp');
+        // (4MP input + 4MP output) * $0.06 = $0.48
+        $this->assertSame('$0.480', $component->invade()->getFormattedCost());
+    }
+
+    public function test_job_receives_model_and_resolution_parameters(): void
+    {
+        config()->set('ai.providers.openrouter.api_key', 'test-key');
+        config()->set('photo-studio.generation_disk', 's3');
+
+        $this->fakeProductImageFetch();
+        Queue::fake();
+
+        $user = User::factory()->withPersonalTeam()->create();
+        $team = $user->currentTeam;
+
+        $feed = ProductFeed::factory()->create([
+            'team_id' => $team->id,
+        ]);
+
+        $product = Product::factory()
+            ->for($feed, 'feed')
+            ->create([
+                'team_id' => $team->id,
+                'image_link' => 'https://cdn.example.com/reference.jpg',
+            ]);
+
+        $this->actingAs($user);
+
+        Livewire::test(PhotoStudio::class)
+            ->set('productId', $product->id)
+            ->set('promptResult', 'Generate product image')
+            ->set('selectedModel', 'google/nano-banana-pro')
+            ->set('selectedResolution', '2K')
+            ->call('generateImage')
+            ->assertHasNoErrors();
+
+        Queue::assertPushed(GeneratePhotoStudioImage::class, function (GeneratePhotoStudioImage $job) {
+            $this->assertSame('google/nano-banana-pro', $job->model);
+            $this->assertSame('2K', $job->resolution);
+            $this->assertSame(0.15, $job->estimatedCost);
+
+            return true;
+        });
+    }
+
+    public function test_generation_record_stores_resolution_and_cost(): void
+    {
+        config()->set('photo-studio.generation_disk', 's3');
+        config()->set('ai.features.image_generation.driver', 'replicate');
+        config()->set('ai.providers.replicate.api_key', 'test-key');
+
+        Storage::fake('s3');
+
+        $user = User::factory()->withPersonalTeam()->create();
+        $team = $user->currentTeam;
+
+        $model = 'google/nano-banana-pro';
+
+        // Fake Replicate API calls
+        Http::fake([
+            // File upload for data URI
+            'api.replicate.com/v1/files' => Http::response([
+                'id' => 'file-test',
+                'url' => 'https://replicate.delivery/files/test.jpg',
+            ]),
+            // Model version lookup
+            'api.replicate.com/v1/models/*' => Http::response([
+                'latest_version' => ['id' => 'nano-banana-version'],
+            ]),
+            // Prediction creation
+            'api.replicate.com/v1/predictions' => Http::response([
+                'id' => 'pred-resolution-test',
+                'status' => 'starting',
+            ]),
+            // Prediction status (succeeded)
+            'api.replicate.com/v1/predictions/pred-resolution-test' => Http::response([
+                'id' => 'pred-resolution-test',
+                'status' => 'succeeded',
+                'output' => 'https://replicate.delivery/output.jpg',
+            ]),
+            // Output image download
+            'replicate.delivery/*' => Http::response(
+                $this->test_image_binary(),
+                200,
+                ['Content-Type' => 'image/jpeg']
+            ),
+        ]);
+
+        $jobRecord = $this->createPhotoStudioJob($team->id);
+
+        $job = new GeneratePhotoStudioImage(
+            productAiJobId: $jobRecord->id,
+            teamId: $team->id,
+            userId: $user->id,
+            productId: null,
+            prompt: 'Generate 2K resolution image',
+            model: $model,
+            disk: 's3',
+            imageInput: $this->test_image_data_uri(),
+            sourceType: 'uploaded_image',
+            sourceReference: 'upload.png',
+            resolution: '2K',
+            estimatedCost: 0.15
+        );
+
+        $job->handle();
+
+        $generation = PhotoStudioGeneration::first();
+
+        $this->assertNotNull($generation);
+        $this->assertSame('2K', $generation->resolution);
+        $this->assertEquals(0.15, $generation->estimated_cost);
+    }
+
+    public function test_default_model_is_loaded_on_mount(): void
+    {
+        $user = User::factory()->withPersonalTeam()->create();
+
+        $this->actingAs($user);
+
+        $component = Livewire::test(PhotoStudio::class);
+
+        $defaultModel = config('photo-studio.default_image_model');
+        $this->assertSame($defaultModel, $component->get('selectedModel'));
+    }
+
+    public function test_cost_estimate_badge_shows_in_ui(): void
+    {
+        $user = User::factory()->withPersonalTeam()->create();
+
+        $this->actingAs($user);
+
+        Livewire::test(PhotoStudio::class)
+            ->set('selectedModel', 'google/gemini-2.5-flash-image')
+            ->assertSee('Est.')
+            ->assertSee('$0.039');
     }
 }

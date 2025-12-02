@@ -78,6 +78,12 @@
                 :can-generate="$canGenerate"
                 :composition-image-count="$compositionImageCount"
                 :min-images="$minImages"
+                :selected-model="$selectedModel"
+                :selected-resolution="$selectedResolution"
+                :available-models="$this->getAvailableModels()"
+                :model-supports-resolution="$this->modelSupportsResolution()"
+                :available-resolutions="$this->getAvailableResolutions()"
+                :estimated-cost="$this->getFormattedCost()"
             />
         </div>
     </div>
