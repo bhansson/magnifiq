@@ -1528,7 +1528,7 @@ class PhotoStudioTest extends TestCase
 
         // Change to FLUX which has different resolution options
         $component
-            ->set('selectedModel', 'black-forest-labs/flux-2-flex')
+            ->set('selectedModel', 'black-forest-labs/flux-2-pro')
             ->assertSet('selectedResolution', '1mp'); // Default for FLUX
     }
 
@@ -1568,17 +1568,17 @@ class PhotoStudioTest extends TestCase
 
         $this->actingAs($user);
 
-        // FLUX 2 Flex: $0.06/megapixel (cost includes input + output, so 2x megapixels)
+        // FLUX 2 Pro: $0.04/megapixel (cost includes input + output, so 2x megapixels)
         $component = Livewire::test(PhotoStudio::class)
-            ->set('selectedModel', 'black-forest-labs/flux-2-flex')
+            ->set('selectedModel', 'black-forest-labs/flux-2-pro')
             ->set('selectedResolution', '1mp');
 
-        // (1MP input + 1MP output) * $0.06 = $0.12
-        $this->assertSame('$0.120', $component->invade()->getFormattedCost());
+        // (1MP input + 1MP output) * $0.04 = $0.08
+        $this->assertSame('$0.080', $component->invade()->getFormattedCost());
 
         $component->set('selectedResolution', '4mp');
-        // (4MP input + 4MP output) * $0.06 = $0.48
-        $this->assertSame('$0.480', $component->invade()->getFormattedCost());
+        // (4MP input + 4MP output) * $0.04 = $0.32
+        $this->assertSame('$0.320', $component->invade()->getFormattedCost());
     }
 
     public function test_job_receives_model_and_resolution_parameters(): void

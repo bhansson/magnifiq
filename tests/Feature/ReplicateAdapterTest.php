@@ -506,7 +506,54 @@ class ReplicateAdapterTest extends TestCase
         });
     }
 
-    public function test_seedream_model_uses_single_image_parameter(): void
+    public function test_prunaai_model_uses_images_array_parameter(): void
+    {
+        Http::fake([
+            'api.replicate.com/v1/models/*' => Http::response([
+                'latest_version' => ['id' => 'prunaai-version'],
+            ]),
+            'api.replicate.com/v1/predictions' => Http::response([
+                'id' => 'pred-prunaai',
+                'status' => 'starting',
+            ]),
+            'api.replicate.com/v1/predictions/pred-prunaai' => Http::response([
+                'id' => 'pred-prunaai',
+                'status' => 'succeeded',
+                'output' => 'https://replicate.delivery/prunaai-output.jpg',
+            ]),
+            'replicate.delivery/*' => Http::response(
+                $this->createMinimalJpeg(),
+                200,
+                ['Content-Type' => 'image/jpeg']
+            ),
+        ]);
+
+        $adapter = $this->createAdapter();
+
+        $request = new ImageGenerationRequest(
+            prompt: 'Edit this image',
+            model: 'prunaai/p-image-edit',
+            inputImages: 'https://example.com/input.jpg',
+        );
+
+        $response = $adapter->generateImage($request);
+
+        $this->assertNotNull($response->image);
+
+        // Verify PrunaAI uses 'images' as an array
+        Http::assertSent(function ($request) {
+            if (! str_contains($request->url(), '/predictions')) {
+                return false;
+            }
+
+            $body = json_decode($request->body(), true);
+
+            return isset($body['input']['images'])
+                && is_array($body['input']['images']);
+        });
+    }
+
+    public function test_seedream_model_uses_image_input_array_parameter(): void
     {
         Http::fake([
             'api.replicate.com/v1/models/*' => Http::response([
@@ -540,7 +587,7 @@ class ReplicateAdapterTest extends TestCase
 
         $this->assertNotNull($response->image);
 
-        // Verify Seedream uses 'image' as a single string (when only one image)
+        // Verify Seedream uses 'image_input' as an array (always array, even for single image)
         Http::assertSent(function ($request) {
             if (! str_contains($request->url(), '/predictions')) {
                 return false;
@@ -548,8 +595,55 @@ class ReplicateAdapterTest extends TestCase
 
             $body = json_decode($request->body(), true);
 
-            return isset($body['input']['image'])
-                && is_string($body['input']['image']);
+            return isset($body['input']['image_input'])
+                && is_array($body['input']['image_input']);
+        });
+    }
+
+    public function test_flux_2_pro_model_uses_input_images_array_parameter(): void
+    {
+        Http::fake([
+            'api.replicate.com/v1/models/*' => Http::response([
+                'latest_version' => ['id' => 'flux-2-pro-version'],
+            ]),
+            'api.replicate.com/v1/predictions' => Http::response([
+                'id' => 'pred-flux-2-pro',
+                'status' => 'starting',
+            ]),
+            'api.replicate.com/v1/predictions/pred-flux-2-pro' => Http::response([
+                'id' => 'pred-flux-2-pro',
+                'status' => 'succeeded',
+                'output' => 'https://replicate.delivery/flux-2-pro-output.jpg',
+            ]),
+            'replicate.delivery/*' => Http::response(
+                $this->createMinimalJpeg(),
+                200,
+                ['Content-Type' => 'image/jpeg']
+            ),
+        ]);
+
+        $adapter = $this->createAdapter();
+
+        $request = new ImageGenerationRequest(
+            prompt: 'Generate an image',
+            model: 'black-forest-labs/flux-2-pro',
+            inputImages: 'https://example.com/input.jpg',
+        );
+
+        $response = $adapter->generateImage($request);
+
+        $this->assertNotNull($response->image);
+
+        // Verify FLUX 2 Pro uses 'input_images' as an array
+        Http::assertSent(function ($request) {
+            if (! str_contains($request->url(), '/predictions')) {
+                return false;
+            }
+
+            $body = json_decode($request->body(), true);
+
+            return isset($body['input']['input_images'])
+                && is_array($body['input']['input_images']);
         });
     }
 

@@ -150,9 +150,12 @@
 
     {{-- Prompt Textarea --}}
     <div>
-        <label for="photo-studio-prompt" class="block text-sm font-medium text-gray-700 dark:text-zinc-300">
-            Prompt text
-        </label>
+        <div class="flex items-center gap-2">
+            <label for="photo-studio-prompt" class="block text-sm font-medium text-gray-700 dark:text-zinc-300">
+                Prompt text
+            </label>
+            <x-copy-button target="photo-studio-prompt" />
+        </div>
         <textarea
             id="photo-studio-prompt"
             wire:model.live.debounce.500ms="promptResult"
@@ -167,7 +170,20 @@
         {{-- Generation Settings Grid --}}
         <div class="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {{-- Model Selector --}}
-            <div>
+            <div
+                x-data="{
+                    storageKey: 'photo-studio-model',
+                    init() {
+                        const saved = localStorage.getItem(this.storageKey);
+                        const availableModels = @js(array_keys($availableModels));
+
+                        if (saved && availableModels.includes(saved) && saved !== @js($selectedModel)) {
+                            $wire.set('selectedModel', saved);
+                        }
+                    }
+                }"
+                x-effect="localStorage.setItem(storageKey, $wire.selectedModel)"
+            >
                 <label for="photo-studio-model" class="block text-sm font-medium text-gray-700 dark:text-zinc-300">
                     AI Model
                 </label>
@@ -290,18 +306,6 @@
                     </span>
                 </div>
             @endif
-            <button
-                type="button"
-                class="inline-flex items-center rounded-full border border-gray-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 px-3 py-2 text-sm font-medium text-gray-700 dark:text-zinc-300 shadow-sm transition hover:bg-gray-50 dark:hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-50"
-                x-data="{ copied: false }"
-                x-on:click="if (@js($hasPromptText)) { navigator.clipboard.writeText(@js($promptResult)).then(() => { copied = true; setTimeout(() => copied = false, 2000); }); }"
-                :disabled="! @js($hasPromptText)"
-            >
-                <svg class="me-2 h-4 w-4 text-gray-500 dark:text-zinc-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M8 16.5v2.25A2.25 2.25 0 0010.25 21h7.5A2.25 2.25 0 0020 18.75v-7.5A2.25 2.25 0 0017.75 9h-2.25M8 16.5h-2.25A2.25 2.25 0 013.5 14.25v-7.5A2.25 2.25 0 015.75 4.5h7.5A2.25 2.25 0 0115.5 6.75V9M8 16.5h6.75A2.25 2.25 0 0017 14.25V7.5M8 16.5A2.25 2.25 0 015.75 14.25V7.5" />
-                </svg>
-                <span x-text="copied ? 'Copied!' : 'Copy prompt'"></span>
-            </button>
         </div>
     </div>
 </div>

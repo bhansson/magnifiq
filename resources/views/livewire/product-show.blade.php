@@ -158,10 +158,13 @@
                         </dl>
 
                         <div>
-                            <h3 class="text-sm font-medium text-gray-900 dark:text-white">Original description</h3>
-                            <p class="mt-2 text-gray-700 dark:text-zinc-300">
-                                {{ $product->description ?: 'No description provided.' }}
-                            </p>
+                            <div class="flex items-center gap-2">
+                                <h3 class="text-sm font-medium text-gray-900 dark:text-white">Original description</h3>
+                                @if ($product->description)
+                                    <x-copy-button :text="$product->description" />
+                                @endif
+                            </div>
+                            <p class="mt-2 text-gray-700 dark:text-zinc-300 whitespace-pre-line">{{ $product->description ?: 'No description provided.' }}</p>
                         </div>
                     </div>
                 </div>
@@ -248,22 +251,56 @@
                                             </div>
                                         </div>
 
+                                        @php
+                                            // Prepare copyable text based on content type
+                                            $copyableText = '';
+                                            if ($contentType === 'usps') {
+                                                $uspItems = collect(is_array($latestContent) ? $latestContent : [])
+                                                    ->map(function ($value) {
+                                                        if (is_array($value)) {
+                                                            $value = implode(' ', $value);
+                                                        }
+                                                        return trim((string) $value);
+                                                    })
+                                                    ->filter()
+                                                    ->values();
+                                                $copyableText = $uspItems->map(fn ($usp) => '• ' . $usp)->implode("\n");
+                                            } elseif ($contentType === 'faq') {
+                                                $faqEntries = collect(is_array($latestContent) ? $latestContent : [])
+                                                    ->map(function ($entry) {
+                                                        if (is_array($entry)) {
+                                                            $question = trim((string) ($entry['question'] ?? ''));
+                                                            $answer = trim((string) ($entry['answer'] ?? ''));
+                                                        } else {
+                                                            $question = '';
+                                                            $answer = trim((string) $entry);
+                                                        }
+                                                        if ($question === '' && $answer === '') {
+                                                            return null;
+                                                        }
+                                                        return [
+                                                            'question' => $question !== '' ? $question : 'Question',
+                                                            'answer' => $answer !== '' ? $answer : 'Answer forthcoming.',
+                                                        ];
+                                                    })
+                                                    ->filter()
+                                                    ->values();
+                                                $copyableText = $faqEntries->map(fn ($faq) => "Q: {$faq['question']}\nA: {$faq['answer']}")->implode("\n\n");
+                                            } else {
+                                                $textContent = trim(is_string($latestContent) ? $latestContent : '');
+                                                $copyableText = $textContent;
+                                            }
+                                        @endphp
+
                                         <div class="space-y-3">
-                                            <h4 class="text-sm font-semibold text-gray-900 dark:text-white">Published</h4>
+                                            <div class="flex items-center gap-2">
+                                                <h4 class="text-sm font-semibold text-gray-900 dark:text-white">Published</h4>
+                                                @if ($copyableText)
+                                                    <x-copy-button :text="$copyableText" />
+                                                @endif
+                                            </div>
                                             @switch($contentType)
                                                 @case('usps')
-                                                    @php
-                                                        $uspItems = collect(is_array($latestContent) ? $latestContent : [])
-                                                            ->map(function ($value) {
-                                                                if (is_array($value)) {
-                                                                    $value = implode(' ', $value);
-                                                                }
-
-                                                                return trim((string) $value);
-                                                            })
-                                                            ->filter()
-                                                            ->values();
-                                                    @endphp
                                                     @if ($uspItems->isNotEmpty())
                                                         <ul class="grid gap-2">
                                                             @foreach ($uspItems as $usp)
@@ -279,29 +316,6 @@
                                                     @break
 
                                                 @case('faq')
-                                                    @php
-                                                        $faqEntries = collect(is_array($latestContent) ? $latestContent : [])
-                                                            ->map(function ($entry) {
-                                                                if (is_array($entry)) {
-                                                                    $question = trim((string) ($entry['question'] ?? ''));
-                                                                    $answer = trim((string) ($entry['answer'] ?? ''));
-                                                                } else {
-                                                                    $question = '';
-                                                                    $answer = trim((string) $entry);
-                                                                }
-
-                                                                if ($question === '' && $answer === '') {
-                                                                    return null;
-                                                                }
-
-                                                                return [
-                                                                    'question' => $question !== '' ? $question : 'Question',
-                                                                    'answer' => $answer !== '' ? $answer : 'Answer forthcoming.',
-                                                                ];
-                                                            })
-                                                            ->filter()
-                                                            ->values();
-                                                    @endphp
                                                     @if ($faqEntries->isNotEmpty())
                                                         <div class="space-y-4 text-gray-700 dark:text-zinc-300">
                                                             @foreach ($faqEntries as $faq)
@@ -317,9 +331,6 @@
                                                     @break
 
                                                 @default
-                                                    @php
-                                                        $textContent = trim(is_string($latestContent) ? $latestContent : '');
-                                                    @endphp
                                                     @if ($textContent !== '')
                                                         <p class="text-gray-700 dark:text-zinc-300">{{ $textContent }}</p>
                                                     @else
