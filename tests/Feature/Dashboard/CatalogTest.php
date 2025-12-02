@@ -19,7 +19,7 @@ class CatalogTest extends TestCase
         $this->actingAs($user)
             ->get(route('catalog.index'))
             ->assertOk()
-            ->assertSee('Imported Feeds');
+            ->assertSee('All Feeds');
     }
 
     public function test_manage_product_feeds_component_renders(): void

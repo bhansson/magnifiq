@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
+use PHPUnit\Framework\Attributes\Group;
 use Tests\TestCase;
 
 class PhotoStudioTest extends TestCase
@@ -789,9 +790,7 @@ class PhotoStudioTest extends TestCase
         Storage::disk('s3')->assertExists($generation->storage_path);
     }
 
-    /**
-     * @group skip-for-refactoring
-     */
+    #[Group('skip-for-refactoring')]
     public function test_generate_photo_studio_image_job_fetches_openrouter_file_with_headers(): void
     {
         $this->markTestSkipped('HTTP header verification requires updates for new AI abstraction layer');
@@ -1481,11 +1480,11 @@ class PhotoStudioTest extends TestCase
 
         Livewire::test(PhotoStudio::class)
             ->assertSee('AI Model')
-            ->assertSee('Gemini Flash Image')
+            ->assertSee('Nano Banana')
             ->assertSee('Nano Banana Pro')
             ->assertSee('Seedream 4')
-            ->assertSee('FLUX 2 Flex')
-            ->assertSee('Qwen Image Edit Plus');
+            ->assertSee('FLUX 2 Pro')
+            ->assertSee('P-Image-Edit');
     }
 
     public function test_resolution_selector_shows_for_supported_models(): void
