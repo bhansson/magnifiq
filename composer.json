@@ -18,7 +18,9 @@
         "livewire/livewire": "^3.6.4",
         "moe-mizrak/laravel-openrouter": "^2.4",
         "openai-php/laravel": "^0.18.0",
-        "symfony/mailgun-mailer": "^7.3"
+        "symfony/console": "^7.3.0 <7.4.0",
+        "symfony/mailgun-mailer": "^7.3",
+        "symfony/string": "^7.0"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",
@@ -27,7 +29,11 @@
         "laravel/pint": "^1.24",
         "laravel/sail": "^1.41",
         "mockery/mockery": "^1.6",
-        "nunomaduro/collision": "^8.6",
+        "nunomaduro/collision": "8.8.2",
+        "pestphp/pest": "*",
+        "pestphp/pest-plugin-drift": "*",
+        "pestphp/pest-plugin-laravel": "*",
+        "pestphp/pest-plugin-livewire": "*",
         "phpunit/phpunit": "^11.5.3"
     },
     "autoload": {

@@ -1,77 +1,67 @@
 <?php
 
-namespace Tests\Feature;
-
 use App\Models\Team;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Tests\TestCase;
 
-class TeamPartnerAssignmentTest extends TestCase
-{
-    use RefreshDatabase;
+uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
 
-    public function test_customer_team_can_be_assigned_to_partner(): void
-    {
-        $user = User::factory()->withPersonalTeam()->create();
-        $partner = Team::factory()->create([
-            'user_id' => $user->id,
-            'type' => 'partner',
-            'name' => 'Partner Corp',
-        ]);
+test('customer team can be assigned to partner', function () {
+    $user = User::factory()->withPersonalTeam()->create();
+    $partner = Team::factory()->create([
+        'user_id' => $user->id,
+        'type' => 'partner',
+        'name' => 'Partner Corp',
+    ]);
 
-        $customer = Team::factory()->create([
-            'user_id' => $user->id,
-            'type' => 'customer',
-            'parent_team_id' => $partner->id,
-        ]);
+    $customer = Team::factory()->create([
+        'user_id' => $user->id,
+        'type' => 'customer',
+        'parent_team_id' => $partner->id,
+    ]);
 
-        $this->assertEquals($partner->id, $customer->parent_team_id);
-        $this->assertTrue($customer->parentTeam->is($partner));
-        $this->assertCount(1, $partner->ownedTeams);
-    }
+    expect($customer->parent_team_id)->toEqual($partner->id);
+    expect($customer->parentTeam->is($partner))->toBeTrue();
+    expect($partner->ownedTeams)->toHaveCount(1);
+});
 
-    public function test_partner_can_have_multiple_customer_teams(): void
-    {
-        $user = User::factory()->withPersonalTeam()->create();
-        $partner = Team::factory()->create([
-            'user_id' => $user->id,
-            'type' => 'partner',
-        ]);
+test('partner can have multiple customer teams', function () {
+    $user = User::factory()->withPersonalTeam()->create();
+    $partner = Team::factory()->create([
+        'user_id' => $user->id,
+        'type' => 'partner',
+    ]);
 
-        $customer1 = Team::factory()->create([
-            'user_id' => $user->id,
-            'parent_team_id' => $partner->id,
-        ]);
+    $customer1 = Team::factory()->create([
+        'user_id' => $user->id,
+        'parent_team_id' => $partner->id,
+    ]);
 
-        $customer2 = Team::factory()->create([
-            'user_id' => $user->id,
-            'parent_team_id' => $partner->id,
-        ]);
+    $customer2 = Team::factory()->create([
+        'user_id' => $user->id,
+        'parent_team_id' => $partner->id,
+    ]);
 
-        $this->assertCount(2, $partner->fresh()->ownedTeams);
-        $this->assertTrue($partner->ownedTeams->contains($customer1));
-        $this->assertTrue($partner->ownedTeams->contains($customer2));
-    }
+    expect($partner->fresh()->ownedTeams)->toHaveCount(2);
+    expect($partner->ownedTeams->contains($customer1))->toBeTrue();
+    expect($partner->ownedTeams->contains($customer2))->toBeTrue();
+});
 
-    public function test_reassigning_team_to_different_partner(): void
-    {
-        $user = User::factory()->withPersonalTeam()->create();
-        $partner1 = Team::factory()->create(['user_id' => $user->id, 'type' => 'partner']);
-        $partner2 = Team::factory()->create(['user_id' => $user->id, 'type' => 'partner']);
+test('reassigning team to different partner', function () {
+    $user = User::factory()->withPersonalTeam()->create();
+    $partner1 = Team::factory()->create(['user_id' => $user->id, 'type' => 'partner']);
+    $partner2 = Team::factory()->create(['user_id' => $user->id, 'type' => 'partner']);
 
-        $customer = Team::factory()->create([
-            'user_id' => $user->id,
-            'parent_team_id' => $partner1->id,
-        ]);
+    $customer = Team::factory()->create([
+        'user_id' => $user->id,
+        'parent_team_id' => $partner1->id,
+    ]);
 
-        $this->assertCount(1, $partner1->fresh()->ownedTeams);
-        $this->assertCount(0, $partner2->fresh()->ownedTeams);
+    expect($partner1->fresh()->ownedTeams)->toHaveCount(1);
+    expect($partner2->fresh()->ownedTeams)->toHaveCount(0);
 
-        // Reassign to partner2
-        $customer->update(['parent_team_id' => $partner2->id]);
+    // Reassign to partner2
+    $customer->update(['parent_team_id' => $partner2->id]);
 
-        $this->assertCount(0, $partner1->fresh()->ownedTeams);
-        $this->assertCount(1, $partner2->fresh()->ownedTeams);
-    }
-}
+    expect($partner1->fresh()->ownedTeams)->toHaveCount(0);
+    expect($partner2->fresh()->ownedTeams)->toHaveCount(1);
+});

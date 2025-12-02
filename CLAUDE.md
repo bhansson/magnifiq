@@ -274,7 +274,7 @@ Key tables:
 
 ## Testing Strategy
 
-Tests are organized in `tests/Feature/` and `tests/Unit/`. Feature tests cover:
+This project uses **Pest** testing framework (built on PHPUnit). Tests are organized in `tests/Feature/` and `tests/Unit/`. Feature tests cover:
 - Authentication flows (Jetstream/Fortify)
 - Team management (creation, invitations, member removal)
 - API token management
@@ -292,6 +292,9 @@ docker compose exec octane php artisan test
 
 ### Testing Patterns
 
+- **Pest syntax**: Use `test('description', function() { ... })` and `expect()` assertions
+- **Setup hooks**: Use `beforeEach()` for test setup (not PHPUnit's `setUp()` method)
+- **Helper functions**: Shared helpers are defined in `tests/Pest.php` (e.g., `createTestJpegBinary()`)
 - Use factories for test data setup (located in `database/factories/`)
 - Stub HTTP calls using `Http::fake()` for external services (AI providers, product feeds)
 - AI calls can be stubbed via `Http::fake()` since all adapters use Laravel's HTTP client
@@ -393,6 +396,7 @@ composer run analyse # Future: PHPStan or Larastan
 
 ### Testing Standards
 
+- **Use Pest syntax** for all tests (not PHPUnit class-based tests)
 - Mirror production namespaces in `tests/` for autoloader simplicity
 - Target **~80% statement coverage**; document gaps in PR descriptions
 - Use factories for test data setup (located in `database/factories/`)

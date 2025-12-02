@@ -1,118 +1,105 @@
 <?php
 
-namespace Tests\Feature;
-
 use App\Livewire\ManagePartners;
 use App\Models\Team;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
-use Tests\TestCase;
 
-class ManagePartnersTest extends TestCase
-{
-    use RefreshDatabase;
+uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
 
-    public function test_admin_can_view_partners_list(): void
-    {
-        $admin = User::factory()->create();
-        $this->actingAs($admin);
+test('admin can view partners list', function () {
+    $admin = User::factory()->create();
+    $this->actingAs($admin);
 
-        $partner1 = Team::factory()->create(['type' => 'partner', 'name' => 'Acme Partner']);
-        $partner2 = Team::factory()->create(['type' => 'partner', 'name' => 'Beta Partner']);
-        $customer = Team::factory()->create(['type' => 'customer']);
+    $partner1 = Team::factory()->create(['type' => 'partner', 'name' => 'Acme Partner']);
+    $partner2 = Team::factory()->create(['type' => 'partner', 'name' => 'Beta Partner']);
+    $customer = Team::factory()->create(['type' => 'customer']);
 
-        Livewire::test(ManagePartners::class)
-            ->assertSee('Acme Partner')
-            ->assertSee('Beta Partner')
-            ->assertDontSee($customer->name);
-    }
+    Livewire::test(ManagePartners::class)
+        ->assertSee('Acme Partner')
+        ->assertSee('Beta Partner')
+        ->assertDontSee($customer->name);
+});
 
-    public function test_can_create_new_partner(): void
-    {
-        $admin = User::factory()->create();
-        $this->actingAs($admin);
+test('can create new partner', function () {
+    $admin = User::factory()->create();
+    $this->actingAs($admin);
 
-        Livewire::test(ManagePartners::class)
-            ->set('name', 'New Partner Inc')
-            ->set('partner_slug', 'newpartner')
-            ->set('partner_share_percent', 25.00)
-            ->call('createPartner')
-            ->assertHasNoErrors();
+    Livewire::test(ManagePartners::class)
+        ->set('name', 'New Partner Inc')
+        ->set('partner_slug', 'newpartner')
+        ->set('partner_share_percent', 25.00)
+        ->call('createPartner')
+        ->assertHasNoErrors();
 
-        $this->assertDatabaseHas('teams', [
-            'name' => 'New Partner Inc',
-            'type' => 'partner',
-            'partner_slug' => 'newpartner',
-        ]);
-    }
+    $this->assertDatabaseHas('teams', [
+        'name' => 'New Partner Inc',
+        'type' => 'partner',
+        'partner_slug' => 'newpartner',
+    ]);
+});
 
-    public function test_partner_name_is_required(): void
-    {
-        $admin = User::factory()->create();
-        $this->actingAs($admin);
+test('partner name is required', function () {
+    $admin = User::factory()->create();
+    $this->actingAs($admin);
 
-        Livewire::test(ManagePartners::class)
-            ->set('name', '')
-            ->set('partner_slug', 'test')
-            ->call('createPartner')
-            ->assertHasErrors(['name' => 'required']);
-    }
+    Livewire::test(ManagePartners::class)
+        ->set('name', '')
+        ->set('partner_slug', 'test')
+        ->call('createPartner')
+        ->assertHasErrors(['name' => 'required']);
+});
 
-    public function test_partner_slug_must_be_unique(): void
-    {
-        $admin = User::factory()->create();
-        $this->actingAs($admin);
+test('partner slug must be unique', function () {
+    $admin = User::factory()->create();
+    $this->actingAs($admin);
 
-        Team::factory()->create([
-            'type' => 'partner',
-            'partner_slug' => 'acme',
-        ]);
+    Team::factory()->create([
+        'type' => 'partner',
+        'partner_slug' => 'acme',
+    ]);
 
-        Livewire::test(ManagePartners::class)
-            ->set('name', 'Another Partner')
-            ->set('partner_slug', 'acme')
-            ->call('createPartner')
-            ->assertHasErrors(['partner_slug' => 'unique']);
-    }
+    Livewire::test(ManagePartners::class)
+        ->set('name', 'Another Partner')
+        ->set('partner_slug', 'acme')
+        ->call('createPartner')
+        ->assertHasErrors(['partner_slug' => 'unique']);
+});
 
-    public function test_can_delete_partner(): void
-    {
-        $admin = User::factory()->create();
-        $this->actingAs($admin);
+test('can delete partner', function () {
+    $admin = User::factory()->create();
+    $this->actingAs($admin);
 
-        $partner = Team::factory()->create(['type' => 'partner', 'name' => 'Delete Me']);
+    $partner = Team::factory()->create(['type' => 'partner', 'name' => 'Delete Me']);
 
-        Livewire::test(ManagePartners::class)
-            ->call('deletePartner', $partner->id)
-            ->assertHasNoErrors();
+    Livewire::test(ManagePartners::class)
+        ->call('deletePartner', $partner->id)
+        ->assertHasNoErrors();
 
-        $this->assertDatabaseMissing('teams', [
-            'id' => $partner->id,
-        ]);
-    }
+    $this->assertDatabaseMissing('teams', [
+        'id' => $partner->id,
+    ]);
+});
 
-    public function test_can_upload_partner_logo(): void
-    {
-        Storage::fake('public');
+test('can upload partner logo', function () {
+    Storage::fake('public');
 
-        $admin = User::factory()->create();
-        $this->actingAs($admin);
+    $admin = User::factory()->create();
+    $this->actingAs($admin);
 
-        $logo = UploadedFile::fake()->image('logo.png', 200, 200);
+    $logo = UploadedFile::fake()->image('logo.png', 200, 200);
 
-        Livewire::test(ManagePartners::class)
-            ->set('name', 'Logo Partner')
-            ->set('partner_slug', 'logopartner')
-            ->set('logo', $logo)
-            ->call('createPartner')
-            ->assertHasNoErrors();
+    Livewire::test(ManagePartners::class)
+        ->set('name', 'Logo Partner')
+        ->set('partner_slug', 'logopartner')
+        ->set('logo', $logo)
+        ->call('createPartner')
+        ->assertHasNoErrors();
 
-        $partner = Team::query()->where('name', 'Logo Partner')->first();
+    $partner = Team::query()->where('name', 'Logo Partner')->first();
 
-        $this->assertNotNull($partner->logo_path);
-        Storage::disk('public')->assertExists($partner->logo_path);
-    }
-}
+    expect($partner->logo_path)->not->toBeNull();
+    Storage::disk('public')->assertExists($partner->logo_path);
+});
