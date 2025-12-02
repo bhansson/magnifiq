@@ -34,6 +34,8 @@ class PhotoStudioGeneration extends Model
         'prompt',
         'edit_instruction',
         'model',
+        'resolution',
+        'estimated_cost',
         'storage_disk',
         'storage_path',
         'image_width',
@@ -50,6 +52,7 @@ class PhotoStudioGeneration extends Model
     protected $casts = [
         'response_metadata' => 'array',
         'source_references' => 'array',
+        'estimated_cost' => 'decimal:4',
     ];
 
     public function team(): BelongsTo

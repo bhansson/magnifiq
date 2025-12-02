@@ -108,8 +108,12 @@
                         </div>
                     </div>
                     <div>
-                        <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-zinc-500">Original Prompt</p>
+                        <div class="flex items-center justify-between">
+                            <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-zinc-500">Original Prompt</p>
+                            <x-copy-button target="overlay-prompt-text" />
+                        </div>
                         <p
+                            id="overlay-prompt-text"
                             class="mt-2 max-h-48 whitespace-pre-line overflow-y-auto rounded-lg border border-gray-200 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-800 p-3 text-sm text-gray-800 dark:text-zinc-200"
                             x-text="selectedEntry && selectedEntry.prompt ? selectedEntry.prompt : 'Prompt unavailable for this render.'"
                         ></p>

@@ -154,6 +154,13 @@ class ReplicateAdapter extends AbstractAiAdapter implements SupportsAsyncPolling
      *
      * Different Replicate models expect different parameter names:
      * - google/gemini-*: uses 'image_input' (array)
+     * - google/nano-banana-*: uses 'image_input' (array)
+     * - qwen/*: uses 'image' (array)
+     * - prunaai/*: uses 'images' (array)
+     * - bytedance/seedream-*: uses 'image_input' (array)
+     * - black-forest-labs/flux-2-pro: uses 'input_images' (array)
+     * - black-forest-labs/flux-2-flex: uses 'input_images' (array)
+     * - black-forest-labs/flux-*: uses 'image' (single)
      * - Most others: use 'image' (single) or 'images' (multiple)
      *
      * @param  array<string>  $images
@@ -161,14 +168,63 @@ class ReplicateAdapter extends AbstractAiAdapter implements SupportsAsyncPolling
      */
     private function getImageInputParams(string $model, array $images): array
     {
-        // Gemini models use 'image_input' as an array
-        if (str_contains($model, 'google/gemini')) {
-            $this->logDebug('Using Gemini image_input format', [
+        // Google models (Gemini, Nano Banana) use 'image_input' as an array
+        if (str_contains($model, 'google/gemini') || str_contains($model, 'google/nano-banana')) {
+            $this->logDebug('Using Google image_input format', [
                 'model' => $model,
                 'image_count' => count($images),
             ]);
 
             return ['image_input' => $images];
+        }
+
+        // Qwen uses 'image' as an array
+        if (str_contains($model, 'qwen/')) {
+            $this->logDebug('Using Qwen image array format', [
+                'model' => $model,
+                'image_count' => count($images),
+            ]);
+
+            return ['image' => $images];
+        }
+
+        // PrunaAI P-Image-Edit uses 'images' as an array
+        if (str_contains($model, 'prunaai/')) {
+            $this->logDebug('Using PrunaAI images array format', [
+                'model' => $model,
+                'image_count' => count($images),
+            ]);
+
+            return ['images' => $images];
+        }
+
+        // Seedream uses 'image_input' as an array (always array, even for single image)
+        if (str_contains($model, 'seedream')) {
+            $this->logDebug('Using Seedream image_input format', [
+                'model' => $model,
+                'image_count' => count($images),
+            ]);
+
+            return ['image_input' => $images];
+        }
+
+        // FLUX 2 Pro/Flex uses 'input_images' as an array
+        if (str_contains($model, 'flux-2-pro') || str_contains($model, 'flux-2-flex')) {
+            $this->logDebug('Using FLUX 2 input_images format', [
+                'model' => $model,
+                'image_count' => count($images),
+            ]);
+
+            return ['input_images' => $images];
+        }
+
+        // Other FLUX models use single 'image' input
+        if (str_contains($model, 'flux')) {
+            $this->logDebug('Using FLUX image format', [
+                'model' => $model,
+            ]);
+
+            return ['image' => $images[0]];
         }
 
         // Default behavior for most models

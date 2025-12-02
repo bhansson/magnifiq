@@ -121,6 +121,138 @@ PROMPT,
 
     /*
     |--------------------------------------------------------------------------
+    | Image Generation Models
+    |--------------------------------------------------------------------------
+    |
+    | Registry of available AI models for image generation. Each model defines
+    | its capabilities, supported resolutions, and pricing information.
+    |
+    | Pricing types:
+    |   - per_image: Flat cost per generated image
+    |   - per_resolution: Cost varies by selected resolution
+    |   - per_megapixel: Cost based on input + output megapixels
+    |
+    */
+    'image_models' => [
+        'google/gemini-2.5-flash-image' => [
+            'name' => 'Nano Banana (Good quality - decent price)',
+            'description' => 'Fast, cost-effective image generation with multi-image support',
+            'provider' => 'replicate',
+            'supports_resolution' => false,
+            'max_images' => 14,
+            'pricing' => [
+                'type' => 'per_image',
+                'cost' => 0.039,
+            ],
+        ],
+        'google/nano-banana-pro' => [
+            'name' => 'Nano Banana Pro (Superb quality - high price)',
+            'description' => 'More expensive but state of the art generations with 1K, 2K, and 4K resolution options',
+            'provider' => 'replicate',
+            'supports_resolution' => true,
+            'max_images' => 14,
+            'resolutions' => [
+                '1K' => [
+                    'label' => '1K (1024px)',
+                    'description' => 'Standard quality',
+                ],
+                '2K' => [
+                    'label' => '2K (2048px)',
+                    'description' => 'High quality',
+                ],
+                '4K' => [
+                    'label' => '4K (4096px)',
+                    'description' => 'Ultra high quality',
+                ],
+            ],
+            'default_resolution' => '1K',
+            'pricing' => [
+                'type' => 'per_resolution',
+                'costs' => [
+                    '1K' => 0.15,
+                    '2K' => 0.15,
+                    '4K' => 0.30,
+                ],
+            ],
+        ],
+        'bytedance/seedream-4' => [
+            'name' => 'Seedream 4 (Lower quality - low price)',
+            'description' => 'ByteDance image model with customizable resolutions',
+            'provider' => 'replicate',
+            'supports_resolution' => true,
+            'max_images' => 10,
+            'resolutions' => [
+                '1K' => [
+                    'label' => '1K (1024px)',
+                    'description' => 'Standard quality',
+                ],
+                '2K' => [
+                    'label' => '2K (2048px)',
+                    'description' => 'High quality (default)',
+                ],
+                '4K' => [
+                    'label' => '4K (4096px)',
+                    'description' => 'Ultra high quality',
+                ],
+            ],
+            'default_resolution' => '2K',
+            'pricing' => [
+                'type' => 'per_image',
+                'cost' => 0.03,
+            ],
+        ],
+        'black-forest-labs/flux-2-pro' => [
+            'name' => 'FLUX 2 Pro (Good quality - decent price)',
+            'description' => 'Professional quality image generation with a decent price tag',
+            'provider' => 'replicate',
+            'supports_resolution' => true,
+            'max_images' => 8,
+            'resolutions' => [
+                '0.5mp' => [
+                    'label' => '0.5 MP (~707×707)',
+                    'megapixels' => 0.5,
+                    'description' => 'Fast preview',
+                ],
+                '1mp' => [
+                    'label' => '1 MP (~1024×1024)',
+                    'megapixels' => 1.0,
+                    'description' => 'Standard quality',
+                ],
+                '2mp' => [
+                    'label' => '2 MP (~1448×1448)',
+                    'megapixels' => 2.0,
+                    'description' => 'High quality',
+                ],
+                '4mp' => [
+                    'label' => '4 MP (2048×2048)',
+                    'megapixels' => 4.0,
+                    'description' => 'Maximum quality',
+                ],
+            ],
+            'default_resolution' => '1mp',
+            'pricing' => [
+                'type' => 'per_megapixel',
+                'cost_per_mp' => 0.04,
+            ],
+        ],
+        'prunaai/p-image-edit' => [
+            'name' => 'P-Image-Edit (Low quality, very fast - very low price)',
+            'description' => 'Ultra fast image editing with a low price tag',
+            'provider' => 'replicate',
+            'supports_resolution' => false,
+            'max_images' => 10,
+            'pricing' => [
+                'type' => 'per_image',
+                'cost' => 0.01,
+            ],
+        ],
+    ],
+
+    // Default model when none is selected (falls back to env for backwards compatibility)
+    'default_image_model' => env('PHOTO_STUDIO_DEFAULT_MODEL', 'google/gemini-2.5-flash-image'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Storage Configuration
     |--------------------------------------------------------------------------
     */

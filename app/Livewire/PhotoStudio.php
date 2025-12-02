@@ -147,6 +147,16 @@ class PhotoStudio extends Component
     public ?string $detectedAspectRatio = null;
 
     /**
+     * Selected AI model for image generation.
+     */
+    public string $selectedModel = '';
+
+    /**
+     * Selected output resolution (for models that support it).
+     */
+    public ?string $selectedResolution = null;
+
+    /**
      * ID of the pending vision/prompt extraction job for polling.
      */
     public ?int $pendingVisionJobId = null;
@@ -168,6 +178,20 @@ class PhotoStudio extends Component
         if (! $team) {
             abort(403, 'Join or create a team to access the Photo Studio.');
         }
+
+        // Initialize model selection
+        $availableModels = $this->getAvailableModels();
+        $defaultModel = config('photo-studio.default_image_model');
+
+        // Use default if available, otherwise first model in list
+        if ($defaultModel && isset($availableModels[$defaultModel])) {
+            $this->selectedModel = $defaultModel;
+        } elseif (! empty($availableModels)) {
+            $this->selectedModel = array_key_first($availableModels);
+        }
+
+        // Initialize resolution to model's default
+        $this->selectedResolution = $this->getDefaultResolution();
 
         $this->refreshProductOptions();
         $this->refreshLatestGeneration();
@@ -241,6 +265,136 @@ class PhotoStudio extends Component
     public function updatedGallerySearch(): void
     {
         $this->refreshProductGallery();
+    }
+
+    /**
+     * Reset resolution to model's default when model changes.
+     */
+    public function updatedSelectedModel(): void
+    {
+        $this->selectedResolution = $this->getDefaultResolution();
+    }
+
+    /**
+     * Get all available image generation models from config.
+     *
+     * @return array<string, array<string, mixed>>
+     */
+    public function getAvailableModels(): array
+    {
+        return config('photo-studio.image_models', []);
+    }
+
+    /**
+     * Get the configuration for the currently selected model.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function getSelectedModelConfig(): ?array
+    {
+        if (! $this->selectedModel) {
+            return null;
+        }
+
+        // Use direct array access because model keys contain forward slashes
+        // which break Laravel's dot notation config lookup
+        $models = config('photo-studio.image_models', []);
+
+        return $models[$this->selectedModel] ?? null;
+    }
+
+    /**
+     * Check if the selected model supports resolution selection.
+     */
+    public function modelSupportsResolution(): bool
+    {
+        $config = $this->getSelectedModelConfig();
+
+        return $config['supports_resolution'] ?? false;
+    }
+
+    /**
+     * Get available resolutions for the selected model.
+     *
+     * @return array<string, array<string, mixed>>
+     */
+    public function getAvailableResolutions(): array
+    {
+        $config = $this->getSelectedModelConfig();
+
+        return $config['resolutions'] ?? [];
+    }
+
+    /**
+     * Get the default resolution for the selected model.
+     */
+    public function getDefaultResolution(): ?string
+    {
+        $config = $this->getSelectedModelConfig();
+
+        return $config['default_resolution'] ?? null;
+    }
+
+    /**
+     * Calculate estimated cost for the current model/resolution selection.
+     */
+    public function getEstimatedCost(): ?float
+    {
+        $config = $this->getSelectedModelConfig();
+
+        if (! $config) {
+            return null;
+        }
+
+        $pricing = $config['pricing'] ?? [];
+        $type = $pricing['type'] ?? 'per_image';
+
+        return match ($type) {
+            'per_image' => $pricing['cost'] ?? null,
+            'per_resolution' => $this->selectedResolution
+                ? ($pricing['costs'][$this->selectedResolution] ?? null)
+                : null,
+            'per_megapixel' => $this->calculateMegapixelCost($pricing),
+            default => null,
+        };
+    }
+
+    /**
+     * Calculate cost for megapixel-based pricing (e.g., FLUX models).
+     */
+    private function calculateMegapixelCost(array $pricing): ?float
+    {
+        if (! $this->selectedResolution) {
+            return null;
+        }
+
+        $resolutions = $this->getAvailableResolutions();
+        $resConfig = $resolutions[$this->selectedResolution] ?? null;
+
+        if (! $resConfig || ! isset($resConfig['megapixels'])) {
+            return null;
+        }
+
+        // Cost is based on input + output megapixels
+        $mp = $resConfig['megapixels'];
+        $costPerMp = $pricing['cost_per_mp'] ?? 0;
+
+        // Approximate: input ~1MP + output at selected resolution
+        return ($mp * 2) * $costPerMp;
+    }
+
+    /**
+     * Get formatted cost string for display.
+     */
+    public function getFormattedCost(): ?string
+    {
+        $cost = $this->getEstimatedCost();
+
+        if ($cost === null) {
+            return null;
+        }
+
+        return '$'.number_format($cost, 3);
     }
 
     /**
@@ -479,14 +633,19 @@ class PhotoStudio extends Component
         }
 
         $disk = config('photo-studio.generation_disk', 's3');
-        $model = config('photo-studio.models.image_generation');
+
+        // Use selected model or fall back to legacy config
+        $model = $this->selectedModel ?: config('photo-studio.models.image_generation');
 
         if (! $model) {
             $this->editSubmitting = false;
-            $this->addError('editInstruction', 'Photo Studio image model is not configured. Set OPENROUTER_PHOTO_STUDIO_IMAGE_MODEL in your environment.');
+            $this->addError('editInstruction', 'No image model selected. Please select a model before generating.');
 
             return;
         }
+
+        // Calculate estimated cost for this generation
+        $estimatedCost = $this->getEstimatedCost();
 
         try {
             // Establish baseline generation ID for polling
@@ -521,6 +680,8 @@ class PhotoStudio extends Component
                     'edit_instruction' => $this->editInstruction,
                     'prompt' => $newPrompt,
                     'model' => $model,
+                    'resolution' => $this->selectedResolution,
+                    'estimated_cost' => $estimatedCost,
                 ]),
             ]);
 
@@ -544,6 +705,8 @@ class PhotoStudio extends Component
                 parentId: $parentGeneration->id,
                 editInstruction: $this->editInstruction,
                 aspectRatio: $editAspectRatio,
+                resolution: $this->selectedResolution,
+                estimatedCost: $estimatedCost,
             );
 
             $this->editSubmitting = false;
@@ -960,13 +1123,17 @@ class PhotoStudio extends Component
                 return $ref;
             })->values()->toArray();
 
-            $model = config('photo-studio.models.image_generation');
+            // Use selected model or fall back to legacy config
+            $model = $this->selectedModel ?: config('photo-studio.models.image_generation');
 
             if (! $model) {
-                $this->errorMessage = 'Photo Studio image model is not configured. Set OPENROUTER_PHOTO_STUDIO_IMAGE_MODEL in your environment.';
+                $this->errorMessage = 'No image model selected. Please select a model before generating.';
 
                 return;
             }
+
+            // Calculate estimated cost for this generation
+            $estimatedCost = $this->getEstimatedCost();
 
             $this->resetGenerationPreview();
 
@@ -997,6 +1164,8 @@ class PhotoStudio extends Component
                     'source_references' => $sourceReferences,
                     'prompt' => $this->promptResult,
                     'model' => $model,
+                    'resolution' => $this->selectedResolution,
+                    'estimated_cost' => $estimatedCost,
                     'aspect_ratio' => $compositionAspectRatio,
                 ]),
             ]);
@@ -1017,6 +1186,8 @@ class PhotoStudio extends Component
                 compositionMode: $this->compositionMode,
                 sourceReferences: $sourceReferences,
                 aspectRatio: $compositionAspectRatio,
+                resolution: $this->selectedResolution,
+                estimatedCost: $estimatedCost,
             );
 
             $this->pendingGenerationBaselineId = $previousGenerationId ?? 0;
