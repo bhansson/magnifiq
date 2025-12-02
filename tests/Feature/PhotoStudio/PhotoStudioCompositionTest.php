@@ -31,20 +31,11 @@ class PhotoStudioCompositionTest extends TestCase
         $this->team = $this->user->currentTeam;
     }
 
-    public function test_composition_tab_is_visible(): void
+    public function test_mode_selection_is_visible(): void
     {
         $this->actingAs($this->user);
 
         Livewire::test(PhotoStudio::class)
-            ->assertSee('Composition');
-    }
-
-    public function test_switching_to_composition_tab_shows_mode_selection(): void
-    {
-        $this->actingAs($this->user);
-
-        Livewire::test(PhotoStudio::class)
-            ->set('activeTab', 'composition')
             ->assertSee('Choose a mode, add your image(s)')
             ->assertSee('Product Group Image')
             ->assertSee('Lifestyle Context')
@@ -62,7 +53,6 @@ class PhotoStudioCompositionTest extends TestCase
         ]);
 
         $component = Livewire::test(PhotoStudio::class)
-            ->set('activeTab', 'composition')
             ->call('addProductToComposition', $product->id);
 
         $component->assertSet('compositionImages.0.type', 'product')
@@ -80,7 +70,6 @@ class PhotoStudioCompositionTest extends TestCase
         ]);
 
         $component = Livewire::test(PhotoStudio::class)
-            ->set('activeTab', 'composition')
             ->call('addProductToComposition', $product->id)
             ->call('addProductToComposition', $product->id);
 
@@ -97,7 +86,6 @@ class PhotoStudioCompositionTest extends TestCase
         ]);
 
         Livewire::test(PhotoStudio::class)
-            ->set('activeTab', 'composition')
             ->call('addProductToComposition', $product->id)
             ->assertCount('compositionImages', 1)
             ->call('removeFromComposition', 0)
@@ -119,7 +107,6 @@ class PhotoStudioCompositionTest extends TestCase
         ]);
 
         Livewire::test(PhotoStudio::class)
-            ->set('activeTab', 'composition')
             ->set('compositionMode', 'reference_hero')
             ->call('addProductToComposition', $product1->id)
             ->call('addProductToComposition', $product2->id)
@@ -139,7 +126,6 @@ class PhotoStudioCompositionTest extends TestCase
 
         // Use 'products_together' mode which requires min_images: 2
         Livewire::test(PhotoStudio::class)
-            ->set('activeTab', 'composition')
             ->set('compositionMode', 'products_together')
             ->call('addProductToComposition', $product->id)
             ->call('extractPrompt')
@@ -161,7 +147,6 @@ class PhotoStudioCompositionTest extends TestCase
         ]);
 
         Livewire::test(PhotoStudio::class)
-            ->set('activeTab', 'composition')
             ->call('addProductToComposition', $product1->id)
             ->call('addProductToComposition', $product2->id)
             ->assertCount('compositionImages', 2)
@@ -181,8 +166,7 @@ class PhotoStudioCompositionTest extends TestCase
             'image_link' => 'https://example.com/image.jpg',
         ]);
 
-        $component = Livewire::test(PhotoStudio::class)
-            ->set('activeTab', 'composition');
+        $component = Livewire::test(PhotoStudio::class);
 
         foreach ($products as $product) {
             $component->call('addProductToComposition', $product->id);
@@ -212,7 +196,6 @@ class PhotoStudioCompositionTest extends TestCase
 
         // Manually set the composition images with data_uri to bypass image fetching
         Livewire::test(PhotoStudio::class)
-            ->set('activeTab', 'composition')
             ->set('compositionMode', 'products_together')
             ->set('compositionImages', [
                 [
