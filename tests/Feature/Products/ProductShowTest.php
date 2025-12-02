@@ -1,7 +1,5 @@
 <?php
 
-namespace Tests\Feature\Products;
-
 use App\Jobs\RunProductAiTemplateJob;
 use App\Livewire\ProductShow;
 use App\Models\Product;
@@ -10,367 +8,353 @@ use App\Models\ProductAiTemplate;
 use App\Models\ProductCatalog;
 use App\Models\ProductFeed;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
 use Livewire\Livewire;
-use Tests\TestCase;
 
-class ProductShowTest extends TestCase
-{
-    use RefreshDatabase;
+uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
 
-    public function test_product_details_page_is_accessible_for_team_member(): void
-    {
-        $user = User::factory()->withPersonalTeam()->create();
-        $team = $user->currentTeam;
+test('product details page is accessible for team member', function () {
+    $user = User::factory()->withPersonalTeam()->create();
+    $team = $user->currentTeam;
 
-        $catalog = ProductCatalog::factory()->create(['team_id' => $team->id]);
+    $catalog = ProductCatalog::factory()->create(['team_id' => $team->id]);
 
-        $feed = ProductFeed::factory()->create([
+    $feed = ProductFeed::factory()->create([
+        'team_id' => $team->id,
+        'product_catalog_id' => $catalog->id,
+        'language' => 'en',
+    ]);
+
+    $product = Product::factory()
+        ->for($feed, 'feed')
+        ->create([
             'team_id' => $team->id,
-            'product_catalog_id' => $catalog->id,
-            'language' => 'en',
-        ]);
-
-        $product = Product::factory()
-            ->for($feed, 'feed')
-            ->create([
-                'team_id' => $team->id,
-                'title' => 'Example Product Title',
-                'brand' => 'Acme',
-                'sku' => 'TEST-001',
-            ]);
-
-        $this->actingAs($user);
-
-        $this->get(route('products.show', [
-            'catalog' => $catalog->slug,
+            'title' => 'Example Product Title',
+            'brand' => 'Acme',
             'sku' => 'TEST-001',
-        ]))
-            ->assertOk()
-            ->assertSeeText('Example Product Title')
-            ->assertSeeText('Summary');
-    }
+        ]);
 
-    public function test_product_details_page_returns_not_found_for_other_team(): void
-    {
-        $user = User::factory()->withPersonalTeam()->create();
-        $otherUser = User::factory()->withPersonalTeam()->create();
+    $this->actingAs($user);
 
-        $catalog = ProductCatalog::factory()->create(['team_id' => $otherUser->currentTeam->id]);
+    $this->get(route('products.show', [
+        'catalog' => $catalog->slug,
+        'sku' => 'TEST-001',
+    ]))
+        ->assertOk()
+        ->assertSeeText('Example Product Title')
+        ->assertSeeText('Summary');
+});
 
-        $foreignFeed = ProductFeed::factory()->create([
+test('product details page returns not found for other team', function () {
+    $user = User::factory()->withPersonalTeam()->create();
+    $otherUser = User::factory()->withPersonalTeam()->create();
+
+    $catalog = ProductCatalog::factory()->create(['team_id' => $otherUser->currentTeam->id]);
+
+    $foreignFeed = ProductFeed::factory()->create([
+        'team_id' => $otherUser->currentTeam->id,
+        'product_catalog_id' => $catalog->id,
+        'language' => 'en',
+    ]);
+
+    $foreignProduct = Product::factory()
+        ->for($foreignFeed, 'feed')
+        ->create([
             'team_id' => $otherUser->currentTeam->id,
-            'product_catalog_id' => $catalog->id,
-            'language' => 'en',
-        ]);
-
-        $foreignProduct = Product::factory()
-            ->for($foreignFeed, 'feed')
-            ->create([
-                'team_id' => $otherUser->currentTeam->id,
-                'brand' => 'Acme',
-                'sku' => 'FOREIGN-001',
-            ]);
-
-        $this->actingAs($user);
-
-        $this->get(route('products.show', [
-            'catalog' => $catalog->slug,
+            'brand' => 'Acme',
             'sku' => 'FOREIGN-001',
-        ]))
-            ->assertNotFound();
+        ]);
+
+    $this->actingAs($user);
+
+    $this->get(route('products.show', [
+        'catalog' => $catalog->slug,
+        'sku' => 'FOREIGN-001',
+    ]))
+        ->assertNotFound();
+});
+
+test('queue generation dispatches job from details page', function () {
+    config()->set('laravel-openrouter.api_key', 'test-key');
+
+    Queue::fake();
+
+    $user = User::factory()->withPersonalTeam()->create();
+    $team = $user->currentTeam;
+
+    $feed = ProductFeed::factory()->create([
+        'team_id' => $team->id,
+    ]);
+
+    $product = Product::factory()
+        ->for($feed, 'feed')
+        ->create([
+            'team_id' => $team->id,
+            'brand' => 'Acme',
+        ]);
+
+    $this->actingAs($user);
+
+    ProductAiTemplate::syncDefaultTemplates();
+
+    $templates = ProductAiTemplate::query()
+        ->whereIn('slug', config('product-ai.actions.generate_summary', []))
+        ->get();
+
+    expect($templates)->not->toBeEmpty();
+
+    $livewire = Livewire::test(ProductShow::class, ['productId' => $product->id]);
+
+    foreach ($templates as $template) {
+        $livewire->call('queueGeneration', $template->id)
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('product_ai_jobs', [
+            'product_id' => $product->id,
+            'product_ai_template_id' => $template->id,
+            'status' => ProductAiJob::STATUS_QUEUED,
+            'job_type' => ProductAiJob::TYPE_TEMPLATE,
+        ]);
+
+        Queue::assertPushed(RunProductAiTemplateJob::class, function (RunProductAiTemplateJob $job) use ($product, $template): bool {
+            $jobRecord = ProductAiJob::find($job->productAiJobId);
+
+            return $jobRecord?->product_id === $product->id
+                && $jobRecord->product_ai_template_id === $template->id;
+        });
     }
+});
 
-    public function test_queue_generation_dispatches_job_from_details_page(): void
-    {
-        config()->set('laravel-openrouter.api_key', 'test-key');
+test('product shows language tabs when in catalog with siblings', function () {
+    $user = User::factory()->withPersonalTeam()->create();
+    $team = $user->currentTeam;
 
-        Queue::fake();
+    $catalog = ProductCatalog::factory()->create(['team_id' => $team->id]);
 
-        $user = User::factory()->withPersonalTeam()->create();
-        $team = $user->currentTeam;
+    $feedEn = ProductFeed::factory()->create([
+        'team_id' => $team->id,
+        'product_catalog_id' => $catalog->id,
+        'language' => 'en',
+    ]);
 
-        $feed = ProductFeed::factory()->create([
-            'team_id' => $team->id,
-        ]);
+    $feedSv = ProductFeed::factory()->create([
+        'team_id' => $team->id,
+        'product_catalog_id' => $catalog->id,
+        'language' => 'sv',
+    ]);
 
-        $product = Product::factory()
-            ->for($feed, 'feed')
-            ->create([
-                'team_id' => $team->id,
-                'brand' => 'Acme',
-            ]);
+    $productEn = Product::factory()->create([
+        'team_id' => $team->id,
+        'product_feed_id' => $feedEn->id,
+        'sku' => 'SKU-001',
+        'title' => 'English Product',
+    ]);
 
-        $this->actingAs($user);
+    $productSv = Product::factory()->create([
+        'team_id' => $team->id,
+        'product_feed_id' => $feedSv->id,
+        'sku' => 'SKU-001',
+        'title' => 'Swedish Product',
+    ]);
 
-        ProductAiTemplate::syncDefaultTemplates();
+    $this->actingAs($user);
 
-        $templates = ProductAiTemplate::query()
-            ->whereIn('slug', config('product-ai.actions.generate_summary', []))
-            ->get();
+    // Products in catalog use semantic URL: /products/{catalog}/{sku}/{lang}
+    $expectedUrl = route('products.show', [
+        'catalog' => $catalog->slug,
+        'sku' => 'SKU-001',
+        'lang' => 'sv',
+    ]);
 
-        $this->assertNotEmpty($templates);
+    // URL should be path-based, not query string
+    $this->assertStringContainsString('/sv', $expectedUrl);
+    $this->assertStringNotContainsString('?lang=', $expectedUrl);
 
-        $livewire = Livewire::test(ProductShow::class, ['productId' => $product->id]);
+    Livewire::test(ProductShow::class, [
+        'productId' => $productEn->id,
+        'catalogSlug' => $catalog->slug,
+    ])
+        ->assertSee('EN')
+        ->assertSee('SV')
+        ->assertSeeHtml('href="'.$expectedUrl.'"');
+});
 
-        foreach ($templates as $template) {
-            $livewire->call('queueGeneration', $template->id)
-                ->assertHasNoErrors();
+test('product does not show language tabs when standalone', function () {
+    $user = User::factory()->withPersonalTeam()->create();
+    $team = $user->currentTeam;
 
-            $this->assertDatabaseHas('product_ai_jobs', [
-                'product_id' => $product->id,
-                'product_ai_template_id' => $template->id,
-                'status' => ProductAiJob::STATUS_QUEUED,
-                'job_type' => ProductAiJob::TYPE_TEMPLATE,
-            ]);
+    $feed = ProductFeed::factory()->create([
+        'team_id' => $team->id,
+        'product_catalog_id' => null,
+        'language' => 'en',
+    ]);
 
-            Queue::assertPushed(RunProductAiTemplateJob::class, function (RunProductAiTemplateJob $job) use ($product, $template): bool {
-                $jobRecord = ProductAiJob::find($job->productAiJobId);
+    $product = Product::factory()->create([
+        'team_id' => $team->id,
+        'product_feed_id' => $feed->id,
+        'sku' => 'SKU-001',
+        'title' => 'Standalone Product',
+    ]);
 
-                return $jobRecord?->product_id === $product->id
-                    && $jobRecord->product_ai_template_id === $template->id;
-            });
-        }
-    }
+    $this->actingAs($user);
 
-    public function test_product_shows_language_tabs_when_in_catalog_with_siblings(): void
-    {
-        $user = User::factory()->withPersonalTeam()->create();
-        $team = $user->currentTeam;
+    // Standalone products should not show the language switcher tabs
+    // (the "Language:" label appears in product info, but not the tab row)
+    $html = Livewire::test(ProductShow::class, ['productId' => $product->id])->html();
 
-        $catalog = ProductCatalog::factory()->create(['team_id' => $team->id]);
+    // Should not have language pill-style tabs with links
+    $this->assertStringNotContainsString('Currently viewing', $html);
+});
 
-        $feedEn = ProductFeed::factory()->create([
-            'team_id' => $team->id,
-            'product_catalog_id' => $catalog->id,
-            'language' => 'en',
-        ]);
+test('product shows catalog name in metadata', function () {
+    $user = User::factory()->withPersonalTeam()->create();
+    $team = $user->currentTeam;
 
-        $feedSv = ProductFeed::factory()->create([
-            'team_id' => $team->id,
-            'product_catalog_id' => $catalog->id,
-            'language' => 'sv',
-        ]);
+    $catalog = ProductCatalog::factory()->create([
+        'team_id' => $team->id,
+        'name' => 'My Test Catalog',
+    ]);
 
-        $productEn = Product::factory()->create([
-            'team_id' => $team->id,
-            'product_feed_id' => $feedEn->id,
-            'sku' => 'SKU-001',
-            'title' => 'English Product',
-        ]);
+    $feed = ProductFeed::factory()->create([
+        'team_id' => $team->id,
+        'product_catalog_id' => $catalog->id,
+        'language' => 'en',
+    ]);
 
-        $productSv = Product::factory()->create([
-            'team_id' => $team->id,
-            'product_feed_id' => $feedSv->id,
-            'sku' => 'SKU-001',
-            'title' => 'Swedish Product',
-        ]);
+    $product = Product::factory()->create([
+        'team_id' => $team->id,
+        'product_feed_id' => $feed->id,
+        'sku' => 'CATALOG-001',
+    ]);
 
-        $this->actingAs($user);
+    $this->actingAs($user);
 
-        // Products in catalog use semantic URL: /products/{catalog}/{sku}/{lang}
-        $expectedUrl = route('products.show', [
-            'catalog' => $catalog->slug,
-            'sku' => 'SKU-001',
-            'lang' => 'sv',
-        ]);
+    Livewire::test(ProductShow::class, [
+        'productId' => $product->id,
+        'catalogSlug' => $catalog->slug,
+    ])
+        ->assertSee('My Test Catalog');
+});
 
-        // URL should be path-based, not query string
-        $this->assertStringContainsString('/sv', $expectedUrl);
-        $this->assertStringNotContainsString('?lang=', $expectedUrl);
+test('semantic url shows product by catalog and sku', function () {
+    $user = User::factory()->withPersonalTeam()->create();
+    $team = $user->currentTeam;
 
-        Livewire::test(ProductShow::class, [
-            'productId' => $productEn->id,
-            'catalogSlug' => $catalog->slug,
-        ])
-            ->assertSee('EN')
-            ->assertSee('SV')
-            ->assertSeeHtml('href="'.$expectedUrl.'"');
-    }
+    $catalog = ProductCatalog::factory()->create([
+        'team_id' => $team->id,
+        'name' => 'Winter Collection',
+    ]);
 
-    public function test_product_does_not_show_language_tabs_when_standalone(): void
-    {
-        $user = User::factory()->withPersonalTeam()->create();
-        $team = $user->currentTeam;
+    $feed = ProductFeed::factory()->create([
+        'team_id' => $team->id,
+        'product_catalog_id' => $catalog->id,
+        'language' => 'en',
+    ]);
 
-        $feed = ProductFeed::factory()->create([
-            'team_id' => $team->id,
-            'product_catalog_id' => null,
-            'language' => 'en',
-        ]);
+    $product = Product::factory()->create([
+        'team_id' => $team->id,
+        'product_feed_id' => $feed->id,
+        'sku' => 'WINTER-001',
+        'title' => 'Cozy Winter Jacket',
+    ]);
 
-        $product = Product::factory()->create([
-            'team_id' => $team->id,
-            'product_feed_id' => $feed->id,
-            'sku' => 'SKU-001',
-            'title' => 'Standalone Product',
-        ]);
+    $this->actingAs($user);
 
-        $this->actingAs($user);
+    $this->get(route('products.show', [
+        'catalog' => $catalog->slug,
+        'sku' => 'WINTER-001',
+    ]))
+        ->assertOk()
+        ->assertSeeText('Cozy Winter Jacket');
+});
 
-        // Standalone products should not show the language switcher tabs
-        // (the "Language:" label appears in product info, but not the tab row)
-        $html = Livewire::test(ProductShow::class, ['productId' => $product->id])->html();
+test('semantic url with lang parameter shows correct language version', function () {
+    $user = User::factory()->withPersonalTeam()->create();
+    $team = $user->currentTeam;
 
-        // Should not have language pill-style tabs with links
-        $this->assertStringNotContainsString('Currently viewing', $html);
-    }
+    $catalog = ProductCatalog::factory()->create(['team_id' => $team->id]);
 
-    public function test_product_shows_catalog_name_in_metadata(): void
-    {
-        $user = User::factory()->withPersonalTeam()->create();
-        $team = $user->currentTeam;
+    $feedEn = ProductFeed::factory()->create([
+        'team_id' => $team->id,
+        'product_catalog_id' => $catalog->id,
+        'language' => 'en',
+    ]);
 
-        $catalog = ProductCatalog::factory()->create([
-            'team_id' => $team->id,
-            'name' => 'My Test Catalog',
-        ]);
+    $feedSv = ProductFeed::factory()->create([
+        'team_id' => $team->id,
+        'product_catalog_id' => $catalog->id,
+        'language' => 'sv',
+    ]);
 
-        $feed = ProductFeed::factory()->create([
-            'team_id' => $team->id,
-            'product_catalog_id' => $catalog->id,
-            'language' => 'en',
-        ]);
+    Product::factory()->create([
+        'team_id' => $team->id,
+        'product_feed_id' => $feedEn->id,
+        'sku' => 'MULTI-001',
+        'title' => 'English Title',
+    ]);
 
-        $product = Product::factory()->create([
-            'team_id' => $team->id,
-            'product_feed_id' => $feed->id,
-            'sku' => 'CATALOG-001',
-        ]);
+    Product::factory()->create([
+        'team_id' => $team->id,
+        'product_feed_id' => $feedSv->id,
+        'sku' => 'MULTI-001',
+        'title' => 'Swedish Title',
+    ]);
 
-        $this->actingAs($user);
+    $this->actingAs($user);
 
-        Livewire::test(ProductShow::class, [
-            'productId' => $product->id,
-            'catalogSlug' => $catalog->slug,
-        ])
-            ->assertSee('My Test Catalog');
-    }
+    // Request Swedish version via lang parameter
+    $this->get(route('products.show', [
+        'catalog' => $catalog->slug,
+        'sku' => 'MULTI-001',
+        'lang' => 'sv',
+    ]))
+        ->assertOk()
+        ->assertSeeText('Swedish Title');
+});
 
-    public function test_semantic_url_shows_product_by_catalog_and_sku(): void
-    {
-        $user = User::factory()->withPersonalTeam()->create();
-        $team = $user->currentTeam;
+test('product get url returns semantic url for catalog products', function () {
+    $user = User::factory()->withPersonalTeam()->create();
+    $team = $user->currentTeam;
 
-        $catalog = ProductCatalog::factory()->create([
-            'team_id' => $team->id,
-            'name' => 'Winter Collection',
-        ]);
+    $catalog = ProductCatalog::factory()->create(['team_id' => $team->id]);
 
-        $feed = ProductFeed::factory()->create([
-            'team_id' => $team->id,
-            'product_catalog_id' => $catalog->id,
-            'language' => 'en',
-        ]);
+    $feed = ProductFeed::factory()->create([
+        'team_id' => $team->id,
+        'product_catalog_id' => $catalog->id,
+        'language' => 'de',
+    ]);
 
-        $product = Product::factory()->create([
-            'team_id' => $team->id,
-            'product_feed_id' => $feed->id,
-            'sku' => 'WINTER-001',
-            'title' => 'Cozy Winter Jacket',
-        ]);
+    $product = Product::factory()->create([
+        'team_id' => $team->id,
+        'product_feed_id' => $feed->id,
+        'sku' => 'URL-001',
+    ]);
 
-        $this->actingAs($user);
+    $url = $product->getUrl();
 
-        $this->get(route('products.show', [
-            'catalog' => $catalog->slug,
-            'sku' => 'WINTER-001',
-        ]))
-            ->assertOk()
-            ->assertSeeText('Cozy Winter Jacket');
-    }
+    $this->assertStringContainsString($catalog->slug, $url);
+    $this->assertStringContainsString('URL-001', $url);
 
-    public function test_semantic_url_with_lang_parameter_shows_correct_language_version(): void
-    {
-        $user = User::factory()->withPersonalTeam()->create();
-        $team = $user->currentTeam;
+    // Language should be a path segment, not query parameter
+    $this->assertStringContainsString('/de', $url);
+    $this->assertStringNotContainsString('?lang=', $url);
+});
 
-        $catalog = ProductCatalog::factory()->create(['team_id' => $team->id]);
+test('product get url returns null for standalone products', function () {
+    $user = User::factory()->withPersonalTeam()->create();
+    $team = $user->currentTeam;
 
-        $feedEn = ProductFeed::factory()->create([
-            'team_id' => $team->id,
-            'product_catalog_id' => $catalog->id,
-            'language' => 'en',
-        ]);
+    $feed = ProductFeed::factory()->create([
+        'team_id' => $team->id,
+        'product_catalog_id' => null,
+    ]);
 
-        $feedSv = ProductFeed::factory()->create([
-            'team_id' => $team->id,
-            'product_catalog_id' => $catalog->id,
-            'language' => 'sv',
-        ]);
+    $product = Product::factory()->create([
+        'team_id' => $team->id,
+        'product_feed_id' => $feed->id,
+        'sku' => 'STANDALONE-001',
+    ]);
 
-        Product::factory()->create([
-            'team_id' => $team->id,
-            'product_feed_id' => $feedEn->id,
-            'sku' => 'MULTI-001',
-            'title' => 'English Title',
-        ]);
-
-        Product::factory()->create([
-            'team_id' => $team->id,
-            'product_feed_id' => $feedSv->id,
-            'sku' => 'MULTI-001',
-            'title' => 'Swedish Title',
-        ]);
-
-        $this->actingAs($user);
-
-        // Request Swedish version via lang parameter
-        $this->get(route('products.show', [
-            'catalog' => $catalog->slug,
-            'sku' => 'MULTI-001',
-            'lang' => 'sv',
-        ]))
-            ->assertOk()
-            ->assertSeeText('Swedish Title');
-    }
-
-    public function test_product_get_url_returns_semantic_url_for_catalog_products(): void
-    {
-        $user = User::factory()->withPersonalTeam()->create();
-        $team = $user->currentTeam;
-
-        $catalog = ProductCatalog::factory()->create(['team_id' => $team->id]);
-
-        $feed = ProductFeed::factory()->create([
-            'team_id' => $team->id,
-            'product_catalog_id' => $catalog->id,
-            'language' => 'de',
-        ]);
-
-        $product = Product::factory()->create([
-            'team_id' => $team->id,
-            'product_feed_id' => $feed->id,
-            'sku' => 'URL-001',
-        ]);
-
-        $url = $product->getUrl();
-
-        $this->assertStringContainsString($catalog->slug, $url);
-        $this->assertStringContainsString('URL-001', $url);
-        // Language should be a path segment, not query parameter
-        $this->assertStringContainsString('/de', $url);
-        $this->assertStringNotContainsString('?lang=', $url);
-    }
-
-    public function test_product_get_url_returns_null_for_standalone_products(): void
-    {
-        $user = User::factory()->withPersonalTeam()->create();
-        $team = $user->currentTeam;
-
-        $feed = ProductFeed::factory()->create([
-            'team_id' => $team->id,
-            'product_catalog_id' => null,
-        ]);
-
-        $product = Product::factory()->create([
-            'team_id' => $team->id,
-            'product_feed_id' => $feed->id,
-            'sku' => 'STANDALONE-001',
-        ]);
-
-        $this->assertNull($product->getUrl());
-        $this->assertFalse($product->hasSemanticUrl());
-    }
-}
+    expect($product->getUrl())->toBeNull();
+    expect($product->hasSemanticUrl())->toBeFalse();
+});

@@ -1,27 +1,21 @@
 <?php
 
-namespace Tests\Unit;
-
 use App\Livewire\ManageProductFeeds;
-use PHPUnit\Framework\TestCase;
 
-class ManageProductFeedsTest extends TestCase
-{
-    public function testXmlFeedIsPreferredWhenContentContainsCommas(): void
-    {
-        $component = new class extends ManageProductFeeds {
-            public function parseForTest(string $content): array
-            {
-                return $this->parseFeed($content);
-            }
+test('xml feed is preferred when content contains commas', function () {
+    $component = new class extends ManageProductFeeds {
+        function parseForTest(string $content): array
+        {
+            return $this->parseFeed($content);
+        }
 
-            public function extractFieldsForTest(array $parsed): array
-            {
-                return $this->extractFieldsFromSample($parsed);
-            }
-        };
+        function extractFieldsForTest(array $parsed): array
+        {
+            return $this->extractFieldsFromSample($parsed);
+        }
+    };
 
-        $xmlFeed = <<<'XML'
+    $xmlFeed = <<<'XML'
 <?xml version="1.0" encoding="UTF-8"?>
 <rss xmlns:g="http://base.google.com/ns/1.0" version="2.0">
 <channel>
@@ -40,57 +34,56 @@ class ManageProductFeedsTest extends TestCase
 </rss>
 XML;
 
-        $parsed = $component->parseForTest($xmlFeed);
+    $parsed = $component->parseForTest($xmlFeed);
 
-        $this->assertSame('xml', $parsed['type']);
+    expect($parsed['type'])->toBe('xml');
 
-        $fields = $component->extractFieldsForTest($parsed);
+    $fields = $component->extractFieldsForTest($parsed);
 
-        $this->assertContains('g:id', $fields);
-        $this->assertContains('title', $fields);
-        $this->assertContains('description', $fields);
-    }
+    expect($fields)->toContain('g:id');
+    expect($fields)->toContain('title');
+    expect($fields)->toContain('description');
+});
 
-    public function testDuplicateSkusInFeedAreHandledGracefully(): void
-    {
-        $component = new class extends ManageProductFeeds {
-            public function parseForTest(string $content): array
-            {
-                return $this->parseFeed($content);
-            }
+test('duplicate skus in feed are handled gracefully', function () {
+    $component = new class extends ManageProductFeeds {
+        function parseForTest(string $content): array
+        {
+            return $this->parseFeed($content);
+        }
 
-            public function buildPayloadForTest(array $parsed, array $mapping): array
-            {
-                $payload = [];
-                $seenSkus = [];
+        function buildPayloadForTest(array $parsed, array $mapping): array
+        {
+            $payload = [];
+            $seenSkus = [];
 
-                foreach ($parsed['items'] as $item) {
-                    $sku = $this->extractValue($parsed['type'], $parsed['namespaces'], $item, $mapping['sku'] ?? '');
-                    $title = $this->extractValue($parsed['type'], $parsed['namespaces'], $item, $mapping['title'] ?? '');
-                    $link = $this->extractValue($parsed['type'], $parsed['namespaces'], $item, $mapping['url'] ?? '');
+            foreach ($parsed['items'] as $item) {
+                $sku = $this->extractValue($parsed['type'], $parsed['namespaces'], $item, $mapping['sku'] ?? '');
+                $title = $this->extractValue($parsed['type'], $parsed['namespaces'], $item, $mapping['title'] ?? '');
+                $link = $this->extractValue($parsed['type'], $parsed['namespaces'], $item, $mapping['url'] ?? '');
 
-                    if ($sku === '' || $title === '' || $link === '') {
-                        continue;
-                    }
-
-                    // Skip duplicates - this is the fix we're testing for
-                    if (isset($seenSkus[$sku])) {
-                        continue;
-                    }
-                    $seenSkus[$sku] = true;
-
-                    $payload[] = [
-                        'sku' => $sku,
-                        'title' => $title,
-                        'url' => $link,
-                    ];
+                if ($sku === '' || $title === '' || $link === '') {
+                    continue;
                 }
 
-                return $payload;
-            }
-        };
+                // Skip duplicates - this is the fix we're testing for
+                if (isset($seenSkus[$sku])) {
+                    continue;
+                }
+                $seenSkus[$sku] = true;
 
-        $xmlFeedWithDuplicates = <<<'XML'
+                $payload[] = [
+                    'sku' => $sku,
+                    'title' => $title,
+                    'url' => $link,
+                ];
+            }
+
+            return $payload;
+        }
+    };
+
+    $xmlFeedWithDuplicates = <<<'XML'
 <?xml version="1.0" encoding="UTF-8"?>
 <rss xmlns:g="http://base.google.com/ns/1.0" version="2.0">
 <channel>
@@ -114,19 +107,18 @@ XML;
 </rss>
 XML;
 
-        $parsed = $component->parseForTest($xmlFeedWithDuplicates);
-        $mapping = [
-            'sku' => 'g:id',
-            'title' => 'g:title',
-            'url' => 'g:link',
-        ];
+    $parsed = $component->parseForTest($xmlFeedWithDuplicates);
+    $mapping = [
+        'sku' => 'g:id',
+        'title' => 'g:title',
+        'url' => 'g:link',
+    ];
 
-        $payload = $component->buildPayloadForTest($parsed, $mapping);
+    $payload = $component->buildPayloadForTest($parsed, $mapping);
 
-        // Should only have 2 products (first occurrence of DUPLICATE_SKU and UNIQUE_SKU)
-        $this->assertCount(2, $payload);
-        $this->assertEquals('DUPLICATE_SKU', $payload[0]['sku']);
-        $this->assertEquals('First Product', $payload[0]['title']);
-        $this->assertEquals('UNIQUE_SKU', $payload[1]['sku']);
-    }
-}
+    // Should only have 2 products (first occurrence of DUPLICATE_SKU and UNIQUE_SKU)
+    expect($payload)->toHaveCount(2);
+    expect($payload[0]['sku'])->toEqual('DUPLICATE_SKU');
+    expect($payload[0]['title'])->toEqual('First Product');
+    expect($payload[1]['sku'])->toEqual('UNIQUE_SKU');
+});
