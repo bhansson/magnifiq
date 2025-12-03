@@ -96,27 +96,18 @@ PROMPT,
 
     /*
     |--------------------------------------------------------------------------
-    | AI Models (Deprecated - Use config/ai.php)
+    | AI Models
     |--------------------------------------------------------------------------
     |
-    | These settings are preserved for backwards compatibility but the AI
-    | abstraction layer now uses config/ai.php for provider and model selection.
+    | Vision model configuration. Image generation models are configured in
+    | the 'image_models' section below and selected via the Photo Studio UI.
     |
-    | To configure AI providers and models, update config/ai.php or use
-    | environment variables:
-    |   - AI_VISION_DRIVER / AI_VISION_MODEL
-    |   - AI_IMAGE_GENERATION_DRIVER / AI_IMAGE_GENERATION_MODEL
-    |
-    | The application uses AI::forFeature('vision') and
-    | AI::forFeature('image_generation') to resolve the appropriate adapter.
+    | The application uses AI::forFeature('vision') to resolve the vision adapter.
     |
     */
     'models' => [
-        // Legacy: Vision model (now configured via AI_VISION_MODEL)
-        'vision' => env('AI_VISION_MODEL', env('OPENROUTER_PHOTO_STUDIO_MODEL')),
-
-        // Legacy: Image generation model (now configured via AI_IMAGE_GENERATION_MODEL)
-        'image_generation' => env('AI_IMAGE_GENERATION_MODEL', env('OPENROUTER_PHOTO_STUDIO_IMAGE_MODEL')),
+        // Vision model for prompt extraction (configured via AI_VISION_MODEL)
+        'vision' => env('AI_VISION_MODEL', 'openai/gpt-4.1'),
     ],
 
     /*
