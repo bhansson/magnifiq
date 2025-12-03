@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use Livewire\Attributes\Validate;
 use Livewire\Component;
+use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
 use SimpleXMLElement;
 
@@ -493,8 +494,8 @@ class ManageProductFeeds extends Component
 
     protected function retrieveFeedContent(): string
     {
-        if ($this->feedFile) {
-            return file_get_contents($this->feedFile->getRealPath());
+        if ($this->feedFile instanceof TemporaryUploadedFile) {
+            return $this->feedFile->get();
         }
 
         $response = Http::withOptions([

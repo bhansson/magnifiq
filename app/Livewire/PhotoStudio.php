@@ -12,7 +12,6 @@ use App\Models\Product;
 use App\Models\ProductAiJob;
 use App\Services\PhotoStudioSourceStorage;
 use Illuminate\Contracts\View\View;
-use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -1512,11 +1511,11 @@ class PhotoStudio extends Component
         return $mime;
     }
 
-    private function encodeUploadedImage(UploadedFile $file): string
+    private function encodeUploadedImage(TemporaryUploadedFile $file): string
     {
-        $contents = file_get_contents($file->getRealPath());
+        $contents = $file->get();
 
-        if ($contents === false) {
+        if ($contents === false || $contents === null) {
             throw new RuntimeException('Failed to read the uploaded image.');
         }
 
@@ -1545,11 +1544,11 @@ class PhotoStudio extends Component
      * This method resizes and converts the image to JPEG format, returning
      * the processed binary data suitable for storage.
      */
-    private function processUploadedImageToJpegBinary(UploadedFile $file): string
+    private function processUploadedImageToJpegBinary(TemporaryUploadedFile $file): string
     {
-        $contents = file_get_contents($file->getRealPath());
+        $contents = $file->get();
 
-        if ($contents === false) {
+        if ($contents === false || $contents === null) {
             throw new RuntimeException('Failed to read the uploaded image.');
         }
 
