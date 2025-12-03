@@ -40,7 +40,9 @@ return [
 
         'image_generation' => [
             'driver' => env('AI_IMAGE_GENERATION_DRIVER', 'replicate'),
-            'model' => env('AI_IMAGE_GENERATION_MODEL'),
+            // Note: Model selection is handled by Photo Studio UI (see config/photo-studio.php)
+            // This is only used as a fallback for direct AI::forFeature('image_generation') calls
+            'model' => null,
         ],
 
     ],

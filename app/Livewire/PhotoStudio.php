@@ -633,10 +633,7 @@ class PhotoStudio extends Component
 
         $disk = config('photo-studio.generation_disk', 's3');
 
-        // Use selected model or fall back to legacy config
-        $model = $this->selectedModel ?: config('photo-studio.models.image_generation');
-
-        if (! $model) {
+        if (! $this->selectedModel) {
             $this->editSubmitting = false;
             $this->addError('editInstruction', 'No image model selected. Please select a model before generating.');
 
@@ -678,7 +675,7 @@ class PhotoStudio extends Component
                     'parent_generation_id' => $parentGeneration->id,
                     'edit_instruction' => $this->editInstruction,
                     'prompt' => $newPrompt,
-                    'model' => $model,
+                    'model' => $this->selectedModel,
                     'resolution' => $this->selectedResolution,
                     'estimated_cost' => $estimatedCost,
                 ]),
@@ -696,7 +693,7 @@ class PhotoStudio extends Component
                 userId: Auth::id(),
                 productId: $parentGeneration->product_id,
                 prompt: $newPrompt,
-                model: $model,
+                model: $this->selectedModel,
                 disk: $disk,
                 imageInput: $imageUrl,
                 sourceType: 'edited_generation',
@@ -1122,10 +1119,7 @@ class PhotoStudio extends Component
                 return $ref;
             })->values()->toArray();
 
-            // Use selected model or fall back to legacy config
-            $model = $this->selectedModel ?: config('photo-studio.models.image_generation');
-
-            if (! $model) {
+            if (! $this->selectedModel) {
                 $this->errorMessage = 'No image model selected. Please select a model before generating.';
 
                 return;
@@ -1162,7 +1156,7 @@ class PhotoStudio extends Component
                     'image_count' => count($this->compositionImages),
                     'source_references' => $sourceReferences,
                     'prompt' => $this->promptResult,
-                    'model' => $model,
+                    'model' => $this->selectedModel,
                     'resolution' => $this->selectedResolution,
                     'estimated_cost' => $estimatedCost,
                     'aspect_ratio' => $compositionAspectRatio,
@@ -1175,7 +1169,7 @@ class PhotoStudio extends Component
                 userId: Auth::id(),
                 productId: $firstProductId,
                 prompt: $this->promptResult,
-                model: $model,
+                model: $this->selectedModel,
                 disk: $disk,
                 imageInput: $imageDataUris,
                 sourceType: 'composition',
