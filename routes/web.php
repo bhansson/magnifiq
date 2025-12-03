@@ -3,6 +3,8 @@
 use App\Http\Controllers\DownloadPhotoStudioGenerationController;
 use App\Http\Controllers\PhotoStudioSourceImageController;
 use App\Http\Controllers\ProductController;
+use App\Models\Team;
+use App\Models\User;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -47,13 +49,17 @@ Route::middleware([
         ->whereNumber('index');
 });
 
-// Partner admin routes (superadmin only)
+// Admin routes (superadmin only)
 Route::middleware([
     'auth:sanctum',
     config('jetstream.auth_session'),
     'verified',
     'superadmin',
 ])->group(function () {
+    Route::get('/admin/dashboard', function () {
+        return view('admin.dashboard');
+    })->name('admin.dashboard');
+
     Route::get('/admin/partners', function () {
         return view('admin.partners');
     })->name('admin.partners');
@@ -61,4 +67,22 @@ Route::middleware([
     Route::get('/admin/revenue', function () {
         return view('admin.revenue');
     })->name('admin.revenue');
+
+    // Users management
+    Route::get('/admin/users', function () {
+        return view('admin.users.index');
+    })->name('admin.users');
+
+    Route::get('/admin/users/{user}', function (User $user) {
+        return view('admin.users.show', ['user' => $user]);
+    })->name('admin.users.show');
+
+    // Teams management
+    Route::get('/admin/teams', function () {
+        return view('admin.teams.index');
+    })->name('admin.teams');
+
+    Route::get('/admin/teams/{team}', function (Team $team) {
+        return view('admin.teams.show', ['team' => $team]);
+    })->name('admin.teams.show');
 });

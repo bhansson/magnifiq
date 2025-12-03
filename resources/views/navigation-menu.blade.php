@@ -151,6 +151,15 @@
                                     {{ __('Administration') }}
                                 </div>
 
+                                <x-dropdown-link href="{{ route('admin.dashboard') }}">
+                                    {{ __('Admin Dashboard') }}
+                                </x-dropdown-link>
+                                <x-dropdown-link href="{{ route('admin.users') }}">
+                                    {{ __('Users') }}
+                                </x-dropdown-link>
+                                <x-dropdown-link href="{{ route('admin.teams') }}">
+                                    {{ __('Teams') }}
+                                </x-dropdown-link>
                                 <x-dropdown-link href="{{ route('admin.partners') }}">
                                     {{ __('Partners') }}
                                 </x-dropdown-link>
@@ -247,6 +256,15 @@
                         {{ __('Administration') }}
                     </div>
 
+                    <x-responsive-nav-link href="{{ route('admin.dashboard') }}" :active="request()->routeIs('admin.dashboard')">
+                        {{ __('Admin Dashboard') }}
+                    </x-responsive-nav-link>
+                    <x-responsive-nav-link href="{{ route('admin.users') }}" :active="request()->routeIs('admin.users*')">
+                        {{ __('Users') }}
+                    </x-responsive-nav-link>
+                    <x-responsive-nav-link href="{{ route('admin.teams') }}" :active="request()->routeIs('admin.teams*')">
+                        {{ __('Teams') }}
+                    </x-responsive-nav-link>
                     <x-responsive-nav-link href="{{ route('admin.partners') }}" :active="request()->routeIs('admin.partners')">
                         {{ __('Partners') }}
                     </x-responsive-nav-link>

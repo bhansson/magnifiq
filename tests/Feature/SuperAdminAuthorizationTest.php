@@ -4,6 +4,15 @@ use App\Models\User;
 
 uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
 
+test('superadmin can access admin dashboard', function () {
+    $superadmin = User::factory()->withPersonalTeam()->create(['role' => 'superadmin']);
+
+    $response = $this->actingAs($superadmin)->get('/admin/dashboard');
+
+    $response->assertStatus(200);
+    $response->assertSee('Admin Dashboard');
+});
+
 test('superadmin can access partners page', function () {
     $superadmin = User::factory()->withPersonalTeam()->create(['role' => 'superadmin']);
 
@@ -96,6 +105,7 @@ test('superadmin sees admin links in navigation', function () {
     $response = $this->actingAs($superadmin)->get('/dashboard');
 
     $response->assertStatus(200);
+    $response->assertSee('Admin Dashboard');
     $response->assertSee('Partners');
     $response->assertSee('Revenue');
 });
@@ -106,6 +116,7 @@ test('regular user does not see admin links in navigation', function () {
     $response = $this->actingAs($user)->get('/dashboard');
 
     $response->assertStatus(200);
+    $response->assertDontSee('Admin Dashboard', false);
     $response->assertDontSee('Partners', false);
     $response->assertDontSee('Revenue', false);
 });
