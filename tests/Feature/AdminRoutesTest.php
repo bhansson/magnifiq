@@ -4,6 +4,31 @@ use App\Models\User;
 
 uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
 
+test('superadmin can access admin dashboard', function () {
+    $superadmin = User::factory()->withPersonalTeam()->create([
+        'role' => 'superadmin',
+    ]);
+
+    $response = $this->actingAs($superadmin)->get('/admin/dashboard');
+
+    $response->assertStatus(200);
+    $response->assertSee('Admin Dashboard');
+});
+
+test('regular user cannot access admin dashboard', function () {
+    $user = User::factory()->withPersonalTeam()->create();
+
+    $response = $this->actingAs($user)->get('/admin/dashboard');
+
+    $response->assertStatus(403);
+});
+
+test('guest cannot access admin dashboard', function () {
+    $response = $this->get('/admin/dashboard');
+
+    $response->assertRedirect('/login');
+});
+
 test('superadmin can access partners page', function () {
     $superadmin = User::factory()->withPersonalTeam()->create([
         'role' => 'superadmin',
