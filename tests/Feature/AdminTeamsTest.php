@@ -1,6 +1,5 @@
 <?php
 
-use App\Models\PhotoStudioGeneration;
 use App\Models\ProductAiJob;
 use App\Models\ProductFeed;
 use App\Models\Team;
@@ -25,7 +24,7 @@ test('superadmin can view team details page', function () {
         'user_id' => $superadmin->id,
     ]);
 
-    $response = $this->actingAs($superadmin)->get('/admin/teams/' . $team->id);
+    $response = $this->actingAs($superadmin)->get('/admin/teams/'.$team->id);
 
     $response->assertStatus(200);
     $response->assertSee('Target Team');
@@ -165,8 +164,31 @@ test('admin teams page has back link to teams list', function () {
     $superadmin = User::factory()->withPersonalTeam()->create(['role' => 'superadmin']);
     $team = Team::factory()->create(['user_id' => $superadmin->id]);
 
-    $response = $this->actingAs($superadmin)->get('/admin/teams/' . $team->id);
+    $response = $this->actingAs($superadmin)->get('/admin/teams/'.$team->id);
 
     $response->assertStatus(200);
     $response->assertSee('Back to Teams');
+});
+
+// Authorization tests - verify Livewire components are protected
+test('regular user cannot access AdminTeams component via Livewire', function () {
+    $user = User::factory()->create(['role' => 'user']);
+
+    Livewire::actingAs($user)
+        ->test(\App\Livewire\AdminTeams::class)
+        ->assertStatus(403);
+});
+
+test('regular user cannot access AdminTeamDetail component via Livewire', function () {
+    $user = User::factory()->create(['role' => 'user']);
+    $team = Team::factory()->create();
+
+    Livewire::actingAs($user)
+        ->test(\App\Livewire\AdminTeamDetail::class, ['team' => $team])
+        ->assertStatus(403);
+});
+
+test('unauthenticated user cannot access AdminTeams component', function () {
+    Livewire::test(\App\Livewire\AdminTeams::class)
+        ->assertStatus(403);
 });

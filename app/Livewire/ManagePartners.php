@@ -12,7 +12,7 @@ use Livewire\WithPagination;
 
 class ManagePartners extends Component
 {
-    use WithPagination, WithFileUploads;
+    use Concerns\AuthorizesSuperAdmin, WithFileUploads, WithPagination;
 
     #[Validate('required|string|max:255')]
     public string $name = '';
@@ -27,12 +27,17 @@ class ManagePartners extends Component
     public $logo = null;
 
     public bool $showCreateModal = false;
+
     public bool $showEditModal = false;
+
     public ?int $editingPartnerId = null;
+
     public ?string $existingLogoPath = null;
 
     public function createPartner(): void
     {
+        $this->authorizeSuperAdmin();
+
         $this->validate([
             'name' => 'required|string|max:255',
             'partner_slug' => 'nullable|string|max:50|unique:teams,partner_slug',
@@ -62,6 +67,8 @@ class ManagePartners extends Component
 
     public function deletePartner(int $partnerId): void
     {
+        $this->authorizeSuperAdmin();
+
         $partner = Team::query()
             ->where('type', 'partner')
             ->findOrFail($partnerId);
@@ -78,6 +85,8 @@ class ManagePartners extends Component
 
     public function openEditModal(int $partnerId): void
     {
+        $this->authorizeSuperAdmin();
+
         $partner = Team::query()
             ->where('type', 'partner')
             ->findOrFail($partnerId);
@@ -92,6 +101,8 @@ class ManagePartners extends Component
 
     public function updatePartner(): void
     {
+        $this->authorizeSuperAdmin();
+
         $partner = Team::query()
             ->where('type', 'partner')
             ->findOrFail($this->editingPartnerId);
@@ -127,6 +138,8 @@ class ManagePartners extends Component
 
     public function removeLogo(): void
     {
+        $this->authorizeSuperAdmin();
+
         if ($this->editingPartnerId) {
             $partner = Team::query()
                 ->where('type', 'partner')

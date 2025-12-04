@@ -11,6 +11,8 @@ use Livewire\Component;
 
 class AdminDashboard extends Component
 {
+    use Concerns\AuthorizesSuperAdmin;
+
     /** @var array<string, mixed> */
     public array $photoStudioStats = [];
 

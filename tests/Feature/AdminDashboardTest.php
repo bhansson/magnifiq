@@ -144,3 +144,17 @@ test('admin dashboard livewire component renders correctly', function () {
         ->assertSee('AI Jobs')
         ->assertSee('Photo Studio');
 });
+
+// Authorization tests - verify Livewire component is protected
+test('regular user cannot access AdminDashboard component via Livewire', function () {
+    $user = User::factory()->create(['role' => 'user']);
+
+    Livewire::actingAs($user)
+        ->test(\App\Livewire\AdminDashboard::class)
+        ->assertStatus(403);
+});
+
+test('unauthenticated user cannot access AdminDashboard component', function () {
+    Livewire::test(\App\Livewire\AdminDashboard::class)
+        ->assertStatus(403);
+});

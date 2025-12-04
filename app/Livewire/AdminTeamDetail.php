@@ -9,6 +9,8 @@ use Livewire\Component;
 
 class AdminTeamDetail extends Component
 {
+    use Concerns\AuthorizesSuperAdmin;
+
     public Team $team;
 
     public function mount(Team $team): void

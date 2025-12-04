@@ -258,3 +258,58 @@ test('parseJobClass handles invalid JSON', function () {
 
     expect($className)->toBe('Unknown');
 });
+
+// Authorization tests - verify Livewire actions are protected
+test('regular user cannot call retryJob action directly via Livewire', function () {
+    $user = User::factory()->withPersonalTeam()->create(['role' => 'user']);
+
+    DB::table('failed_jobs')->insert([
+        'uuid' => 'auth-test-uuid',
+        'connection' => 'database',
+        'queue' => 'default',
+        'payload' => json_encode(['displayName' => 'App\\Jobs\\TestJob']),
+        'exception' => 'Test exception',
+        'failed_at' => now(),
+    ]);
+
+    Livewire::actingAs($user)
+        ->test(AdminJobs::class)
+        ->assertStatus(403);
+});
+
+test('admin user cannot call retryJob action directly via Livewire', function () {
+    $admin = User::factory()->withPersonalTeam()->create(['role' => 'admin']);
+
+    Livewire::actingAs($admin)
+        ->test(AdminJobs::class)
+        ->assertStatus(403);
+});
+
+test('regular user cannot call deleteFailedJob action via Livewire', function () {
+    $user = User::factory()->withPersonalTeam()->create(['role' => 'user']);
+
+    Livewire::actingAs($user)
+        ->test(AdminJobs::class)
+        ->assertStatus(403);
+});
+
+test('regular user cannot call flushFailedJobs action via Livewire', function () {
+    $user = User::factory()->withPersonalTeam()->create(['role' => 'user']);
+
+    Livewire::actingAs($user)
+        ->test(AdminJobs::class)
+        ->assertStatus(403);
+});
+
+test('regular user cannot call retryAllFailedJobs action via Livewire', function () {
+    $user = User::factory()->withPersonalTeam()->create(['role' => 'user']);
+
+    Livewire::actingAs($user)
+        ->test(AdminJobs::class)
+        ->assertStatus(403);
+});
+
+test('unauthenticated user cannot access AdminJobs component', function () {
+    Livewire::test(AdminJobs::class)
+        ->assertStatus(403);
+});

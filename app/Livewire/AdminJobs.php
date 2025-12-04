@@ -10,7 +10,7 @@ use Livewire\WithPagination;
 
 class AdminJobs extends Component
 {
-    use WithPagination;
+    use Concerns\AuthorizesSuperAdmin, WithPagination;
 
     #[Url]
     public string $tab = 'pending';
@@ -41,6 +41,8 @@ class AdminJobs extends Component
      */
     public function retryJob(string $uuid): void
     {
+        $this->authorizeSuperAdmin();
+
         $failedJob = DB::table('failed_jobs')->where('uuid', $uuid)->first();
 
         if (! $failedJob) {
@@ -61,6 +63,8 @@ class AdminJobs extends Component
      */
     public function deleteFailedJob(int $id): void
     {
+        $this->authorizeSuperAdmin();
+
         DB::table('failed_jobs')->where('id', $id)->delete();
 
         session()->flash('message', 'Failed job deleted.');
@@ -71,6 +75,8 @@ class AdminJobs extends Component
      */
     public function flushFailedJobs(): void
     {
+        $this->authorizeSuperAdmin();
+
         DB::table('failed_jobs')->truncate();
 
         session()->flash('message', 'All failed jobs have been deleted.');
@@ -81,6 +87,8 @@ class AdminJobs extends Component
      */
     public function retryAllFailedJobs(): void
     {
+        $this->authorizeSuperAdmin();
+
         $failedJobs = DB::table('failed_jobs')->get();
         $count = 0;
 

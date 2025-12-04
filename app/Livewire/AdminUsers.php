@@ -9,7 +9,7 @@ use Livewire\WithPagination;
 
 class AdminUsers extends Component
 {
-    use WithPagination;
+    use Concerns\AuthorizesSuperAdmin, WithPagination;
 
     #[Url(as: 'q')]
     public string $search = '';

@@ -9,9 +9,9 @@ use Livewire\Livewire;
 
 uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
 
-test('admin can view partners list', function () {
-    $admin = User::factory()->create();
-    $this->actingAs($admin);
+test('superadmin can view partners list', function () {
+    $superadmin = User::factory()->create(['role' => 'superadmin']);
+    $this->actingAs($superadmin);
 
     $partner1 = Team::factory()->create(['type' => 'partner', 'name' => 'Acme Partner']);
     $partner2 = Team::factory()->create(['type' => 'partner', 'name' => 'Beta Partner']);
@@ -23,9 +23,9 @@ test('admin can view partners list', function () {
         ->assertDontSee($customer->name);
 });
 
-test('can create new partner', function () {
-    $admin = User::factory()->create();
-    $this->actingAs($admin);
+test('superadmin can create new partner', function () {
+    $superadmin = User::factory()->create(['role' => 'superadmin']);
+    $this->actingAs($superadmin);
 
     Livewire::test(ManagePartners::class)
         ->set('name', 'New Partner Inc')
@@ -42,8 +42,8 @@ test('can create new partner', function () {
 });
 
 test('partner name is required', function () {
-    $admin = User::factory()->create();
-    $this->actingAs($admin);
+    $superadmin = User::factory()->create(['role' => 'superadmin']);
+    $this->actingAs($superadmin);
 
     Livewire::test(ManagePartners::class)
         ->set('name', '')
@@ -53,8 +53,8 @@ test('partner name is required', function () {
 });
 
 test('partner slug must be unique', function () {
-    $admin = User::factory()->create();
-    $this->actingAs($admin);
+    $superadmin = User::factory()->create(['role' => 'superadmin']);
+    $this->actingAs($superadmin);
 
     Team::factory()->create([
         'type' => 'partner',
@@ -68,9 +68,9 @@ test('partner slug must be unique', function () {
         ->assertHasErrors(['partner_slug' => 'unique']);
 });
 
-test('can delete partner', function () {
-    $admin = User::factory()->create();
-    $this->actingAs($admin);
+test('superadmin can delete partner', function () {
+    $superadmin = User::factory()->create(['role' => 'superadmin']);
+    $this->actingAs($superadmin);
 
     $partner = Team::factory()->create(['type' => 'partner', 'name' => 'Delete Me']);
 
@@ -83,11 +83,11 @@ test('can delete partner', function () {
     ]);
 });
 
-test('can upload partner logo', function () {
+test('superadmin can upload partner logo', function () {
     Storage::fake('public');
 
-    $admin = User::factory()->create();
-    $this->actingAs($admin);
+    $superadmin = User::factory()->create(['role' => 'superadmin']);
+    $this->actingAs($superadmin);
 
     $logo = UploadedFile::fake()->image('logo.png', 200, 200);
 
@@ -102,4 +102,26 @@ test('can upload partner logo', function () {
 
     expect($partner->logo_path)->not->toBeNull();
     Storage::disk('public')->assertExists($partner->logo_path);
+});
+
+// Authorization tests - verify Livewire component is protected
+test('regular user cannot access ManagePartners component', function () {
+    $user = User::factory()->create(['role' => 'user']);
+
+    Livewire::actingAs($user)
+        ->test(ManagePartners::class)
+        ->assertStatus(403);
+});
+
+test('admin user cannot access ManagePartners component', function () {
+    $admin = User::factory()->create(['role' => 'admin']);
+
+    Livewire::actingAs($admin)
+        ->test(ManagePartners::class)
+        ->assertStatus(403);
+});
+
+test('unauthenticated user cannot access ManagePartners component', function () {
+    Livewire::test(ManagePartners::class)
+        ->assertStatus(403);
 });
