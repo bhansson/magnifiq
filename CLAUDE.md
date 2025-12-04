@@ -8,13 +8,13 @@ Magnifiq is a Laravel 12 + Jetstream (Livewire stack) application running on Lar
 
 ## Development Environment
 
-This project uses Docker Compose for local development with dedicated services for Octane, Vite, Redis, Horizon queue workers, scheduled tasks, and a bundled Supabase Postgres database.
+This project uses Docker Compose for local development with dedicated services for Octane, Vite, queue workers, scheduled tasks, and Postgres database.
 
 ### Essential Commands
 
 **Start the development stack:**
 ```bash
-docker compose up octane vite redis -d
+docker compose up octane vite -d
 ```
 
 **Run migrations:**
@@ -42,13 +42,10 @@ docker compose exec octane bash
 docker compose exec octane php artisan octane:reload
 ```
 
-**Start queue worker (Horizon):**
+**Start queue worker:**
 ```bash
 docker compose up queue -d
 ```
-
-**View Horizon dashboard:**
-Navigate to `http://magnifiq.test/horizon` after starting the Octane service.
 
 **Run scheduler:**
 ```bash
@@ -180,7 +177,7 @@ The AI generation system supports two primary workflows:
    - Stores generations in `PhotoStudioGeneration` model with team-scoped gallery
    - Supports optional creative briefs to guide prompt extraction
 
-**Queue Architecture**: All AI generation jobs flow through the `ProductAiJob` model which tracks status, progress, and metadata. Jobs are dispatched to the `ai` queue (see `config/horizon.php`) and processed by dedicated Horizon supervisors with higher memory limits (256MB) and longer timeouts (120s).
+**Queue Architecture**: All AI generation jobs flow through the `ProductAiJob` model which tracks status, progress, and metadata. Jobs are dispatched to the `ai` queue and processed by the queue worker with configurable retries and timeouts.
 
 The `GeneratePhotoStudioImage` job (`app/Jobs/GeneratePhotoStudioImage.php`) handles complex AI provider response parsing, supports multiple image payload formats (base64, URLs, attachment references), automatically converts PNGs to JPGs with white backgrounds, and stores final images on the configured disk (S3 by default).
 
@@ -221,7 +218,6 @@ Key components:
 - Fortify handles registration, login, password resets
 - Team policies in `app/Policies/TeamPolicy.php`
 - All authenticated routes require `['auth:sanctum', 'verified']` middleware
-- Horizon dashboard protected by same auth middleware
 
 ### AI Provider Abstraction
 
@@ -364,8 +360,8 @@ Key variables beyond standard Laravel config:
 
 - **Octane**: Runs on port 8000 internally, and 80 externally, uses Swoole, file watching enabled by default
 - **Vite**: Runs on port 5173, hot module replacement for frontend assets
-- **Redis**: Port 6379, used for cache, sessions, and Horizon queue backend
-- **Horizon**: Two supervisors—`supervisor-default` (default queue) and `supervisor-ai` (ai queue with higher resources)
+- **Queue**: Uses `queue:work` with database driver (no Redis required)
+- **Cache**: Uses database driver
 
 ## Frontend Stack
 
@@ -464,8 +460,7 @@ This ensures consistent development experience across the team without IDE lock-
 5. Add queue dispatch in relevant Livewire component
 6. Create corresponding model for storing results
 7. Add migration for new table
-8. Update Horizon config if custom queue required
-9. Add monitoring in `AiJobsIndex` component
+8. Add monitoring in `AiJobsIndex` component
 
 ### Adding a New AI Provider
 

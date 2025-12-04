@@ -21,7 +21,6 @@ services:
       - .:/var/www/html
       - composer-cache:/tmp/composer
     depends_on:
-      - redis
       - postgres
 
   queue:
@@ -32,7 +31,9 @@ services:
         PUID: ${PUID:-1000}
         PGID: ${PGID:-1000}
     image: magnifiq/octane:local
-    command: ["php", "artisan", "horizon"]
+    command: ["php", "artisan", "queue:work", "--queue=default,ai,vision", "--tries=3", "--timeout=120", "--sleep=1"]
+    deploy:
+      replicas: 2
     environment:
       APP_ENV: ${APP_ENV:-local}
       APP_DEBUG: ${APP_DEBUG:-true}
@@ -41,7 +42,7 @@ services:
       - .:/var/www/html
       - composer-cache:/tmp/composer
     depends_on:
-      - redis
+      - postgres
 
   scheduler:
     build:
@@ -61,7 +62,7 @@ services:
       - .:/var/www/html
       - composer-cache:/tmp/composer
     depends_on:
-      - redis
+      - postgres
 
   vite:
     image: node:22-alpine
@@ -76,15 +77,6 @@ services:
     volumes:
       - .:/var/www/html
       - node_modules:/var/www/html/node_modules
-
-  redis:
-    image: redis:7-alpine
-    container_name: magnifiq-redis
-    command: redis-server --save "" --appendonly no
-    ports:
-      - "${REDIS_PORT:-6379}:6379"
-    volumes:
-      - redis-data:/data
 
   postgres:
     image: postgres:15-alpine
@@ -102,5 +94,4 @@ services:
 volumes:
   composer-cache:
   node_modules:
-  redis-data:
   postgres-data:
