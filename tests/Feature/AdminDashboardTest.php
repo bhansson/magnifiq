@@ -17,7 +17,7 @@ test('admin dashboard displays environment configuration', function () {
     $response->assertSee('AI Models');
     $response->assertSee('Environment');
     $response->assertSee('Debug Mode');
-    $response->assertSee('Chat');
+    $response->assertSee('Text');
     $response->assertSee('Vision');
 });
 

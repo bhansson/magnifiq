@@ -33,7 +33,7 @@ services:
     image: magnifiq/octane:local
     command: ["php", "artisan", "queue:work", "--queue=default,ai,vision", "--tries=3", "--timeout=120", "--sleep=1"]
     deploy:
-      replicas: 5
+      replicas: 2
     environment:
       APP_ENV: ${APP_ENV:-local}
       APP_DEBUG: ${APP_DEBUG:-true}
