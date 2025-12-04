@@ -6,6 +6,8 @@ use App\Models\TeamActivity;
 use App\Models\User;
 use App\Notifications\ResetPasswordNotification;
 use App\Notifications\VerifyEmailNotification;
+use Illuminate\Auth\Events\Registered;
+use Illuminate\Auth\Listeners\SendEmailVerificationNotification;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Support\Facades\Event;
@@ -28,6 +30,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Send email verification notification when a user registers
+        Event::listen(Registered::class, SendEmailVerificationNotification::class);
+
         // Use custom branded verification email
         VerifyEmail::toMailUsing(function (object $notifiable, string $url) {
             return (new VerifyEmailNotification($url))->toMail($notifiable);
