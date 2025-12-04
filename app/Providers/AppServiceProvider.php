@@ -4,6 +4,10 @@ namespace App\Providers;
 
 use App\Models\TeamActivity;
 use App\Models\User;
+use App\Notifications\ResetPasswordNotification;
+use App\Notifications\VerifyEmailNotification;
+use Illuminate\Auth\Notifications\ResetPassword;
+use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Jetstream\Events\TeamMemberAdded;
@@ -24,6 +28,16 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Use custom branded verification email
+        VerifyEmail::toMailUsing(function (object $notifiable, string $url) {
+            return (new VerifyEmailNotification($url))->toMail($notifiable);
+        });
+
+        // Use custom branded password reset email
+        ResetPassword::toMailUsing(function (object $notifiable, string $token) {
+            return (new ResetPasswordNotification($token))->toMail($notifiable);
+        });
+
         Event::listen(TeamMemberAdded::class, function (TeamMemberAdded $event) {
             TeamActivity::create([
                 'team_id' => $event->team->id,
