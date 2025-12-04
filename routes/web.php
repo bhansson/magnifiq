@@ -85,4 +85,9 @@ Route::middleware([
     Route::get('/admin/teams/{team}', function (Team $team) {
         return view('admin.teams.show', ['team' => $team]);
     })->name('admin.teams.show');
+
+    // Queue jobs management
+    Route::get('/admin/jobs', function () {
+        return view('admin.jobs.index');
+    })->name('admin.jobs');
 });
