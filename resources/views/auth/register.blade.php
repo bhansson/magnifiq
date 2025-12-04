@@ -46,6 +46,10 @@
                 </div>
             @endif
 
+            <div class="mt-4">
+                <x-turnstile-widget />
+            </div>
+
             <div class="flex items-center justify-end mt-6">
                 <x-button class="w-full justify-center">
                     {{ __('Create Account') }}
