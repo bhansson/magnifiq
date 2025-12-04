@@ -9,7 +9,7 @@ use Livewire\WithPagination;
 
 class PartnerRevenueDashboard extends Component
 {
-    use WithPagination;
+    use Concerns\AuthorizesSuperAdmin, WithPagination;
 
     public ?int $selectedPartnerId = null;
 
@@ -31,7 +31,7 @@ class PartnerRevenueDashboard extends Component
         $revenueRecords = $revenueQuery->paginate(20);
 
         $totalPartnerRevenue = PartnerRevenue::query()
-            ->when($this->selectedPartnerId, fn($q) => $q->where('partner_team_id', $this->selectedPartnerId))
+            ->when($this->selectedPartnerId, fn ($q) => $q->where('partner_team_id', $this->selectedPartnerId))
             ->sum('partner_revenue_cents');
 
         return view('livewire.partner-revenue-dashboard', [

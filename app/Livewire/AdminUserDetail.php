@@ -8,6 +8,8 @@ use Livewire\Component;
 
 class AdminUserDetail extends Component
 {
+    use Concerns\AuthorizesSuperAdmin;
+
     public User $user;
 
     public function mount(User $user): void
