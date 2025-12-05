@@ -2,6 +2,7 @@
 
 namespace App\Livewire;
 
+use App\Facades\AI;
 use App\Jobs\RunProductAiTemplateJob;
 use App\Models\Product;
 use App\Models\ProductAiGeneration;
@@ -69,7 +70,7 @@ class ProductShow extends Component
         $this->generationLoading[$key] = true;
 
         try {
-            if (! config('laravel-openrouter.api_key')) {
+            if (! AI::hasApiKeyForFeature('chat')) {
                 throw new \RuntimeException('AI provider API key is not configured.');
             }
 

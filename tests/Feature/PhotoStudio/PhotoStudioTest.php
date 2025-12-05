@@ -786,7 +786,6 @@ test('generate photo studio image job fetches openrouter file with headers', fun
 
     // Set up AI config keys
     config()->set('ai.providers.openrouter.api_endpoint', 'https://openrouter.ai/api/v1/');
-    config()->set('ai.features.image_generation.driver', 'openrouter');
 
     // Combined HTTP fake for both chat and file endpoints
     Http::fake([
@@ -943,7 +942,6 @@ function fakeOpenRouter(callable $callback): void
     config()->set('ai.providers.openrouter.api_key', 'test-key');
     config()->set('ai.providers.openrouter.api_endpoint', 'https://openrouter.ai/api/v1/');
     config()->set('ai.features.vision.driver', 'openrouter');
-    config()->set('ai.features.image_generation.driver', 'openrouter');
 
     Http::fake([
         '*openrouter.ai/*' => function ($request) use ($callback) {
@@ -1591,7 +1589,6 @@ test('job receives model and resolution parameters', function () {
 
 test('generation record stores resolution and cost', function () {
     config()->set('photo-studio.generation_disk', 's3');
-    config()->set('ai.features.image_generation.driver', 'replicate');
     config()->set('ai.providers.replicate.api_key', 'test-key');
 
     Storage::fake('s3');

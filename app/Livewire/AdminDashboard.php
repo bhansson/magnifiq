@@ -50,7 +50,7 @@ class AdminDashboard extends Component
             'chat_model' => config('ai.features.chat.model'),
             'vision_driver' => config('ai.features.vision.driver'),
             'vision_model' => config('ai.features.vision.model'),
-            'image_generation_driver' => config('ai.features.image_generation.driver'),
+            'default_image_model' => config('photo-studio.default_image_model'),
         ];
     }
 

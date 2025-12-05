@@ -303,6 +303,20 @@ class PhotoStudio extends Component
     }
 
     /**
+     * Check if the selected model's provider has an API key configured.
+     *
+     * Each model specifies its provider (e.g., 'replicate') in the config.
+     * Falls back to 'replicate' for any models without an explicit provider.
+     */
+    public function hasApiKeyForSelectedModel(): bool
+    {
+        $config = $this->getSelectedModelConfig();
+        $provider = $config['provider'] ?? 'replicate';
+
+        return AI::hasApiKeyForDriver($provider);
+    }
+
+    /**
      * Check if the selected model supports resolution selection.
      */
     public function modelSupportsResolution(): bool
@@ -624,7 +638,7 @@ class PhotoStudio extends Component
             return;
         }
 
-        if (! AI::hasApiKeyForFeature('image_generation')) {
+        if (! $this->hasApiKeyForSelectedModel()) {
             $this->editSubmitting = false;
             $this->addError('editInstruction', 'Configure an AI provider API key before generating images.');
 
@@ -1046,7 +1060,7 @@ class PhotoStudio extends Component
         $this->errorMessage = null;
         $this->generationStatus = null;
 
-        if (! AI::hasApiKeyForFeature('image_generation')) {
+        if (! $this->hasApiKeyForSelectedModel()) {
             $this->errorMessage = 'Configure an AI provider API key before generating images.';
 
             return;

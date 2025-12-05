@@ -16,7 +16,6 @@ beforeEach(function () {
     config()->set('ai.providers.openai.api_key', 'test-key');
     config()->set('ai.features.chat.model', 'gpt-4o');
     config()->set('ai.features.vision.model', 'gpt-4o');
-    config()->set('ai.features.image_generation.model', 'dall-e-3');
 
     $this->adapter = new OpenAiAdapter([
         'api_key' => 'test-key',

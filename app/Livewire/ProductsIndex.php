@@ -2,6 +2,7 @@
 
 namespace App\Livewire;
 
+use App\Facades\AI;
 use App\Jobs\RunProductAiTemplateJob;
 use App\Models\Product;
 use App\Models\ProductAiJob;
@@ -126,7 +127,7 @@ class ProductsIndex extends Component
                 return;
             }
 
-            if (! config('laravel-openrouter.api_key')) {
+            if (! AI::hasApiKeyForFeature('chat')) {
                 $this->bulkErrorMessage = 'AI provider API key is not configured, unable to queue AI jobs.';
 
                 return;
@@ -417,7 +418,7 @@ class ProductsIndex extends Component
                 ->unique()
                 ->values();
 
-            if (! config('laravel-openrouter.api_key')) {
+            if (! AI::hasApiKeyForFeature('chat')) {
                 throw new \RuntimeException('AI provider API key is not configured.');
             }
 
