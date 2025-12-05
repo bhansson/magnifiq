@@ -75,7 +75,7 @@ test('product details page returns not found for other team', function () {
 });
 
 test('queue generation dispatches job from details page', function () {
-    config()->set('laravel-openrouter.api_key', 'test-key');
+    config()->set('ai.providers.openai.api_key', 'test-key');
 
     Queue::fake();
 

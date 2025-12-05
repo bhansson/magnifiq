@@ -13,7 +13,7 @@ use Livewire\Livewire;
 uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
 
 test('bulk generate queues jobs for selected products', function () {
-    config()->set('laravel-openrouter.api_key', 'fake-key');
+    config()->set('ai.providers.openai.api_key', 'fake-key');
 
     Queue::fake();
 
@@ -66,7 +66,7 @@ test('bulk generate queues jobs for selected products', function () {
 });
 
 test('bulk generate skips products without skus', function () {
-    config()->set('laravel-openrouter.api_key', 'fake-key');
+    config()->set('ai.providers.openai.api_key', 'fake-key');
 
     Queue::fake();
 

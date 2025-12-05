@@ -307,12 +307,12 @@ Key variables beyond standard Laravel config:
 - `AI_DEFAULT_PROVIDER`: Default AI provider (default: `openai`, options: `openai`, `openrouter`, `replicate`)
 - `AI_CHAT_DRIVER`: Provider for chat/text completion (default: `openai`)
 - `AI_VISION_DRIVER`: Provider for vision/image analysis (default: `openai`)
-- `AI_IMAGE_GENERATION_DRIVER`: Provider for image generation (default: `replicate`)
 - `AI_CHAT_MODEL`: Model for chat completion (default: `openai/gpt-5`)
 - `AI_VISION_MODEL`: Model for vision analysis (default: `openai/gpt-4.1`)
 
 **Photo Studio Configuration:**
 - `PHOTO_STUDIO_DEFAULT_MODEL`: Default image generation model pre-selected in UI (default: `google/gemini-2.5-flash-image`). Users can change the model via the Photo Studio interface. Available models are configured in `config/photo-studio.php`.
+- Image generation provider is configured per-model in `config/photo-studio.php` via the `provider` key (e.g., `'provider' => 'replicate'`).
 
 **OpenAI Provider:**
 - `OPENAI_API_KEY`: API key for OpenAI (**required** for chat/vision)

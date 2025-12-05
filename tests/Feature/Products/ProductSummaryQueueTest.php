@@ -13,7 +13,7 @@ use Livewire\Livewire;
 uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
 
 test('summarize product dispatches ai job', function () {
-    config()->set('laravel-openrouter.api_key', 'test-key');
+    config()->set('ai.providers.openai.api_key', 'test-key');
 
     Queue::fake();
 

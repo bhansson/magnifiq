@@ -22,7 +22,8 @@ return [
     | Configure which AI provider and model to use for each feature.
     | Each feature can independently use a different provider.
     |
-    | Supported features: chat, vision, image_generation
+    | Note: Image generation is configured per-model in config/photo-studio.php
+    | using the 'provider' key. Each model specifies its own provider.
     |
     */
 
@@ -36,13 +37,6 @@ return [
         'vision' => [
             'driver' => env('AI_VISION_DRIVER', 'openai'),
             'model' => env('AI_VISION_MODEL', 'openai/gpt-4.1'),
-        ],
-
-        'image_generation' => [
-            'driver' => env('AI_IMAGE_GENERATION_DRIVER', 'replicate'),
-            // Note: Model selection is handled by Photo Studio UI (see config/photo-studio.php)
-            // This is only used as a fallback for direct AI::forFeature('image_generation') calls
-            'model' => null,
         ],
 
     ],

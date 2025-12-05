@@ -64,7 +64,10 @@ class GeneratePhotoStudioImage implements ShouldQueue
         public ?float $estimatedCost = null,
     ) {
         // Capture the AI driver at dispatch time for Horizon visibility
-        $this->aiDriver = AI::getDriverForFeature('image_generation');
+        // Use model-specific provider from config, falling back to 'replicate'
+        $models = config('photo-studio.image_models', []);
+        $modelConfig = $models[$this->model] ?? null;
+        $this->aiDriver = $modelConfig['provider'] ?? 'replicate';
     }
 
     public function handle(): void
@@ -94,11 +97,11 @@ class GeneratePhotoStudioImage implements ShouldQueue
                 extra: $this->buildModelSpecificParams(),
             );
 
-            // Get the driver name for tracking (visible in Horizon)
-            $aiDriver = AI::getDriverForFeature('image_generation');
+            // Use the provider specified in the model config, falling back to feature driver
+            $aiDriver = $this->resolveProviderForModel();
 
-            // Generate image using AI provider abstraction
-            $response = AI::forFeature('image_generation')->generateImage($request);
+            // Generate image using the model-specific provider
+            $response = AI::driver($aiDriver)->generateImage($request);
 
             // Prepare image (PNG to JPG conversion if needed)
             $preparedImage = $this->prepareGeneratedImage(
@@ -187,6 +190,22 @@ class GeneratePhotoStudioImage implements ShouldQueue
             'product_ai_job_id' => $this->productAiJobId,
             'exception' => $exception->getMessage(),
         ]);
+    }
+
+    /**
+     * Resolve the AI provider for the selected model.
+     *
+     * Photo Studio models specify their provider in config/photo-studio.php.
+     * Falls back to 'replicate' for any models without an explicit provider.
+     */
+    private function resolveProviderForModel(): string
+    {
+        // Use array access because model keys contain forward slashes
+        // which break Laravel's dot notation config lookup
+        $models = config('photo-studio.image_models', []);
+        $modelConfig = $models[$this->model] ?? null;
+
+        return $modelConfig['provider'] ?? 'replicate';
     }
 
     /**

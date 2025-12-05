@@ -71,8 +71,8 @@
                 </div>
 
                 <div class="flex justify-between items-center">
-                    <dt class="text-sm text-gray-500 dark:text-zinc-400">Image API</dt>
-                    <dd class="text-sm font-mono text-gray-900 dark:text-zinc-100">{{ $envConfig['image_generation_driver'] ?? '—' }}</dd>
+                    <dt class="text-sm text-gray-500 dark:text-zinc-400">Default Image Model</dt>
+                    <dd class="text-sm font-mono text-gray-900 dark:text-zinc-100">{{ $envConfig['default_image_model'] ?? '—' }}</dd>
                 </div>
             </dl>
         </div>

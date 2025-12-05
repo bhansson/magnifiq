@@ -70,6 +70,14 @@ class AiManager extends Manager
     {
         $driver = $this->getDriverForFeature($feature);
 
+        return $this->hasApiKeyForDriver($driver);
+    }
+
+    /**
+     * Check if a specific driver has an API key configured.
+     */
+    public function hasApiKeyForDriver(string $driver): bool
+    {
         return ! empty($this->config->get("ai.providers.{$driver}.api_key"));
     }
 
