@@ -30,7 +30,6 @@ class ManageProductFeeds extends Component
     #[Validate('nullable|string|max:255')]
     public string $feedName = '';
 
-    #[Validate('nullable|url|max:2048')]
     public string $feedUrl = '';
 
     #[Validate(ProductFeed::LANGUAGE_VALIDATION_RULE)]
@@ -249,6 +248,7 @@ class ManageProductFeeds extends Component
             return;
         }
 
+        $this->feedUrl = trim($this->feedUrl);
         $this->resetMessages();
 
         if (! $this->feedUrl && ! $this->feedFile) {
@@ -298,10 +298,13 @@ class ManageProductFeeds extends Component
 
     public function importFeed(): void
     {
+        $this->feedUrl = trim($this->feedUrl);
         $this->resetMessages();
 
         if (! $this->isRefreshing) {
-            $this->validate();
+            $this->validate([
+                'feedUrl' => 'nullable|url|max:2048',
+            ]);
         }
 
         if (! $this->feedUrl && ! $this->feedFile) {

@@ -34,7 +34,7 @@
 
                     <div class="space-y-2">
                         <x-label for="feedUrl" value="Feed URL" />
-                        <x-input id="feedUrl" type="url" class="w-full" placeholder="https://example.com/products.xml" wire:model.defer="feedUrl" />
+                        <x-input id="feedUrl" type="text" class="w-full" placeholder="https://example.com/products.xml" wire:model.defer="feedUrl" />
                         <x-input-error for="feedUrl" />
                     </div>
 
