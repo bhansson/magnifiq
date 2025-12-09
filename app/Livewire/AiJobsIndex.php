@@ -4,15 +4,16 @@ namespace App\Livewire;
 
 use App\Models\ProductAiJob;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 use Livewire\WithPagination;
 
 class AiJobsIndex extends Component
 {
+    use Concerns\WithTeamContext;
     use WithPagination;
 
     public int $perPage = 100;
+
     public string $filter = 'all';
 
     protected $queryString = [
@@ -32,7 +33,7 @@ class AiJobsIndex extends Component
 
     public function render()
     {
-        $team = Auth::user()->currentTeam;
+        $team = $this->getTeam();
 
         $jobsQuery = ProductAiJob::query()
             ->with([

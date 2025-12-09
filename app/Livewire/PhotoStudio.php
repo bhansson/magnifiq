@@ -26,6 +26,7 @@ use Throwable;
 
 class PhotoStudio extends Component
 {
+    use Concerns\WithTeamContext;
     use WithFileUploads;
 
     private const PRODUCT_SEARCH_LIMIT = 50;
@@ -173,11 +174,7 @@ class PhotoStudio extends Component
 
     public function mount(): void
     {
-        $team = Auth::user()?->currentTeam;
-
-        if (! $team) {
-            abort(403, 'Join or create a team to access the Photo Studio.');
-        }
+        $this->getTeam(); // Ensures team context is available
 
         // Initialize model selection
         $availableModels = $this->getAvailableModels();
@@ -473,13 +470,15 @@ class PhotoStudio extends Component
             return;
         }
 
-        $teamId = Auth::user()?->currentTeam?->id;
+        $team = $this->getTeamOrNull();
 
-        if (! $teamId) {
+        if (! $team) {
             $this->isAwaitingGeneration = false;
 
             return;
         }
+
+        $teamId = $team->id;
 
         $baseline = $this->pendingGenerationBaselineId ?? 0;
 
@@ -523,11 +522,7 @@ class PhotoStudio extends Component
 
     public function deleteGeneration(int $generationId): void
     {
-        $team = Auth::user()?->currentTeam;
-
-        if (! $team) {
-            abort(403, 'Join or create a team to access the Photo Studio.');
-        }
+        $team = $this->getTeam();
 
         $generation = PhotoStudioGeneration::query()
             ->where('team_id', $team->id)
@@ -548,11 +543,7 @@ class PhotoStudio extends Component
 
     public function openEditModal(int $generationId): void
     {
-        $team = Auth::user()?->currentTeam;
-
-        if (! $team) {
-            abort(403, 'Join or create a team to access the Photo Studio.');
-        }
+        $team = $this->getTeam();
 
         $generation = PhotoStudioGeneration::query()
             ->where('team_id', $team->id)
@@ -586,7 +577,7 @@ class PhotoStudio extends Component
             return;
         }
 
-        $team = Auth::user()?->currentTeam;
+        $team = $this->getTeamOrNull();
 
         if (! $team) {
             return;
@@ -622,11 +613,7 @@ class PhotoStudio extends Component
             'editInstruction' => ['required', 'string', 'min:3', 'max:1000'],
         ]);
 
-        $team = Auth::user()?->currentTeam;
-
-        if (! $team) {
-            abort(403, 'Join or create a team to access the Photo Studio.');
-        }
+        $team = $this->getTeam();
 
         $parentGeneration = PhotoStudioGeneration::query()
             ->where('team_id', $team->id)
@@ -745,11 +732,13 @@ class PhotoStudio extends Component
     {
         $maxImages = config('photo-studio.composition.max_images', 14);
         $currentCount = count($this->compositionImages);
-        $teamId = Auth::user()?->currentTeam?->id;
+        $team = $this->getTeamOrNull();
 
-        if (! $teamId) {
+        if (! $team) {
             return;
         }
+
+        $teamId = $team->id;
 
         $sourceStorage = app(PhotoStudioSourceStorage::class);
 
@@ -810,7 +799,7 @@ class PhotoStudio extends Component
             }
         }
 
-        $teamId = Auth::user()?->currentTeam?->id;
+        $teamId = $this->getTeamOrNull()?->id;
 
         $product = Product::query()
             ->where('team_id', $teamId)
@@ -938,11 +927,7 @@ class PhotoStudio extends Component
             return;
         }
 
-        $team = Auth::user()?->currentTeam;
-
-        if (! $team) {
-            abort(403, 'Join or create a team to access the Photo Studio.');
-        }
+        $team = $this->getTeam();
 
         $this->isProcessing = true;
 
@@ -1089,11 +1074,7 @@ class PhotoStudio extends Component
             return;
         }
 
-        $team = Auth::user()?->currentTeam;
-
-        if (! $team) {
-            abort(403, 'Join or create a team to access the Photo Studio.');
-        }
+        $team = $this->getTeam();
 
         try {
             $previousGenerationId = PhotoStudioGeneration::query()
@@ -1586,13 +1567,15 @@ class PhotoStudio extends Component
 
     private function refreshLatestGeneration(): void
     {
-        $teamId = Auth::user()?->currentTeam?->id;
+        $team = $this->getTeamOrNull();
 
-        if (! $teamId) {
+        if (! $team) {
             $this->resetGenerationPreview();
 
             return;
         }
+
+        $teamId = $team->id;
 
         $latest = PhotoStudioGeneration::query()
             ->where('team_id', $teamId)
@@ -1620,11 +1603,13 @@ class PhotoStudio extends Component
         $this->productGallery = [];
         $this->galleryTotal = 0;
 
-        $teamId = Auth::user()?->currentTeam?->id;
+        $team = $this->getTeamOrNull();
 
-        if (! $teamId) {
+        if (! $team) {
             return;
         }
+
+        $teamId = $team->id;
 
         $search = trim($this->gallerySearch);
 
@@ -1723,7 +1708,7 @@ class PhotoStudio extends Component
 
     private function refreshProductOptions(): void
     {
-        $team = Auth::user()?->currentTeam;
+        $team = $this->getTeamOrNull();
 
         $this->products = [];
 

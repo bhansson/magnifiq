@@ -11,13 +11,13 @@ use App\Models\ProductCatalog;
 use App\Models\ProductFeed;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Livewire\Component;
 use Livewire\WithPagination;
 
 class ProductsIndex extends Component
 {
+    use Concerns\WithTeamContext;
     use WithPagination;
 
     public int $perPage = 100;
@@ -133,7 +133,7 @@ class ProductsIndex extends Component
                 return;
             }
 
-            $team = Auth::user()->currentTeam;
+            $team = $this->getTeam();
 
             $template = ProductAiTemplate::query()
                 ->forTeam($team->id)
@@ -254,7 +254,7 @@ class ProductsIndex extends Component
 
     public function render()
     {
-        $team = Auth::user()->currentTeam;
+        $team = $this->getTeam();
 
         $brands = Product::query()
             ->where('team_id', $team->id)
@@ -402,7 +402,7 @@ class ProductsIndex extends Component
 
     public function summarizeProduct(int $productId): void
     {
-        $team = Auth::user()->currentTeam;
+        $team = $this->getTeam();
 
         $product = Product::query()
             ->where('team_id', $team->id)
