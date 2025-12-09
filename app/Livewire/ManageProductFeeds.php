@@ -22,6 +22,11 @@ class ManageProductFeeds extends Component
 {
     use WithFileUploads;
 
+    private const MAPPING_FIELDS = [
+        'sku', 'gtin', 'title', 'brand', 'description',
+        'url', 'image_link', 'additional_image_link',
+    ];
+
     #[Validate('nullable|string|max:255')]
     public string $feedName = '';
 
@@ -160,25 +165,10 @@ class ManageProductFeeds extends Component
                 throw new \RuntimeException('Could not determine available fields in the feed.');
             }
 
-            $mapping = array_merge([
-                'sku' => '',
-                'gtin' => '',
-                'title' => '',
-                'brand' => '',
-                'description' => '',
-                'url' => '',
-                'image_link' => '',
-                'additional_image_link' => '',
-            ], Arr::only($feed->field_mappings ?? [], [
-                'sku',
-                'gtin',
-                'title',
-                'brand',
-                'description',
-                'url',
-                'image_link',
-                'additional_image_link',
-            ]));
+            $mapping = array_merge(
+                $this->getEmptyFieldMapping(),
+                Arr::only($feed->field_mappings ?? [], self::MAPPING_FIELDS)
+            );
 
             foreach (['sku', 'title', 'url'] as $required) {
                 if (empty($mapping[$required])) {
@@ -188,16 +178,7 @@ class ManageProductFeeds extends Component
 
             DB::transaction(function () use ($feed, $parsed, $mapping): void {
                 $feed->forceFill([
-                    'field_mappings' => Arr::only($mapping, [
-                        'sku',
-                        'gtin',
-                        'title',
-                        'brand',
-                        'description',
-                        'url',
-                        'image_link',
-                        'additional_image_link',
-                    ]),
+                    'field_mappings' => Arr::only($mapping, self::MAPPING_FIELDS),
                 ])->save();
 
                 $this->upsertProductsFromParsedFeed($feed, $parsed['items'], $parsed, $mapping);
@@ -916,6 +897,11 @@ class ManageProductFeeds extends Component
     {
         $this->statusMessage = null;
         $this->errorMessage = null;
+    }
+
+    private function getEmptyFieldMapping(): array
+    {
+        return array_fill_keys(self::MAPPING_FIELDS, '');
     }
 
     // ─────────────────────────────────────────────────────────────────────────
