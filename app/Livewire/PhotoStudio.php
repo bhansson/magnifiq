@@ -10,6 +10,7 @@ use App\Jobs\GeneratePhotoStudioImage;
 use App\Models\PhotoStudioGeneration;
 use App\Models\Product;
 use App\Models\ProductAiJob;
+use App\Services\ImageProcessor;
 use App\Services\PhotoStudioSourceStorage;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;
@@ -1337,63 +1338,10 @@ class PhotoStudio extends Component
         }
 
         // Convert unsupported formats (AVIF, HEIC, BMP, etc.) to JPEG (includes resize)
-        return $this->convertImageToJpegDataUri($binary);
-    }
+        $maxDimension = config('photo-studio.input.max_dimension');
+        $jpegBinary = app(ImageProcessor::class)->convertToJpeg($binary, $maxDimension);
 
-    /**
-     * Convert any image binary to JPEG data URI, resizing if needed.
-     */
-    private function convertImageToJpegDataUri(string $binary): string
-    {
-        if (! function_exists('imagecreatefromstring')) {
-            throw new RuntimeException('GD extension is required to convert image formats.');
-        }
-
-        $image = @imagecreatefromstring($binary);
-
-        if ($image === false) {
-            throw new RuntimeException('Unable to process the product image format.');
-        }
-
-        $width = imagesx($image);
-        $height = imagesy($image);
-
-        // Resize if exceeds max dimension
-        [$newWidth, $newHeight, $needsResize] = $this->calculateResizeDimensions($width, $height);
-
-        if ($needsResize) {
-            $resized = imagescale($image, $newWidth, $newHeight, IMG_BICUBIC);
-            imagedestroy($image);
-
-            if ($resized === false) {
-                throw new RuntimeException('Failed to resize the image.');
-            }
-
-            $image = $resized;
-            $width = $newWidth;
-            $height = $newHeight;
-        }
-
-        // Create a new true color image with white background (for transparency)
-        $canvas = imagecreatetruecolor($width, $height);
-        $white = imagecolorallocate($canvas, 255, 255, 255);
-        imagefilledrectangle($canvas, 0, 0, $width, $height, $white);
-        imagecopy($canvas, $image, 0, 0, 0, 0, $width, $height);
-
-        $jpegQuality = (int) config('photo-studio.input.jpeg_quality', 90);
-
-        ob_start();
-        imagejpeg($canvas, null, $jpegQuality);
-        $jpegBinary = ob_get_clean();
-
-        imagedestroy($image);
-        imagedestroy($canvas);
-
-        if ($jpegBinary === false) {
-            throw new RuntimeException('Failed to convert image to JPEG format.');
-        }
-
-        return 'data:image/jpeg;base64,'.base64_encode($jpegBinary);
+        return ImageProcessor::toDataUri($jpegBinary);
     }
 
     /**
@@ -1543,7 +1491,10 @@ class PhotoStudio extends Component
         }
 
         // Convert unsupported formats (AVIF, HEIC, BMP, etc.) to JPEG (includes resize)
-        return $this->convertImageToJpegDataUri($contents);
+        $maxDimension = config('photo-studio.input.max_dimension');
+        $jpegBinary = app(ImageProcessor::class)->convertToJpeg($contents, $maxDimension);
+
+        return ImageProcessor::toDataUri($jpegBinary);
     }
 
     /**
@@ -1561,63 +1512,9 @@ class PhotoStudio extends Component
         }
 
         // Always convert to JPEG for consistent storage format
-        return $this->convertBinaryToJpeg($contents);
-    }
+        $maxDimension = config('photo-studio.input.max_dimension');
 
-    /**
-     * Convert any image binary to JPEG binary, resizing if needed.
-     */
-    private function convertBinaryToJpeg(string $binary): string
-    {
-        if (! function_exists('imagecreatefromstring')) {
-            throw new RuntimeException('GD extension is required to convert image formats.');
-        }
-
-        $image = @imagecreatefromstring($binary);
-
-        if ($image === false) {
-            throw new RuntimeException('Unable to process the image format.');
-        }
-
-        $width = imagesx($image);
-        $height = imagesy($image);
-
-        // Resize if exceeds max dimension
-        [$newWidth, $newHeight, $needsResize] = $this->calculateResizeDimensions($width, $height);
-
-        if ($needsResize) {
-            $resized = imagescale($image, $newWidth, $newHeight, IMG_BICUBIC);
-            imagedestroy($image);
-
-            if ($resized === false) {
-                throw new RuntimeException('Failed to resize the image.');
-            }
-
-            $image = $resized;
-            $width = $newWidth;
-            $height = $newHeight;
-        }
-
-        // Create a new true color image with white background (for transparency)
-        $canvas = imagecreatetruecolor($width, $height);
-        $white = imagecolorallocate($canvas, 255, 255, 255);
-        imagefilledrectangle($canvas, 0, 0, $width, $height, $white);
-        imagecopy($canvas, $image, 0, 0, 0, 0, $width, $height);
-
-        $jpegQuality = (int) config('photo-studio.input.jpeg_quality', 90);
-
-        ob_start();
-        imagejpeg($canvas, null, $jpegQuality);
-        $jpegBinary = ob_get_clean();
-
-        imagedestroy($image);
-        imagedestroy($canvas);
-
-        if ($jpegBinary === false) {
-            throw new RuntimeException('Failed to convert image to JPEG format.');
-        }
-
-        return $jpegBinary;
+        return app(ImageProcessor::class)->convertToJpeg($contents, $maxDimension);
     }
 
     /**
