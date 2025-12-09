@@ -200,54 +200,7 @@ class ManageProductFeeds extends Component
                     ]),
                 ])->save();
 
-                // Use upsert to preserve existing product IDs and relationships
-                $chunks = $parsed['items']->chunk(100);
-                $type = $parsed['type'];
-                $namespaces = $parsed['namespaces'];
-                $seenSkus = [];
-
-                foreach ($chunks as $chunk) {
-                    $payload = [];
-                    foreach ($chunk as $item) {
-                        $sku = $this->extractValue($type, $namespaces, $item, $mapping['sku'] ?? '');
-                        $title = $this->extractValue($type, $namespaces, $item, $mapping['title'] ?? '');
-                        $link = $this->extractValue($type, $namespaces, $item, $mapping['url'] ?? '');
-
-                        if ($sku === '' || $title === '' || $link === '') {
-                            continue;
-                        }
-
-                        // Skip duplicate SKUs - keep first occurrence only
-                        if (isset($seenSkus[$sku])) {
-                            continue;
-                        }
-                        $seenSkus[$sku] = true;
-
-                        $payload[] = [
-                            'product_feed_id' => $feed->id,
-                            'team_id' => $feed->team_id,
-                            'sku' => $sku,
-                            'gtin' => $this->maybeValue($type, $namespaces, $item, 'gtin', $mapping),
-                            'title' => $title,
-                            'brand' => $this->maybeValue($type, $namespaces, $item, 'brand', $mapping),
-                            'description' => $this->maybeValue($type, $namespaces, $item, 'description', $mapping),
-                            'url' => $link,
-                            'image_link' => $this->maybeValue($type, $namespaces, $item, 'image_link', $mapping),
-                            'additional_image_link' => $this->maybeValue($type, $namespaces, $item, 'additional_image_link', $mapping),
-                            'created_at' => now(),
-                            'updated_at' => now(),
-                        ];
-                    }
-
-                    if (! empty($payload)) {
-                        // Upsert based on the unique constraint: team_id + sku + product_feed_id
-                        Product::upsert(
-                            $payload,
-                            ['team_id', 'sku', 'product_feed_id'],
-                            ['gtin', 'title', 'brand', 'description', 'url', 'image_link', 'additional_image_link', 'updated_at']
-                        );
-                    }
-                }
+                $this->upsertProductsFromParsedFeed($feed, $parsed['items'], $parsed, $mapping);
 
                 $feed->touch();
             });
@@ -415,53 +368,7 @@ class ManageProductFeeds extends Component
                     'field_mappings' => $this->mapping,
                 ])->save();
 
-                // Use upsert to preserve existing product IDs and relationships
-                $chunks = $items->chunk(100);
-                $seenSkus = [];
-
-                foreach ($chunks as $chunk) {
-                    $payload = [];
-                    foreach ($chunk as $item) {
-                        $sku = $this->extractValue($parsed['type'], $parsed['namespaces'], $item, $this->mapping['sku'] ?? '');
-                        $title = $this->extractValue($parsed['type'], $parsed['namespaces'], $item, $this->mapping['title'] ?? '');
-                        $link = $this->extractValue($parsed['type'], $parsed['namespaces'], $item, $this->mapping['url'] ?? '');
-
-                        if ($sku === '' || $title === '' || $link === '') {
-                            continue;
-                        }
-
-                        // Skip duplicate SKUs - keep first occurrence only
-                        if (isset($seenSkus[$sku])) {
-                            continue;
-                        }
-                        $seenSkus[$sku] = true;
-
-                        $payload[] = [
-                            'product_feed_id' => $feed->id,
-                            'team_id' => $team->id,
-                            'sku' => $sku,
-                            'gtin' => $this->maybeValue($parsed['type'], $parsed['namespaces'], $item, 'gtin'),
-                            'title' => $title,
-                            'brand' => $this->maybeValue($parsed['type'], $parsed['namespaces'], $item, 'brand'),
-                            'description' => $this->maybeValue($parsed['type'], $parsed['namespaces'], $item, 'description'),
-                            'url' => $link,
-                            'image_link' => $this->maybeValue($parsed['type'], $parsed['namespaces'], $item, 'image_link'),
-                            'additional_image_link' => $this->maybeValue($parsed['type'], $parsed['namespaces'], $item, 'additional_image_link'),
-                            'created_at' => now(),
-                            'updated_at' => now(),
-                        ];
-                    }
-
-                    if (! empty($payload)) {
-                        // Upsert based on the unique constraint: team_id + sku + product_feed_id
-                        Product::upsert(
-                            $payload,
-                            ['team_id', 'sku', 'product_feed_id'],
-                            ['gtin', 'title', 'brand', 'description', 'url', 'image_link', 'additional_image_link', 'updated_at']
-                        );
-                        $importedCount += count($payload);
-                    }
-                }
+                $importedCount = $this->upsertProductsFromParsedFeed($feed, $items, $parsed, $this->mapping);
 
                 $importedFeed = $feed;
             });
@@ -871,6 +778,74 @@ class ManageProductFeeds extends Component
         $value = $this->extractValue($type, $namespaces, $item, $mapping[$field] ?? '');
 
         return $value !== '' ? $value : null;
+    }
+
+    /**
+     * Upsert products from a parsed feed into the database.
+     *
+     * Processes items in chunks of 100, deduplicates by SKU (keeping first occurrence),
+     * and uses database upsert to preserve existing product IDs and relationships.
+     *
+     * @param  ProductFeed  $feed  The feed to associate products with
+     * @param  Collection  $items  Parsed feed items (XML elements or CSV rows)
+     * @param  array  $parsed  Parsed feed metadata with 'type' and 'namespaces' keys
+     * @param  array  $mapping  Field mapping array (sku, title, url, etc.)
+     * @return int Number of products upserted
+     */
+    protected function upsertProductsFromParsedFeed(ProductFeed $feed, Collection $items, array $parsed, array $mapping): int
+    {
+        $chunks = $items->chunk(100);
+        $type = $parsed['type'];
+        $namespaces = $parsed['namespaces'];
+        $seenSkus = [];
+        $upsertedCount = 0;
+
+        foreach ($chunks as $chunk) {
+            $payload = [];
+
+            foreach ($chunk as $item) {
+                $sku = $this->extractValue($type, $namespaces, $item, $mapping['sku'] ?? '');
+                $title = $this->extractValue($type, $namespaces, $item, $mapping['title'] ?? '');
+                $link = $this->extractValue($type, $namespaces, $item, $mapping['url'] ?? '');
+
+                if ($sku === '' || $title === '' || $link === '') {
+                    continue;
+                }
+
+                // Skip duplicate SKUs - keep first occurrence only
+                if (isset($seenSkus[$sku])) {
+                    continue;
+                }
+                $seenSkus[$sku] = true;
+
+                $payload[] = [
+                    'product_feed_id' => $feed->id,
+                    'team_id' => $feed->team_id,
+                    'sku' => $sku,
+                    'gtin' => $this->maybeValue($type, $namespaces, $item, 'gtin', $mapping),
+                    'title' => $title,
+                    'brand' => $this->maybeValue($type, $namespaces, $item, 'brand', $mapping),
+                    'description' => $this->maybeValue($type, $namespaces, $item, 'description', $mapping),
+                    'url' => $link,
+                    'image_link' => $this->maybeValue($type, $namespaces, $item, 'image_link', $mapping),
+                    'additional_image_link' => $this->maybeValue($type, $namespaces, $item, 'additional_image_link', $mapping),
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ];
+            }
+
+            if (! empty($payload)) {
+                // Upsert based on the unique constraint: team_id + sku + product_feed_id
+                Product::upsert(
+                    $payload,
+                    ['team_id', 'sku', 'product_feed_id'],
+                    ['gtin', 'title', 'brand', 'description', 'url', 'image_link', 'additional_image_link', 'updated_at']
+                );
+                $upsertedCount += count($payload);
+            }
+        }
+
+        return $upsertedCount;
     }
 
     protected function findOrCreateFeed(int $teamId, string $language): ProductFeed
