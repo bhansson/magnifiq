@@ -3,13 +3,14 @@
 namespace App\Livewire;
 
 use App\Models\ProductAiTemplate;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Livewire\Component;
 
 class ManageProductAiTemplates extends Component
 {
+    use Concerns\WithTeamContext;
+
     public bool $showForm = false;
 
     public ?int $editingTemplateId = null;
@@ -34,9 +35,7 @@ class ManageProductAiTemplates extends Component
 
     public function render()
     {
-        $team = Auth::user()->currentTeam;
-
-        abort_if(! $team, 404);
+        $team = $this->getTeam();
 
         ProductAiTemplate::syncDefaultTemplates();
 
@@ -60,8 +59,7 @@ class ManageProductAiTemplates extends Component
 
     public function startEdit(int $templateId): void
     {
-        $team = Auth::user()->currentTeam;
-        abort_if(! $team, 404);
+        $team = $this->getTeam();
 
         $template = ProductAiTemplate::query()
             ->where('id', $templateId)
@@ -88,8 +86,7 @@ class ManageProductAiTemplates extends Component
 
     public function duplicate(int $templateId): void
     {
-        $team = Auth::user()->currentTeam;
-        abort_if(! $team, 404);
+        $team = $this->getTeam();
 
         $template = ProductAiTemplate::query()
             ->forTeam($team->id)
@@ -115,8 +112,7 @@ class ManageProductAiTemplates extends Component
 
     public function delete(int $templateId): void
     {
-        $team = Auth::user()->currentTeam;
-        abort_if(! $team, 404);
+        $team = $this->getTeam();
 
         $template = ProductAiTemplate::query()
             ->where('id', $templateId)
@@ -151,8 +147,7 @@ class ManageProductAiTemplates extends Component
 
     public function save(): void
     {
-        $team = Auth::user()->currentTeam;
-        abort_if(! $team, 404);
+        $team = $this->getTeam();
 
         $this->validate($this->rules());
 
