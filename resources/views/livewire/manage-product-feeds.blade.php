@@ -62,10 +62,10 @@
                 </div>
 
                 <div class="flex items-center space-x-3">
-                    <x-button type="button" wire:click="fetchFields" wire:loading.attr="disabled">
+                    <x-button type="button" wire:click="fetchFields" wire:loading.attr="disabled" wire:target="fetchFields">
                         Load Feed Fields
                     </x-button>
-                    <span class="text-sm text-gray-500 dark:text-zinc-400" wire:loading>
+                    <span class="text-sm text-gray-500 dark:text-zinc-400" wire:loading wire:target="fetchFields">
                         Loading feed…
                     </span>
                 </div>
@@ -94,10 +94,10 @@
                         </div>
 
                         <div class="mt-6 flex items-center space-x-3">
-                            <x-button type="button" wire:click="importFeed" wire:loading.attr="disabled">
+                            <x-button type="button" wire:click="importFeed" wire:loading.attr="disabled" wire:target="importFeed">
                                 Import Products
                             </x-button>
-                            <span class="text-sm text-gray-500 dark:text-zinc-400" wire:loading>
+                            <span class="text-sm text-gray-500 dark:text-zinc-400" wire:loading wire:target="importFeed">
                                 Importing products…
                             </span>
                         </div>
@@ -370,7 +370,7 @@
                         No feeds imported yet. Submit a feed above to get started.
                     </p>
                 @else
-                    <div class="overflow-x-auto min-h-[200px]">
+                    <div class="overflow-x-auto min-h-[340px]">
                         <table class="min-w-full divide-y divide-gray-200 dark:divide-zinc-800 text-sm">
                             <thead class="bg-gray-50 dark:bg-zinc-800/50">
                                 <tr>
