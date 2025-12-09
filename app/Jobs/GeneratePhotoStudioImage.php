@@ -8,6 +8,7 @@ use App\Facades\AI;
 use App\Models\PhotoStudioGeneration;
 use App\Models\ProductAiJob;
 use App\Models\TeamActivity;
+use App\Services\ImageProcessor;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -21,8 +22,6 @@ use Throwable;
 
 class GeneratePhotoStudioImage implements ShouldQueue
 {
-    private const JPG_QUALITY = 90;
-
     use Dispatchable;
     use InteractsWithQueue;
     use Queueable;
@@ -282,7 +281,7 @@ class GeneratePhotoStudioImage implements ShouldQueue
         [$width, $height] = $this->detectImageDimensions($binary);
 
         if ($extension === 'png') {
-            $binary = $this->convertPngToJpg($binary);
+            $binary = app(ImageProcessor::class)->convertToJpeg($binary);
             $extension = 'jpg';
 
             [$postWidth, $postHeight] = $this->detectImageDimensions($binary);
@@ -296,43 +295,6 @@ class GeneratePhotoStudioImage implements ShouldQueue
             'width' => $width,
             'height' => $height,
         ];
-    }
-
-    private function convertPngToJpg(string $binary): string
-    {
-        if (! function_exists('imagecreatefromstring') || ! function_exists('imagecreatetruecolor')) {
-            throw new RuntimeException('GD extension is required to convert PNG images.');
-        }
-
-        $png = @imagecreatefromstring($binary);
-
-        if ($png === false) {
-            throw new RuntimeException('Unable to decode PNG payload from provider response.');
-        }
-
-        $width = imagesx($png);
-        $height = imagesy($png);
-
-        $canvas = imagecreatetruecolor($width, $height);
-        imagealphablending($canvas, true);
-        imagesavealpha($canvas, false);
-
-        $background = imagecolorallocate($canvas, 255, 255, 255);
-        imagefilledrectangle($canvas, 0, 0, $width, $height, $background);
-        imagecopy($canvas, $png, 0, 0, 0, 0, $width, $height);
-
-        ob_start();
-        $written = imagejpeg($canvas, null, self::JPG_QUALITY);
-        $jpegBinary = ob_get_clean();
-
-        imagedestroy($png);
-        imagedestroy($canvas);
-
-        if ($jpegBinary === false || $written === false) {
-            throw new RuntimeException('Failed to convert PNG payload to JPG.');
-        }
-
-        return $jpegBinary;
     }
 
     /**
