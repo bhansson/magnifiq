@@ -15,7 +15,12 @@ use InvalidArgumentException;
  * Manages AI provider adapters using Laravel's Manager pattern,
  * similar to Cache::driver() or Mail::mailer().
  *
+ * Driver methods are called dynamically by the parent Manager class
+ * when resolving drivers via driver('name') calls.
+ *
  * @method AiProviderContract driver(string|null $driver = null)
+ *
+ * @see \Illuminate\Support\Manager::createDriver()
  */
 class AiManager extends Manager
 {
@@ -47,6 +52,8 @@ class AiManager extends Manager
 
     /**
      * Get the model configured for a specific feature.
+     *
+     * @noinspection PhpUnused — Public API method exposed via AI facade
      */
     public function getModelForFeature(string $feature): ?string
     {
@@ -83,6 +90,10 @@ class AiManager extends Manager
 
     /**
      * Create the OpenAI driver.
+     *
+     * Called dynamically by Manager::createDriver() when driver('openai') is requested.
+     *
+     * @noinspection PhpUnused
      */
     protected function createOpenaiDriver(): OpenAiAdapter
     {
@@ -93,6 +104,10 @@ class AiManager extends Manager
 
     /**
      * Create the OpenRouter driver.
+     *
+     * Called dynamically by Manager::createDriver() when driver('openrouter') is requested.
+     *
+     * @noinspection PhpUnused
      */
     protected function createOpenrouterDriver(): OpenRouterAdapter
     {
@@ -103,6 +118,10 @@ class AiManager extends Manager
 
     /**
      * Create the Replicate driver.
+     *
+     * Called dynamically by Manager::createDriver() when driver('replicate') is requested.
+     *
+     * @noinspection PhpUnused
      */
     protected function createReplicateDriver(): ReplicateAdapter
     {
