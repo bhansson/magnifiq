@@ -1,4 +1,4 @@
-<nav x-data="{ open: false }" class="bg-white dark:bg-zinc-900/80 dark:backdrop-blur-xl border-b border-gray-100 dark:border-zinc-800 transition-colors duration-200">
+<nav x-data="{ open: false }" class="relative z-[9999] bg-white dark:bg-zinc-900/80 dark:backdrop-blur-xl border-b border-gray-100 dark:border-zinc-800 transition-colors duration-200">
     <!-- Primary Navigation Menu -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between h-16">
