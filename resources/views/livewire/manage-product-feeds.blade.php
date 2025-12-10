@@ -350,12 +350,42 @@
                                                         {{ $feed->products_count }} products
                                                     </span>
                                                 </div>
-                                                <div class="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                                     <button
                                                         type="button"
                                                         wire:click="startMoveFeed({{ $feed->id }})"
-                                                        class="text-xs text-gray-500 dark:text-zinc-400 hover:text-amber-600 dark:hover:text-amber-400 transition-colors">
-                                                        Move
+                                                        class="inline-flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 dark:text-zinc-500 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-500/10 focus:outline-none transition-all"
+                                                        title="Move to Catalog">
+                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
+                                                        </svg>
+                                                    </button>
+                                                    @if ($feed->feed_url)
+                                                        <button
+                                                            type="button"
+                                                            wire:click="refreshFeed({{ $feed->id }})"
+                                                            wire:loading.attr="disabled"
+                                                            wire:target="refreshFeed({{ $feed->id }})"
+                                                            class="inline-flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 dark:text-zinc-500 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-500/10 focus:outline-none transition-all disabled:opacity-50"
+                                                            title="Re-import products">
+                                                            <svg class="w-4 h-4" wire:loading.remove wire:target="refreshFeed({{ $feed->id }})" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                                                            </svg>
+                                                            <svg class="w-4 h-4 animate-spin" wire:loading wire:target="refreshFeed({{ $feed->id }})" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                                                            </svg>
+                                                        </button>
+                                                    @endif
+                                                    <button
+                                                        type="button"
+                                                        x-on:click.prevent="if(window.confirm('Delete this feed? All imported products from this feed will be removed.')) { $wire.deleteFeed({{ $feed->id }}) }"
+                                                        wire:loading.attr="disabled"
+                                                        wire:target="deleteFeed({{ $feed->id }})"
+                                                        class="inline-flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 dark:text-zinc-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 focus:outline-none transition-all disabled:opacity-50"
+                                                        title="Delete Feed">
+                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                                        </svg>
                                                     </button>
                                                 </div>
                                             </div>
@@ -364,12 +394,106 @@
                                 @else
                                     <div class="px-4 py-4 text-center">
                                         <p class="text-sm text-gray-500 dark:text-zinc-500">
-                                            No feeds in this catalog yet. Move feeds here from the table below.
+                                            No feeds in this catalog yet.
                                         </p>
                                     </div>
                                 @endif
                             </div>
                         @endforeach
+
+                        {{-- Uncategorized Feeds --}}
+                        @php
+                            $uncategorizedFeeds = $feeds->whereNull('product_catalog_id');
+                        @endphp
+                        @if ($uncategorizedFeeds->isNotEmpty())
+                            <div class="rounded-xl border border-gray-200 dark:border-zinc-700 overflow-hidden" wire:key="uncategorized-feeds">
+                                <div class="px-4 py-3 bg-gray-50/50 dark:bg-zinc-800/30 flex items-center justify-between">
+                                    <div class="flex items-center gap-2">
+                                        <svg class="w-5 h-5 text-gray-400 dark:text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
+                                        </svg>
+                                        <span class="font-semibold text-gray-600 dark:text-zinc-400">Uncategorized</span>
+                                        <span class="text-xs px-2 py-0.5 rounded-full bg-gray-200 dark:bg-zinc-700 text-gray-600 dark:text-zinc-400">
+                                            {{ $uncategorizedFeeds->count() }} {{ Str::plural('feed', $uncategorizedFeeds->count()) }}
+                                        </span>
+                                        @if ($uncategorizedFeeds->isNotEmpty())
+                                            <div class="flex items-center gap-1 ml-2">
+                                                @foreach ($uncategorizedFeeds->pluck('language')->unique() as $lang)
+                                                    <span class="text-xs px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400 font-medium">
+                                                        {{ Str::upper($lang) }}
+                                                    </span>
+                                                @endforeach
+                                            </div>
+                                        @endif
+                                    </div>
+                                </div>
+
+                                <div class="divide-y divide-gray-100 dark:divide-zinc-800">
+                                    @foreach ($uncategorizedFeeds as $feed)
+                                        <div class="px-4 py-3 flex items-center justify-between hover:bg-gray-50/50 dark:hover:bg-zinc-800/30 transition-colors group" wire:key="uncategorized-feed-{{ $feed->id }}">
+                                            <div class="flex items-center gap-3">
+                                                <span class="text-xs px-1.5 py-0.5 rounded bg-gray-100 dark:bg-zinc-700 text-gray-600 dark:text-zinc-400 font-medium">
+                                                    {{ Str::upper($feed->language) }}
+                                                </span>
+                                                <span class="text-sm text-gray-800 dark:text-zinc-200">{{ $feed->name }}</span>
+                                                @if ($feed->feed_url)
+                                                    <a href="{{ $feed->feed_url }}"
+                                                       target="_blank"
+                                                       rel="noopener noreferrer"
+                                                       class="text-gray-400 dark:text-zinc-500 hover:text-amber-600 dark:hover:text-amber-400 transition-colors"
+                                                       title="{{ $feed->feed_url }}">
+                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
+                                                        </svg>
+                                                    </a>
+                                                @endif
+                                                <span class="text-xs text-gray-500 dark:text-zinc-500">
+                                                    {{ $feed->products_count }} products
+                                                </span>
+                                            </div>
+                                            <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <button
+                                                    type="button"
+                                                    wire:click="startMoveFeed({{ $feed->id }})"
+                                                    class="inline-flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 dark:text-zinc-500 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-500/10 focus:outline-none transition-all"
+                                                    title="Move to Catalog">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
+                                                    </svg>
+                                                </button>
+                                                @if ($feed->feed_url)
+                                                    <button
+                                                        type="button"
+                                                        wire:click="refreshFeed({{ $feed->id }})"
+                                                        wire:loading.attr="disabled"
+                                                        wire:target="refreshFeed({{ $feed->id }})"
+                                                        class="inline-flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 dark:text-zinc-500 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-500/10 focus:outline-none transition-all disabled:opacity-50"
+                                                        title="Re-import products">
+                                                        <svg class="w-4 h-4" wire:loading.remove wire:target="refreshFeed({{ $feed->id }})" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                                                        </svg>
+                                                        <svg class="w-4 h-4 animate-spin" wire:loading wire:target="refreshFeed({{ $feed->id }})" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                                                        </svg>
+                                                    </button>
+                                                @endif
+                                                <button
+                                                    type="button"
+                                                    x-on:click.prevent="if(window.confirm('Delete this feed? All imported products from this feed will be removed.')) { $wire.deleteFeed({{ $feed->id }}) }"
+                                                    wire:loading.attr="disabled"
+                                                    wire:target="deleteFeed({{ $feed->id }})"
+                                                    class="inline-flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 dark:text-zinc-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 focus:outline-none transition-all disabled:opacity-50"
+                                                    title="Delete Feed">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            </div>
+                        @endif
                     </div>
                 @endif
             </div>
@@ -435,161 +559,4 @@
             </div>
         </div>
     @endif
-
-    {{-- Imported Feeds Section --}}
-    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 mt-10">
-        <div class="bg-white dark:bg-zinc-900/50 shadow dark:shadow-none dark:ring-1 dark:ring-zinc-800 sm:rounded-xl">
-            <div class="px-6 py-6 border-b border-gray-200 dark:border-zinc-800">
-                <h2 class="text-lg font-semibold text-gray-800 dark:text-white">
-                    All Feeds
-                </h2>
-                <p class="mt-1 text-sm text-gray-600 dark:text-zinc-400">
-                    All imported feeds. Use the actions menu to manage feeds or move them to catalogs.
-                </p>
-            </div>
-
-            <div class="px-6 py-6">
-                @if ($feeds->isEmpty())
-                    <p class="text-sm text-gray-600 dark:text-zinc-400">
-                        No feeds imported yet. Submit a feed above to get started.
-                    </p>
-                @else
-                    <div class="overflow-x-auto min-h-[340px]">
-                        <table class="min-w-full divide-y divide-gray-200 dark:divide-zinc-800 text-sm">
-                            <thead class="bg-gray-50 dark:bg-zinc-800/50">
-                                <tr>
-                                    <th class="px-4 py-3 text-left font-semibold text-gray-700 dark:text-zinc-300 uppercase tracking-wider text-xs">Name</th>
-                                    <th class="px-4 py-3 text-left font-semibold text-gray-700 dark:text-zinc-300 uppercase tracking-wider text-xs">Language</th>
-                                    <th class="px-4 py-3 text-left font-semibold text-gray-700 dark:text-zinc-300 uppercase tracking-wider text-xs">Catalog</th>
-                                    <th class="px-4 py-3 text-left font-semibold text-gray-700 dark:text-zinc-300 uppercase tracking-wider text-xs">Products</th>
-                                    <th class="px-4 py-3 text-left font-semibold text-gray-700 dark:text-zinc-300 uppercase tracking-wider text-xs">Updated</th>
-                                    <th class="px-4 py-3 text-right font-semibold text-gray-700 dark:text-zinc-300 uppercase tracking-wider text-xs">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-gray-200 dark:divide-zinc-800">
-                                @foreach ($feeds as $feed)
-                                    <tr class="group hover:bg-gray-50/50 dark:hover:bg-zinc-800/50 transition-colors" wire:key="feed-row-{{ $feed->id }}">
-                                        <td class="px-4 py-3 font-medium text-gray-900 dark:text-white">
-                                            <div class="flex items-center gap-2">
-                                                {{ $feed->name }}
-                                                @if ($feed->feed_url)
-                                                    <a href="{{ $feed->feed_url }}"
-                                                       target="_blank"
-                                                       rel="noopener noreferrer"
-                                                       class="text-gray-400 dark:text-zinc-500 hover:text-amber-600 dark:hover:text-amber-400 transition-colors"
-                                                       title="{{ $feed->feed_url }}">
-                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
-                                                        </svg>
-                                                    </a>
-                                                @endif
-                                            </div>
-                                        </td>
-                                        <td class="px-4 py-3 text-gray-700 dark:text-zinc-300">
-                                            @php
-                                                $languageCode = $feed->language;
-                                                $languageLabel = $languageOptions[$languageCode] ?? Str::upper($languageCode);
-                                            @endphp
-                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-400">
-                                                {{ Str::upper($languageCode) }}
-                                            </span>
-                                        </td>
-                                        <td class="px-4 py-3 text-gray-700 dark:text-zinc-300">
-                                            @if ($feed->catalog)
-                                                <span class="inline-flex items-center gap-1 text-sm">
-                                                    <svg class="w-4 h-4 text-amber-500 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
-                                                    </svg>
-                                                    {{ $feed->catalog->name }}
-                                                </span>
-                                            @else
-                                                <span class="text-gray-400 dark:text-zinc-500 text-sm italic">Uncategorized</span>
-                                            @endif
-                                        </td>
-                                        <td class="px-4 py-3 text-gray-700 dark:text-zinc-300">
-                                            {{ number_format($feed->products_count) }}
-                                        </td>
-                                        <td class="px-4 py-3 text-gray-700 dark:text-zinc-300">
-                                            {{ $feed->updated_at->diffForHumans() }}
-                                        </td>
-                                        <td class="px-4 py-3 text-right">
-                                            <div class="relative inline-block text-left" x-data="{ open: false, dropup: false }" @click.away="open = false">
-                                                <button
-                                                    type="button"
-                                                    x-ref="trigger"
-                                                    @click="
-                                                        const rect = $refs.trigger.getBoundingClientRect();
-                                                        const spaceBelow = window.innerHeight - rect.bottom;
-                                                        dropup = spaceBelow < 160;
-                                                        open = !open;
-                                                    "
-                                                    class="inline-flex items-center justify-center w-8 h-8 rounded-lg text-gray-400 dark:text-zinc-500 hover:text-gray-600 dark:hover:text-zinc-300 hover:bg-gray-100/80 dark:hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-amber-500/50 transition-all opacity-0 group-hover:opacity-100"
-                                                    :class="{ 'opacity-100 text-gray-600 dark:text-zinc-300 bg-gray-100 dark:bg-zinc-800': open }">
-                                                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                                                        <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z"></path>
-                                                    </svg>
-                                                </button>
-
-                                                <div
-                                                    x-show="open"
-                                                    x-transition:enter="transition ease-out duration-100"
-                                                    x-transition:enter-start="transform opacity-0 scale-95"
-                                                    x-transition:enter-end="transform opacity-100 scale-100"
-                                                    x-transition:leave="transition ease-in duration-75"
-                                                    x-transition:leave-start="transform opacity-100 scale-100"
-                                                    x-transition:leave-end="transform opacity-0 scale-95"
-                                                    class="absolute right-0 z-10 w-48 rounded-xl bg-white dark:bg-zinc-800 shadow-lg dark:shadow-none ring-1 ring-black/5 dark:ring-white/10 border border-gray-200 dark:border-zinc-700 focus:outline-none"
-                                                    :class="dropup ? 'bottom-full mb-2 origin-bottom-right' : 'top-full mt-2 origin-top-right'"
-                                                    style="display: none;">
-                                                    <div class="py-1">
-                                                        <button
-                                                            type="button"
-                                                            wire:click="startMoveFeed({{ $feed->id }})"
-                                                            @click="open = false"
-                                                            class="group flex items-center w-full px-4 py-2.5 text-sm text-gray-700 dark:text-zinc-300 hover:bg-amber-50 dark:hover:bg-amber-500/10 hover:text-amber-700 dark:hover:text-amber-400 transition-colors">
-                                                            <svg class="w-4 h-4 mr-3 text-gray-400 dark:text-zinc-500 group-hover:text-amber-600 dark:group-hover:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
-                                                            </svg>
-                                                            Move to Catalog
-                                                        </button>
-                                                        @if ($feed->feed_url)
-                                                            <button
-                                                                type="button"
-                                                                wire:click="refreshFeed({{ $feed->id }})"
-                                                                wire:loading.attr="disabled"
-                                                                wire:target="refreshFeed({{ $feed->id }})"
-                                                                @click="open = false"
-                                                                class="group flex items-center w-full px-4 py-2.5 text-sm text-gray-700 dark:text-zinc-300 hover:bg-amber-50 dark:hover:bg-amber-500/10 hover:text-amber-700 dark:hover:text-amber-400 transition-colors disabled:opacity-50">
-                                                                <svg class="w-4 h-4 mr-3 text-gray-400 dark:text-zinc-500 group-hover:text-amber-600 dark:group-hover:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-                                                                </svg>
-                                                                <span wire:loading.remove wire:target="refreshFeed({{ $feed->id }})">Refresh Feed</span>
-                                                                <span wire:loading wire:target="refreshFeed({{ $feed->id }})">Refreshing…</span>
-                                                            </button>
-                                                        @endif
-                                                        <button
-                                                            type="button"
-                                                            x-on:click.prevent="if(window.confirm('Delete this feed? All imported products from this feed will be removed.')) { $wire.deleteFeed({{ $feed->id }}); open = false; }"
-                                                            wire:loading.attr="disabled"
-                                                            wire:target="deleteFeed({{ $feed->id }})"
-                                                            class="group flex items-center w-full px-4 py-2.5 text-sm text-gray-700 dark:text-zinc-300 hover:bg-red-50 dark:hover:bg-red-500/10 hover:text-red-700 dark:hover:text-red-400 transition-colors disabled:opacity-50">
-                                                            <svg class="w-4 h-4 mr-3 text-gray-400 dark:text-zinc-500 group-hover:text-red-600 dark:group-hover:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                                                            </svg>
-                                                            <span wire:loading.remove wire:target="deleteFeed({{ $feed->id }})">Delete Feed</span>
-                                                            <span wire:loading wire:target="deleteFeed({{ $feed->id }})">Deleting…</span>
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
-                    </div>
-                @endif
-            </div>
-        </div>
-    </div>
 </div>
