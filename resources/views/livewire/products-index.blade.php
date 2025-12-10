@@ -145,7 +145,7 @@
 
         <div class="bg-white dark:bg-zinc-900/50 shadow dark:shadow-none dark:ring-1 dark:ring-zinc-800 sm:rounded-xl">
             <div class="divide-y divide-gray-200 dark:divide-zinc-800">
-                <div class="hidden px-4 py-3 bg-gray-50 dark:bg-zinc-800/50 text-xs font-semibold uppercase text-gray-600 dark:text-zinc-400 sm:grid sm:grid-cols-12 rounded-t-xl">
+                <div class="hidden px-4 py-3 bg-gray-50 dark:bg-zinc-800/50 text-xs font-semibold uppercase text-gray-600 dark:text-zinc-400 sm:grid sm:grid-cols-10 rounded-t-xl">
                     <div class="col-span-1 flex items-center">
                         <input
                             type="checkbox"
@@ -156,7 +156,6 @@
                     </div>
                     <div class="col-span-7">Title</div>
                     <div class="col-span-2">Last AI Generation</div>
-                    <div class="col-span-2 text-right">Actions</div>
                 </div>
 
                 @forelse ($products as $product)
@@ -165,7 +164,7 @@
                         $latestGenerationLabel = $latestGenerationRecord?->template?->name ?? 'AI Generation';
                         $latestGenerationTimestamp = $latestGenerationRecord?->updated_at ?? $latestGenerationRecord?->created_at;
                     @endphp
-                    <div wire:key="product-{{ $product->id }}" class="flex flex-col gap-4 px-4 py-5 transition-colors sm:grid sm:grid-cols-12 sm:items-center hover:bg-gray-50 dark:hover:bg-zinc-800/50">
+                    <div wire:key="product-{{ $product->id }}" class="flex flex-col gap-4 px-4 py-5 transition-colors sm:grid sm:grid-cols-10 sm:items-center hover:bg-gray-50 dark:hover:bg-zinc-800/50">
                         <div class="flex items-center sm:col-span-1 sm:justify-center">
                             <input
                                 type="checkbox"
@@ -177,15 +176,31 @@
                         </div>
                         <div class="sm:col-span-7">
                             <div class="flex items-start gap-4">
-                                <x-product-image-preview
-                                    :src="$product->image_link"
-                                    :alt="$product->title ? 'Preview of '.$product->title : 'Product image preview'"
-                                    size="w-16 h-16"
-                                />
+                                @if ($product->hasSemanticUrl())
+                                    <a href="{{ $product->getUrl() }}" class="block shrink-0">
+                                        <x-product-image-preview
+                                            :src="$product->image_link"
+                                            :alt="$product->title ? 'Preview of '.$product->title : 'Product image preview'"
+                                            size="w-16 h-16"
+                                        />
+                                    </a>
+                                @else
+                                    <x-product-image-preview
+                                        :src="$product->image_link"
+                                        :alt="$product->title ? 'Preview of '.$product->title : 'Product image preview'"
+                                        size="w-16 h-16"
+                                    />
+                                @endif
                                 <div class="flex-1">
-                                    <div class="text-sm font-semibold text-gray-900 dark:text-white">
-                                        {{ $product->title ?: 'Untitled product' }}
-                                    </div>
+                                    @if ($product->hasSemanticUrl())
+                                        <a href="{{ $product->getUrl() }}" class="text-sm font-semibold text-gray-900 dark:text-white hover:text-amber-600 dark:hover:text-amber-400 transition-colors">
+                                            {{ $product->title ?: 'Untitled product' }}
+                                        </a>
+                                    @else
+                                        <div class="text-sm font-semibold text-gray-900 dark:text-white">
+                                            {{ $product->title ?: 'Untitled product' }}
+                                        </div>
+                                    @endif
                                     <div class="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500 dark:text-zinc-500">
                                         <span>Brand: {{ $product->brand ?: '—' }}</span>
                                         <span>SKU: {{ $product->sku ?: '—' }}</span>
@@ -245,18 +260,6 @@
                                 </p>
                             @else
                                 <p class="text-gray-500 dark:text-zinc-500">Never generated</p>
-                            @endif
-                        </div>
-                        <div class="sm:col-span-2 flex flex-col gap-2 sm:items-end">
-                            @if ($product->hasSemanticUrl())
-                                <a href="{{ $product->getUrl() }}" class="text-sm font-medium text-amber-600 dark:text-amber-400 hover:text-amber-500 dark:hover:text-amber-300">
-                                    View details
-                                    <span class="sr-only">for {{ $product->title ?: 'Untitled product' }}</span>
-                                </a>
-                            @else
-                                <span class="text-sm text-gray-400 dark:text-zinc-500">
-                                    Add to catalog to view
-                                </span>
                             @endif
                         </div>
                     </div>
