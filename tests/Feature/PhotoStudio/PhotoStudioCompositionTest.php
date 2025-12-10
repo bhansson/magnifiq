@@ -5,7 +5,6 @@ use App\Livewire\PhotoStudio;
 use App\Models\PhotoStudioGeneration;
 use App\Models\Product;
 use App\Models\ProductAiJob;
-use App\Models\Team;
 use App\Models\User;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
@@ -254,4 +253,165 @@ test('gallery shows composition badge', function () {
 
     Livewire::test(PhotoStudio::class)
         ->assertSee('Product Group Image');
+});
+
+test('adding product stores both primary and additional image urls', function () {
+    $this->actingAs($this->user);
+
+    $product = Product::factory()->create([
+        'team_id' => $this->team->id,
+        'title' => 'Product With Both Images',
+        'image_link' => 'https://example.com/primary.jpg',
+        'additional_image_link' => 'https://example.com/additional.jpg',
+    ]);
+
+    $component = Livewire::test(PhotoStudio::class)
+        ->call('addProductToComposition', $product->id);
+
+    $component->assertSet('compositionImages.0.primary_image_url', 'https://example.com/primary.jpg')
+        ->assertSet('compositionImages.0.additional_image_url', 'https://example.com/additional.jpg')
+        ->assertSet('compositionImages.0.using_additional_image', false)
+        ->assertSet('compositionImages.0.preview_url', 'https://example.com/primary.jpg');
+});
+
+test('toggle product image switches to additional image', function () {
+    $this->actingAs($this->user);
+
+    $product = Product::factory()->create([
+        'team_id' => $this->team->id,
+        'title' => 'Toggleable Product',
+        'image_link' => 'https://example.com/primary.jpg',
+        'additional_image_link' => 'https://example.com/additional.jpg',
+    ]);
+
+    $component = Livewire::test(PhotoStudio::class)
+        ->call('addProductToComposition', $product->id)
+        ->assertSet('compositionImages.0.using_additional_image', false)
+        ->assertSet('compositionImages.0.preview_url', 'https://example.com/primary.jpg')
+        ->call('toggleProductImage', 0)
+        ->assertSet('compositionImages.0.using_additional_image', true)
+        ->assertSet('compositionImages.0.preview_url', 'https://example.com/additional.jpg')
+        ->assertSet('compositionImages.0.source_reference', 'https://example.com/additional.jpg');
+});
+
+test('toggle product image switches back to primary image', function () {
+    $this->actingAs($this->user);
+
+    $product = Product::factory()->create([
+        'team_id' => $this->team->id,
+        'image_link' => 'https://example.com/primary.jpg',
+        'additional_image_link' => 'https://example.com/additional.jpg',
+    ]);
+
+    Livewire::test(PhotoStudio::class)
+        ->call('addProductToComposition', $product->id)
+        ->call('toggleProductImage', 0)
+        ->assertSet('compositionImages.0.using_additional_image', true)
+        ->call('toggleProductImage', 0)
+        ->assertSet('compositionImages.0.using_additional_image', false)
+        ->assertSet('compositionImages.0.preview_url', 'https://example.com/primary.jpg');
+});
+
+test('toggle product image clears prompt result', function () {
+    $this->actingAs($this->user);
+
+    $product = Product::factory()->create([
+        'team_id' => $this->team->id,
+        'image_link' => 'https://example.com/primary.jpg',
+        'additional_image_link' => 'https://example.com/additional.jpg',
+    ]);
+
+    Livewire::test(PhotoStudio::class)
+        ->call('addProductToComposition', $product->id)
+        ->set('promptResult', 'A beautiful generated prompt')
+        ->assertSet('promptResult', 'A beautiful generated prompt')
+        ->call('toggleProductImage', 0)
+        ->assertSet('promptResult', null);
+});
+
+test('toggle product image does nothing for products without additional image', function () {
+    $this->actingAs($this->user);
+
+    $product = Product::factory()->create([
+        'team_id' => $this->team->id,
+        'image_link' => 'https://example.com/primary.jpg',
+        'additional_image_link' => null,
+    ]);
+
+    Livewire::test(PhotoStudio::class)
+        ->call('addProductToComposition', $product->id)
+        ->assertSet('compositionImages.0.preview_url', 'https://example.com/primary.jpg')
+        ->call('toggleProductImage', 0)
+        ->assertSet('compositionImages.0.preview_url', 'https://example.com/primary.jpg')
+        ->assertSet('compositionImages.0.using_additional_image', false);
+});
+
+test('toggle product image does nothing for uploaded images', function () {
+    $this->actingAs($this->user);
+
+    // Simulate an uploaded image in the composition
+    Livewire::test(PhotoStudio::class)
+        ->set('compositionImages', [
+            [
+                'type' => 'upload',
+                'product_id' => null,
+                'title' => 'uploaded-image.jpg',
+                'preview_url' => 'data:image/jpeg;base64,/9j/4AAQ...',
+                'data_uri' => 'data:image/jpeg;base64,/9j/4AAQ...',
+                'source_reference' => 'uploaded-image.jpg',
+                'primary_image_url' => null,
+                'additional_image_url' => null,
+                'using_additional_image' => false,
+            ],
+        ])
+        ->assertSet('compositionImages.0.preview_url', 'data:image/jpeg;base64,/9j/4AAQ...')
+        ->call('toggleProductImage', 0)
+        ->assertSet('compositionImages.0.preview_url', 'data:image/jpeg;base64,/9j/4AAQ...');
+});
+
+test('toggle product image does nothing for invalid index', function () {
+    $this->actingAs($this->user);
+
+    $product = Product::factory()->create([
+        'team_id' => $this->team->id,
+        'image_link' => 'https://example.com/primary.jpg',
+        'additional_image_link' => 'https://example.com/additional.jpg',
+    ]);
+
+    Livewire::test(PhotoStudio::class)
+        ->call('addProductToComposition', $product->id)
+        ->call('toggleProductImage', 99)
+        ->assertSet('compositionImages.0.preview_url', 'https://example.com/primary.jpg')
+        ->assertSet('compositionImages.0.using_additional_image', false);
+});
+
+test('product dropdown shows multi-image badge for products with additional images', function () {
+    $this->actingAs($this->user);
+
+    Product::factory()->create([
+        'team_id' => $this->team->id,
+        'title' => 'Product With Additional',
+        'sku' => 'WITH-ADD',
+        'image_link' => 'https://example.com/primary.jpg',
+        'additional_image_link' => 'https://example.com/additional.jpg',
+    ]);
+
+    Product::factory()->create([
+        'team_id' => $this->team->id,
+        'title' => 'Product Without Additional',
+        'sku' => 'NO-ADD',
+        'image_link' => 'https://example.com/single.jpg',
+        'additional_image_link' => null,
+    ]);
+
+    // The component should load products with additional_image_link field
+    $component = Livewire::test(PhotoStudio::class);
+
+    // Verify the products array contains the additional_image_link field
+    $products = $component->get('products');
+    $productWithAdditional = collect($products)->firstWhere('sku', 'WITH-ADD');
+    $productWithoutAdditional = collect($products)->firstWhere('sku', 'NO-ADD');
+
+    expect($productWithAdditional['additional_image_link'])->toBe('https://example.com/additional.jpg');
+    expect($productWithoutAdditional['additional_image_link'])->toBeNull();
 });

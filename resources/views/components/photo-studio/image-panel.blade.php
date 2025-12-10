@@ -59,6 +59,7 @@
                         <img
                             src="{{ $img['preview_url'] }}"
                             alt="{{ $img['title'] }}"
+                            title="{{ $img['title'] }}"
                             class="size-full object-cover"
                         />
 
@@ -74,6 +75,21 @@
                             </button>
                         @endif
 
+                        {{-- Image toggle button (products with additional images) --}}
+                        @if ($img['type'] === 'product' && ! empty($img['additional_image_url']))
+                            <button
+                                type="button"
+                                wire:click="toggleProductImage({{ $index }})"
+                                class="absolute top-1 left-1/2 -translate-x-1/2 flex items-center gap-0.5 rounded-full bg-black/70 px-1.5 py-0.5 text-[10px] font-medium text-white backdrop-blur-sm transition hover:bg-black/80 focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+                                title="Switch to {{ ($img['using_additional_image'] ?? false) ? 'primary' : 'additional' }} image"
+                            >
+                                <svg class="size-3" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
+                                </svg>
+                                <span>{{ ($img['using_additional_image'] ?? false) ? '2/2' : '1/2' }}</span>
+                            </button>
+                        @endif
+
                         {{-- Remove Button --}}
                         <button
                             type="button"
@@ -84,10 +100,6 @@
                             <svg class="size-3" viewBox="0 0 20 20" fill="none"><path d="m6 6 8 8m0-8-8 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" /></svg>
                         </button>
 
-                        {{-- Type Badge --}}
-                        <div class="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/60 to-transparent px-2 py-1">
-                            <p class="truncate text-[10px] font-medium text-white">{{ $img['title'] }}</p>
-                        </div>
                     </div>
                 @endforeach
             </div>

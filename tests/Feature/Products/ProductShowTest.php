@@ -358,3 +358,59 @@ test('product get url returns null for standalone products', function () {
     expect($product->getUrl())->toBeNull();
     expect($product->hasSemanticUrl())->toBeFalse();
 });
+
+test('product with additional image shows image switcher badge', function () {
+    $user = User::factory()->withPersonalTeam()->create();
+    $team = $user->currentTeam;
+
+    $feed = ProductFeed::factory()->create([
+        'team_id' => $team->id,
+    ]);
+
+    $product = Product::factory()->create([
+        'team_id' => $team->id,
+        'product_feed_id' => $feed->id,
+        'title' => 'Product With Two Images',
+        'image_link' => 'https://example.com/primary.jpg',
+        'additional_image_link' => 'https://example.com/additional.jpg',
+    ]);
+
+    $this->actingAs($user);
+
+    $component = Livewire::test(ProductShow::class, ['productId' => $product->id]);
+
+    // The image switcher should show the toggle badge with "1/2" indicator
+    $component->assertSeeHtml('x-text="(currentIndex + 1) + \'/\' + images.length"');
+});
+
+test('product without additional image shows simple image', function () {
+    $user = User::factory()->withPersonalTeam()->create();
+    $team = $user->currentTeam;
+
+    $feed = ProductFeed::factory()->create([
+        'team_id' => $team->id,
+    ]);
+
+    $product = Product::factory()->create([
+        'team_id' => $team->id,
+        'product_feed_id' => $feed->id,
+        'title' => 'Product With Single Image',
+        'image_link' => 'https://example.com/single.jpg',
+        'additional_image_link' => null,
+    ]);
+
+    $this->actingAs($user);
+
+    $component = Livewire::test(ProductShow::class, ['productId' => $product->id]);
+
+    // The component should not have the toggle button (only appears with multiple images)
+    $html = $component->html();
+
+    // Image URL is passed via @js() to Alpine, so it appears as JSON escaped in the HTML
+    // The URL is in the images array: images: ["https:\/\/example.com\/single.jpg"]
+    $this->assertStringContainsString('example.com', $html);
+
+    // The toggle badge should not appear (only rendered when $hasMultipleImages is true)
+    // We check for the absence of the @click handler with toggle()
+    $this->assertStringNotContainsString('@click.stop.prevent="toggle()"', $html);
+});

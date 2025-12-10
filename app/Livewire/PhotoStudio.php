@@ -803,7 +803,7 @@ class PhotoStudio extends Component
 
         $product = Product::query()
             ->where('team_id', $teamId)
-            ->find($productId, ['id', 'title', 'sku', 'brand', 'image_link']);
+            ->find($productId, ['id', 'title', 'sku', 'brand', 'image_link', 'additional_image_link']);
 
         if (! $product || ! $product->image_link) {
             return;
@@ -816,6 +816,9 @@ class PhotoStudio extends Component
             'preview_url' => $product->image_link,
             'data_uri' => null, // Will be fetched during extraction
             'source_reference' => $product->image_link,
+            'primary_image_url' => $product->image_link,
+            'additional_image_url' => $product->additional_image_link,
+            'using_additional_image' => false,
         ];
 
         $this->promptResult = null;
@@ -839,6 +842,35 @@ class PhotoStudio extends Component
             $this->compositionHeroIndex--;
         }
 
+        $this->promptResult = null;
+    }
+
+    /**
+     * Toggle between primary and additional image for a product in composition.
+     */
+    public function toggleProductImage(int $index): void
+    {
+        if (! isset($this->compositionImages[$index])) {
+            return;
+        }
+
+        $img = $this->compositionImages[$index];
+
+        // Only toggle if this is a product with an additional image
+        if ($img['type'] !== 'product' || empty($img['additional_image_url'])) {
+            return;
+        }
+
+        $useAdditional = ! ($img['using_additional_image'] ?? false);
+        $newUrl = $useAdditional ? $img['additional_image_url'] : $img['primary_image_url'];
+
+        $this->compositionImages[$index]['using_additional_image'] = $useAdditional;
+        $this->compositionImages[$index]['preview_url'] = $newUrl;
+        $this->compositionImages[$index]['source_reference'] = $newUrl;
+        // Clear cached data_uri so it will be re-fetched
+        $this->compositionImages[$index]['data_uri'] = null;
+
+        // Clear prompt since input changed
         $this->promptResult = null;
     }
 
@@ -1737,7 +1769,7 @@ class PhotoStudio extends Component
         $productRecords = $query
             ->orderBy('title')
             ->limit(self::PRODUCT_SEARCH_LIMIT)
-            ->get(['id', 'title', 'sku', 'brand', 'image_link']);
+            ->get(['id', 'title', 'sku', 'brand', 'image_link', 'additional_image_link']);
 
         $this->products = $productRecords
             ->map(static function (Product $product): array {
@@ -1747,6 +1779,7 @@ class PhotoStudio extends Component
                     'sku' => $product->sku,
                     'brand' => $product->brand,
                     'image_link' => $product->image_link,
+                    'additional_image_link' => $product->additional_image_link,
                 ];
             })
             ->toArray();
@@ -1765,7 +1798,7 @@ class PhotoStudio extends Component
             $missingProducts = Product::query()
                 ->where('team_id', $team->id)
                 ->whereIn('id', $missingProductIds)
-                ->get(['id', 'title', 'sku', 'brand', 'image_link']);
+                ->get(['id', 'title', 'sku', 'brand', 'image_link', 'additional_image_link']);
 
             foreach ($missingProducts as $product) {
                 $this->products[] = [
@@ -1774,6 +1807,7 @@ class PhotoStudio extends Component
                     'sku' => $product->sku,
                     'brand' => $product->brand,
                     'image_link' => $product->image_link,
+                    'additional_image_link' => $product->additional_image_link,
                 ];
             }
         }
