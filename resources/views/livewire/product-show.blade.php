@@ -109,8 +109,9 @@
 
                     @if ($product->image_link)
                         <div class="lg:w-56 flex justify-start lg:justify-end">
-                            <x-product-image-preview
-                                :src="$product->image_link"
+                            <x-product-image-switcher
+                                :primary-src="$product->image_link"
+                                :secondary-src="$product->additional_image_link"
                                 :alt="$product->title ? 'Preview of '.$product->title : 'Product image preview'"
                                 size="w-40 h-40 sm:w-48 sm:h-48"
                                 class="mx-auto lg:mx-0"
