@@ -206,7 +206,7 @@ class ManageProductFeeds extends Component
 
             $this->loadFeeds();
         } catch (\Throwable $e) {
-            $this->errorMessage = 'Unable to refresh feed: '.$e->getMessage();
+            $this->errorMessage = 'Unable to import feed: '.$e->getMessage();
         } finally {
             $this->feedUrl = $previousUrl;
             $this->feedFile = $previousFile;
