@@ -27,15 +27,21 @@ class ManageProductFeeds extends Component
         'url', 'image_link', 'additional_image_link',
     ];
 
-    #[Validate('nullable|string|max:255')]
+    #[Validate('required|string|max:255')]
     public string $feedName = '';
+
+    /**
+     * Selected catalog option: 'new' to create a new catalog, or an existing catalog ID.
+     */
+    #[Validate('required|string')]
+    public string $catalogOption = 'new';
 
     public string $feedUrl = '';
 
     #[Validate(ProductFeed::LANGUAGE_VALIDATION_RULE)]
     public string $language = 'en';
 
-    #[Validate('nullable|file|max:5120|mimetypes:text/xml,application/xml,application/rss+xml,text/csv,text/plain,application/octet-stream')]
+    #[Validate('nullable|file|max:20480|mimetypes:text/xml,application/xml,application/rss+xml,text/csv,text/plain,application/octet-stream')]
     public $feedFile;
 
     public array $availableFields = [];
@@ -250,6 +256,7 @@ class ManageProductFeeds extends Component
 
         $this->feedUrl = trim($this->feedUrl);
         $this->resetMessages();
+        $this->showMapping = false;
 
         if (! $this->feedUrl && ! $this->feedFile) {
             $this->errorMessage = 'Provide a feed URL or upload a feed file.';
@@ -283,8 +290,15 @@ class ManageProductFeeds extends Component
 
             $this->availableFields = $fields;
             $this->suggestMappings($fields);
-            $this->showMapping = true;
             $this->lastParsed = $parsed;
+
+            // Auto-populate feed name from URL domain
+            $this->feedName = $this->suggestFeedName();
+
+            // Auto-detect language from feed content
+            $this->language = $this->detectLanguageFromFeed($content, $parsed);
+
+            $this->showMapping = true;
         } catch (\Throwable $e) {
             $this->errorMessage = 'Unable to read feed: '.$e->getMessage();
             if ($this->lastContentType) {
@@ -296,6 +310,144 @@ class ManageProductFeeds extends Component
         }
     }
 
+    /**
+     * Suggest a feed name based on URL or file name.
+     */
+    protected function suggestFeedName(): string
+    {
+        if ($this->feedUrl) {
+            // Extract domain name only
+            $parsed = parse_url($this->feedUrl);
+            $host = $parsed['host'] ?? '';
+
+            // Remove common prefixes like www.
+            return preg_replace('/^www\./', '', $host);
+        }
+
+        if ($this->feedFile) {
+            $filename = $this->feedFile->getClientOriginalName();
+
+            // Remove extension
+            return preg_replace('/\.(xml|csv|txt|rss)$/i', '', $filename);
+        }
+
+        return 'Product Feed';
+    }
+
+    /**
+     * Detect language from feed content.
+     * Checks RSS/Atom language tags, Google Merchant fields, and URL patterns.
+     */
+    protected function detectLanguageFromFeed(string $content, array $parsed): string
+    {
+        $detectedLanguage = null;
+
+        // For XML feeds, check common language indicators
+        if ($parsed['type'] === 'xml' && $parsed['items']->isNotEmpty()) {
+            $firstItem = $parsed['items']->first();
+            $namespaces = $parsed['namespaces'];
+
+            // Check g:content_language (Google Merchant)
+            $contentLang = $this->extractXmlValue($namespaces, $firstItem, 'g:content_language');
+            if ($contentLang) {
+                $detectedLanguage = Str::lower($contentLang);
+            }
+
+            // Check g:target_country and infer language
+            if (! $detectedLanguage) {
+                $targetCountry = $this->extractXmlValue($namespaces, $firstItem, 'g:target_country');
+                if ($targetCountry) {
+                    $detectedLanguage = $this->languageFromCountry($targetCountry);
+                }
+            }
+        }
+
+        // Check for <language> tag in RSS (usually at channel level, but check content)
+        if (! $detectedLanguage && preg_match('/<language>([a-z]{2}(?:-[a-z]{2})?)<\/language>/i', $content, $matches)) {
+            $detectedLanguage = Str::lower($matches[1]);
+        }
+
+        // Check URL for language hints
+        if (! $detectedLanguage && $this->feedUrl) {
+            $detectedLanguage = $this->detectLanguageFromUrl($this->feedUrl);
+        }
+
+        // Validate against supported languages
+        if ($detectedLanguage && array_key_exists($detectedLanguage, ProductFeed::languageOptions())) {
+            return $detectedLanguage;
+        }
+
+        // Try to match partial (e.g., 'en-us' -> 'en')
+        if ($detectedLanguage) {
+            $shortCode = Str::before($detectedLanguage, '-');
+            if (array_key_exists($shortCode, ProductFeed::languageOptions())) {
+                return $shortCode;
+            }
+        }
+
+        return 'en'; // Default fallback
+    }
+
+    /**
+     * Detect language code from URL patterns.
+     */
+    protected function detectLanguageFromUrl(string $url): ?string
+    {
+        // Common URL patterns: /sv/, /en-gb/, ?lang=sv, etc.
+        $patterns = [
+            '/\/([a-z]{2}(?:-[a-z]{2})?)\/feed/i',      // /sv/feed, /en-gb/feed
+            '/\/([a-z]{2}(?:-[a-z]{2})?)\//i',          // /sv/, /en-gb/
+            '/[?&]lang(?:uage)?=([a-z]{2}(?:-[a-z]{2})?)/i', // ?lang=sv, ?language=en-gb
+            '/[?&]locale=([a-z]{2}(?:-[a-z]{2})?)/i',   // ?locale=sv
+            '/[-_]([a-z]{2}(?:-[a-z]{2})?)\.xml$/i',    // feed-sv.xml, feed_en-gb.xml
+        ];
+
+        foreach ($patterns as $pattern) {
+            if (preg_match($pattern, $url, $matches)) {
+                return Str::lower($matches[1]);
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Map country code to likely language.
+     */
+    protected function languageFromCountry(string $country): ?string
+    {
+        $countryToLanguage = [
+            'SE' => 'sv',
+            'NO' => 'no',
+            'DK' => 'da',
+            'FI' => 'fi',
+            'DE' => 'de',
+            'AT' => 'de',
+            'CH' => 'de',
+            'FR' => 'fr',
+            'ES' => 'es',
+            'IT' => 'it',
+            'NL' => 'nl',
+            'BE' => 'nl',
+            'PL' => 'pl',
+            'PT' => 'pt',
+            'GB' => 'en-gb',
+            'UK' => 'en-gb',
+            'US' => 'en-us',
+            'CZ' => 'cs',
+            'HU' => 'hu',
+            'RO' => 'ro',
+            'BG' => 'bg',
+            'SK' => 'sk',
+            'SI' => 'sl',
+            'EE' => 'et',
+            'LV' => 'lv',
+            'LT' => 'lt',
+        ];
+
+        return $countryToLanguage[Str::upper($country)] ?? null;
+    }
+
     public function importFeed(): void
     {
         $this->feedUrl = trim($this->feedUrl);
@@ -303,7 +455,9 @@ class ManageProductFeeds extends Component
 
         if (! $this->isRefreshing) {
             $this->validate([
+                'feedName' => 'required|string|max:255',
                 'feedUrl' => 'nullable|url|max:2048',
+                'catalogOption' => 'required|string',
             ]);
         }
 
@@ -325,6 +479,37 @@ class ManageProductFeeds extends Component
 
         $team = $this->currentTeam();
 
+        // Validate catalog option (must be 'new' or existing catalog ID)
+        $catalogId = null;
+        if ($this->catalogOption !== 'new') {
+            $catalog = ProductCatalog::query()
+                ->where('team_id', $team->id)
+                ->where('id', $this->catalogOption)
+                ->first();
+
+            if (! $catalog) {
+                $this->errorMessage = 'Selected catalog not found.';
+
+                return;
+            }
+            $catalogId = $catalog->id;
+        }
+
+        // Check for duplicate feed URL with same language (only for new URL-based imports)
+        if (! $this->isRefreshing && $this->feedUrl) {
+            $existingFeed = ProductFeed::query()
+                ->where('team_id', $team->id)
+                ->where('feed_url', $this->feedUrl)
+                ->where('language', $this->language)
+                ->first();
+
+            if ($existingFeed) {
+                $this->errorMessage = 'A feed with this URL and language already exists: "'.$existingFeed->name.'". Use the refresh option to update it instead.';
+
+                return;
+            }
+        }
+
         try {
             $content = $this->retrieveFeedContent();
             $parsed = $this->parseFeed($content);
@@ -341,15 +526,35 @@ class ManageProductFeeds extends Component
 
             $importedFeed = null;
             $importedCount = 0;
+            $createdCatalog = null;
 
-            DB::transaction(function () use ($team, $items, $parsed, $language, &$importedFeed, &$importedCount): void {
+            DB::transaction(function () use ($team, $items, $parsed, $language, $catalogId, &$importedFeed, &$importedCount, &$createdCatalog): void {
+                // Create new catalog if needed, or use existing one with same name
+                if ($this->catalogOption === 'new') {
+                    $existingCatalog = ProductCatalog::query()
+                        ->where('team_id', $team->id)
+                        ->where('name', $this->feedName)
+                        ->first();
+
+                    if ($existingCatalog) {
+                        $catalogId = $existingCatalog->id;
+                    } else {
+                        $createdCatalog = ProductCatalog::create([
+                            'team_id' => $team->id,
+                            'name' => $this->feedName,
+                        ]);
+                        $catalogId = $createdCatalog->id;
+                    }
+                }
+
                 $feed = $this->findOrCreateFeed($team->id, $language);
 
                 $feed->forceFill([
-                    'name' => $this->resolveFeedName(),
+                    'name' => $this->feedName,
                     'feed_url' => $this->feedUrl ?: null,
                     'language' => $language,
                     'field_mappings' => $this->mapping,
+                    'product_catalog_id' => $catalogId,
                 ])->save();
 
                 $importedCount = $this->upsertProductsFromParsedFeed($feed, $items, $parsed, $this->mapping);
@@ -357,12 +562,37 @@ class ManageProductFeeds extends Component
                 $importedFeed = $feed;
             });
 
+            if ($createdCatalog) {
+                TeamActivity::create([
+                    'team_id' => $team->id,
+                    'user_id' => Auth::id(),
+                    'type' => TeamActivity::TYPE_CATALOG_CREATED,
+                    'subject_type' => ProductCatalog::class,
+                    'subject_id' => $createdCatalog->id,
+                    'properties' => [
+                        'catalog_name' => $createdCatalog->name,
+                    ],
+                ]);
+            }
+
             if ($importedFeed) {
                 TeamActivity::recordFeedImported($importedFeed, Auth::id(), $importedCount);
             }
 
-            $this->reset(['feedFile']);
+            // Reset form to initial state for next import
+            $this->reset([
+                'feedUrl',
+                'feedFile',
+                'feedName',
+                'language',
+                'availableFields',
+                'mapping',
+                'showMapping',
+            ]);
+            $this->language = 'en';
+            $this->catalogOption = 'new';
             $this->statusMessage = 'Feed imported successfully.';
+            $this->loadCatalogs();
             $this->loadFeeds();
         } catch (\Throwable $e) {
             report($e);

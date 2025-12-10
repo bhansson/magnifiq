@@ -25,81 +25,165 @@
                     </div>
                 @endif
 
-                <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
-                    <div class="space-y-2">
-                        <x-label for="feedName" value="Feed Name" />
-                        <x-input id="feedName" type="text" class="w-full" wire:model.defer="feedName" />
-                        <x-input-error for="feedName" />
-                    </div>
-
-                    <div class="space-y-2">
-                        <x-label for="feedUrl" value="Feed URL" />
-                        <x-input id="feedUrl" type="text" class="w-full" placeholder="https://example.com/products.xml" wire:model.defer="feedUrl" />
-                        <x-input-error for="feedUrl" />
-                    </div>
-
-                    <div class="space-y-2">
-                        <x-label for="feedLanguage" value="Language" />
-                        <select id="feedLanguage" wire:model.defer="language" class="block w-full px-4 py-3 bg-white dark:bg-zinc-800/50 border border-gray-300 dark:border-zinc-700 rounded-xl text-gray-900 dark:text-zinc-100 focus:border-amber-500 dark:focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 dark:focus:ring-amber-500/20 transition-colors duration-200 text-sm">
-                            @foreach ($languageOptions as $code => $label)
-                                <option value="{{ $code }}">{{ $label }} ({{ Str::upper($code) }})</option>
-                            @endforeach
-                        </select>
-                        <x-input-error for="language" />
-                        <p class="text-xs text-gray-500 dark:text-zinc-500">
-                            Choose the market language that matches this catalog feed.
-                        </p>
-                    </div>
-                </div>
-
-                <div class="space-y-2">
-                    <x-label for="feedFile" value="Or Upload XML Feed" />
-                    <input id="feedFile" type="file" wire:model="feedFile" class="block w-full text-sm text-gray-500 dark:text-zinc-400 file:mr-4 file:rounded-full file:border-0 file:bg-amber-500/10 dark:file:bg-amber-500/20 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-amber-600 dark:file:text-amber-400 hover:file:bg-amber-500/20 dark:hover:file:bg-amber-500/30 transition-colors" />
-                    <x-input-error for="feedFile" />
-                    <p class="text-xs text-gray-500 dark:text-zinc-500">
-                        XML or CSV feeds up to 5MB are supported. If both a URL and file are provided, the uploaded file will be used.
-                    </p>
-                </div>
-
-                <div class="flex items-center space-x-3">
-                    <x-button type="button" wire:click="fetchFields" wire:loading.attr="disabled" wire:target="fetchFields">
-                        Load Feed Fields
-                    </x-button>
-                    <span class="text-sm text-gray-500 dark:text-zinc-400" wire:loading wire:target="fetchFields">
-                        Loading feed…
-                    </span>
-                </div>
-
-                @if ($showMapping)
-                    <div class="border-t border-gray-200 dark:border-zinc-800 pt-6">
-                        <h3 class="text-base font-semibold text-gray-800 dark:text-white">
-                            Field Mapping
-                        </h3>
-                        <p class="text-sm text-gray-600 dark:text-zinc-400 mt-1">
-                            Select which feed element populates each product attribute.
-                        </p>
-
-                        <div class="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
-                            @foreach ($mapping as $attribute => $value)
-                                <div class="space-y-2">
-                                    <x-label :for="'mapping_'.$attribute" :value="Str::headline($attribute)" />
-                                    <select id="mapping_{{ $attribute }}" wire:model="mapping.{{ $attribute }}" class="block w-full px-4 py-3 bg-white dark:bg-zinc-800/50 border border-gray-300 dark:border-zinc-700 rounded-xl text-gray-900 dark:text-zinc-100 focus:border-amber-500 dark:focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 dark:focus:ring-amber-500/20 transition-colors duration-200 text-sm">
-                                        <option value="">-- Select field --</option>
-                                        @foreach ($availableFields as $field)
-                                            <option value="{{ $field }}">{{ $field }}</option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                            @endforeach
+                {{-- Step 1: Feed URL Input --}}
+                <div class="space-y-4">
+                    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                        <div class="space-y-2">
+                            <x-label for="feedUrl" value="Feed URL" />
+                            <x-input id="feedUrl" type="text" class="w-full" placeholder="https://example.com/products.xml" wire:model.defer="feedUrl" />
+                            <x-input-error for="feedUrl" />
                         </div>
 
-                        <div class="mt-6 flex items-center space-x-3">
-                            <x-button type="button" wire:click="importFeed" wire:loading.attr="disabled" wire:target="importFeed">
-                                Import Products
+                        <div
+                            class="space-y-2"
+                            x-data="{
+                                uploading: false,
+                                progress: 0,
+                                uploadError: null,
+                                maxSize: 20 * 1024 * 1024,
+                                fileValid: false,
+                                validateFile(event) {
+                                    const file = event.target.files[0];
+                                    if (file && file.size > this.maxSize) {
+                                        this.uploadError = 'File is too large. Maximum size is 20MB, but your file is ' + (file.size / 1024 / 1024).toFixed(1) + 'MB.';
+                                        this.fileValid = false;
+                                        event.target.value = '';
+                                        return;
+                                    }
+                                    this.uploadError = null;
+                                    this.fileValid = true;
+                                }
+                            }"
+                            x-on:livewire-upload-start="if (fileValid) { uploading = true; uploadError = null; }"
+                            x-on:livewire-upload-finish="uploading = false"
+                            x-on:livewire-upload-cancel="uploading = false"
+                            x-on:livewire-upload-error="uploading = false; uploadError = 'File upload failed. The file may be too large or the server rejected it.'"
+                            x-on:livewire-upload-progress="progress = $event.detail.progress"
+                        >
+                            <x-label for="feedFile" value="Or Upload Feed File" />
+                            <input id="feedFile" type="file" wire:model="feedFile" x-on:change="validateFile($event)" class="block w-full text-sm text-gray-500 dark:text-zinc-400 file:mr-4 file:rounded-full file:border-0 file:bg-amber-500/10 dark:file:bg-amber-500/20 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-amber-600 dark:file:text-amber-400 hover:file:bg-amber-500/20 dark:hover:file:bg-amber-500/30 transition-colors" />
+                            <div x-show="uploading" class="mt-2">
+                                <div class="flex items-center gap-2 text-sm text-gray-600 dark:text-zinc-400">
+                                    <progress max="100" x-bind:value="progress" class="h-2 w-full rounded-full overflow-hidden [&::-webkit-progress-bar]:bg-gray-200 dark:[&::-webkit-progress-bar]:bg-zinc-700 [&::-webkit-progress-value]:bg-amber-500 [&::-moz-progress-bar]:bg-amber-500"></progress>
+                                    <span x-text="progress + '%'" class="min-w-[3rem] text-right"></span>
+                                </div>
+                            </div>
+                            <template x-if="uploadError">
+                                <p class="mt-1 text-sm text-red-600 dark:text-red-400" x-text="uploadError"></p>
+                            </template>
+                            <x-input-error for="feedFile" />
+                        </div>
+                    </div>
+
+                    <p class="text-xs text-gray-500 dark:text-zinc-500">
+                        XML or CSV feeds up to 20MB are supported. If both a URL and file are provided, the uploaded file will be used.
+                    </p>
+
+                    @if (! $showMapping)
+                        <div class="flex items-center space-x-3">
+                            <x-button type="button" wire:click="fetchFields" wire:loading.attr="disabled" wire:target="feedFile, fetchFields">
+                                <svg class="w-4 h-4 mr-2 -ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                                </svg>
+                                Load Feed
                             </x-button>
-                            <span class="text-sm text-gray-500 dark:text-zinc-400" wire:loading wire:target="importFeed">
-                                Importing products…
+                            <span class="text-sm text-gray-500 dark:text-zinc-400" wire:loading wire:target="fetchFields">
+                                Loading feed…
                             </span>
+                        </div>
+                    @endif
+                </div>
+
+                {{-- Step 2: Configure Feed (shown after successful fetch) --}}
+                @if ($showMapping)
+                    <div class="border-t border-gray-200 dark:border-zinc-800 pt-6 space-y-6">
+                        {{-- Feed Settings --}}
+                        <div>
+                            <h3 class="text-base font-semibold text-gray-800 dark:text-white">
+                                Feed Settings
+                            </h3>
+                            <p class="text-sm text-gray-600 dark:text-zinc-400 mt-1">
+                                Review and adjust the auto-detected settings for this feed.
+                            </p>
+
+                            <div class="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+                                <div class="space-y-2">
+                                    <x-label for="feedName" value="Feed Name" />
+                                    <x-input id="feedName" type="text" class="w-full" wire:model.defer="feedName" placeholder="My Product Feed" required />
+                                    <x-input-error for="feedName" />
+                                </div>
+
+                                <div class="space-y-2">
+                                    <x-label for="feedLanguage" value="Language" />
+                                    <select id="feedLanguage" wire:model.defer="language" class="block w-full px-4 py-3 bg-white dark:bg-zinc-800/50 border border-gray-300 dark:border-zinc-700 rounded-xl text-gray-900 dark:text-zinc-100 focus:border-amber-500 dark:focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 dark:focus:ring-amber-500/20 transition-colors duration-200 text-sm">
+                                        @foreach ($languageOptions as $code => $label)
+                                            <option value="{{ $code }}">{{ $label }} ({{ Str::upper($code) }})</option>
+                                        @endforeach
+                                    </select>
+                                    <x-input-error for="language" />
+                                </div>
+
+                                <div class="space-y-2 lg:col-span-2">
+                                    <x-label for="catalogOption" value="Catalog" />
+                                    <select id="catalogOption" wire:model.defer="catalogOption" class="block w-full px-4 py-3 bg-white dark:bg-zinc-800/50 border border-gray-300 dark:border-zinc-700 rounded-xl text-gray-900 dark:text-zinc-100 focus:border-amber-500 dark:focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 dark:focus:ring-amber-500/20 transition-colors duration-200 text-sm">
+                                        <option value="new">+ Create new catalog (uses feed name)</option>
+                                        @foreach ($catalogs as $catalog)
+                                            <option value="{{ $catalog->id }}">{{ $catalog->name }}</option>
+                                        @endforeach
+                                    </select>
+                                    <x-input-error for="catalogOption" />
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- Field Mapping --}}
+                        <div>
+                            <h3 class="text-base font-semibold text-gray-800 dark:text-white">
+                                Field Mapping
+                            </h3>
+                            <p class="text-sm text-gray-600 dark:text-zinc-400 mt-1">
+                                Map feed elements to product attributes. SKU, Title, and URL are required.
+                            </p>
+
+                            <div class="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+                                @foreach ($mapping as $attribute => $value)
+                                    <div class="space-y-2">
+                                        <x-label :for="'mapping_'.$attribute">
+                                            {{ Str::headline($attribute) }}
+                                            @if (in_array($attribute, ['sku', 'title', 'url']))
+                                                <span class="text-red-500">*</span>
+                                            @endif
+                                        </x-label>
+                                        <select id="mapping_{{ $attribute }}" wire:model="mapping.{{ $attribute }}" class="block w-full px-4 py-3 bg-white dark:bg-zinc-800/50 border border-gray-300 dark:border-zinc-700 rounded-xl text-gray-900 dark:text-zinc-100 focus:border-amber-500 dark:focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 dark:focus:ring-amber-500/20 transition-colors duration-200 text-sm">
+                                            <option value="">-- Select field --</option>
+                                            @foreach ($availableFields as $field)
+                                                <option value="{{ $field }}">{{ $field }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                @endforeach
+                            </div>
+                        </div>
+
+                        {{-- Action Buttons --}}
+                        <div class="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-zinc-800">
+                            <button
+                                type="button"
+                                wire:click="$set('showMapping', false)"
+                                class="text-sm text-gray-500 dark:text-zinc-400 hover:text-gray-700 dark:hover:text-zinc-300 transition-colors">
+                                ← Load different feed
+                            </button>
+                            <div class="flex items-center space-x-3">
+                                <span class="text-sm text-gray-500 dark:text-zinc-400" wire:loading wire:target="importFeed">
+                                    Importing products…
+                                </span>
+                                <x-button type="button" wire:click="importFeed" wire:loading.attr="disabled" wire:target="importFeed">
+                                    <svg class="w-4 h-4 mr-2 -ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                    </svg>
+                                    Import Products
+                                </x-button>
+                            </div>
                         </div>
                     </div>
                 @endif
