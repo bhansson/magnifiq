@@ -3,6 +3,7 @@
 use App\Http\Controllers\DownloadPhotoStudioGenerationController;
 use App\Http\Controllers\PhotoStudioSourceImageController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\StoreOAuthController;
 use App\Models\Team;
 use App\Models\User;
 use Illuminate\Support\Facades\Route;
@@ -47,6 +48,14 @@ Route::middleware([
     Route::get('/photo-studio/generations/{generation}/sources/{index}', PhotoStudioSourceImageController::class)
         ->name('photo-studio.generation.source')
         ->whereNumber('index');
+
+    // Store integration OAuth routes
+    Route::get('/store/{platform}/connect', [StoreOAuthController::class, 'redirect'])
+        ->name('store.oauth.redirect');
+    Route::get('/store/{platform}/callback', [StoreOAuthController::class, 'callback'])
+        ->name('store.oauth.callback');
+    Route::delete('/store/connections/{connection}', [StoreOAuthController::class, 'disconnect'])
+        ->name('store.disconnect');
 });
 
 // Admin routes (superadmin only)

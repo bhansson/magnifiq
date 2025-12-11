@@ -12,7 +12,7 @@ test('catalog page is accessible', function () {
     $this->actingAs($user)
         ->get(route('catalog.index'))
         ->assertOk()
-        ->assertSee('All Feeds');
+        ->assertSee('Product Catalogs');
 });
 
 test('manage product feeds component renders', function () {

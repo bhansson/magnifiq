@@ -25,6 +25,7 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withSchedule(function (Schedule $schedule): void {
         $schedule->command('products:generate-public-json')->everyFiveMinutes();
+        $schedule->command('stores:sync')->everyFifteenMinutes();
     })
     ->withCommands([
         GenerateProductJsonCommand::class,
