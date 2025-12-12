@@ -1,8 +1,131 @@
 {
   "blocks": {
+    "ai_description": {
+      "name": "Magnifiq Description",
+      "settings": {
+        "header_content": "Content",
+        "heading": {
+          "label": "Section heading",
+          "default": "About This Product"
+        },
+        "show_heading": {
+          "label": "Show heading"
+        },
+        "header_colors": "Colors",
+        "text_color": {
+          "label": "Text color"
+        },
+        "heading_color": {
+          "label": "Heading color"
+        },
+        "background_color": {
+          "label": "Background color"
+        },
+        "header_typography": "Typography",
+        "heading_size": {
+          "label": "Heading size"
+        },
+        "text_size": {
+          "label": "Text size"
+        },
+        "line_height": {
+          "label": "Line height"
+        },
+        "header_spacing": "Spacing",
+        "padding_vertical": {
+          "label": "Vertical padding"
+        },
+        "padding_horizontal": {
+          "label": "Horizontal padding"
+        },
+        "margin_top": {
+          "label": "Top margin"
+        },
+        "margin_bottom": {
+          "label": "Bottom margin"
+        },
+        "header_border": "Border",
+        "border_radius": {
+          "label": "Corner radius"
+        },
+        "border_width": {
+          "label": "Border width"
+        },
+        "border_color": {
+          "label": "Border color"
+        }
+      }
+    },
+    "description_summary": {
+      "name": "Magnifiq Summary",
+      "settings": {
+        "header_content": "Content",
+        "heading": {
+          "label": "Section heading",
+          "default": "Quick Overview"
+        },
+        "show_heading": {
+          "label": "Show heading"
+        },
+        "style": {
+          "label": "Display style",
+          "options__1": "Paragraph",
+          "options__2": "Highlighted box",
+          "options__3": "Boxed",
+          "options__4": "Quote"
+        },
+        "header_colors": "Colors",
+        "text_color": {
+          "label": "Text color"
+        },
+        "heading_color": {
+          "label": "Heading color"
+        },
+        "background_color": {
+          "label": "Background color"
+        },
+        "accent_color": {
+          "label": "Accent color"
+        },
+        "header_typography": "Typography",
+        "heading_size": {
+          "label": "Heading size"
+        },
+        "text_size": {
+          "label": "Text size"
+        },
+        "line_height": {
+          "label": "Line height"
+        },
+        "header_spacing": "Spacing",
+        "padding_vertical": {
+          "label": "Vertical padding"
+        },
+        "padding_horizontal": {
+          "label": "Horizontal padding"
+        },
+        "margin_top": {
+          "label": "Top margin"
+        },
+        "margin_bottom": {
+          "label": "Bottom margin"
+        },
+        "header_border": "Border",
+        "border_radius": {
+          "label": "Corner radius"
+        },
+        "border_width": {
+          "label": "Border width"
+        },
+        "border_color": {
+          "label": "Border color"
+        }
+      }
+    },
     "faq_accordion": {
       "name": "Magnifiq FAQ",
       "settings": {
+        "header_content": "Content",
         "heading": {
           "label": "Section heading",
           "default": "Frequently Asked Questions"
@@ -12,12 +135,68 @@
         },
         "expand_first": {
           "label": "Expand first question"
+        },
+        "header_colors": "Colors",
+        "heading_color": {
+          "label": "Heading color"
+        },
+        "question_color": {
+          "label": "Question text color"
+        },
+        "question_background": {
+          "label": "Question background"
+        },
+        "text_color": {
+          "label": "Answer text color"
+        },
+        "answer_background": {
+          "label": "Answer background"
+        },
+        "icon_color": {
+          "label": "Icon color"
+        },
+        "header_typography": "Typography",
+        "heading_size": {
+          "label": "Heading size"
+        },
+        "question_size": {
+          "label": "Question text size"
+        },
+        "answer_size": {
+          "label": "Answer text size"
+        },
+        "line_height": {
+          "label": "Line height"
+        },
+        "header_spacing": "Spacing",
+        "item_padding": {
+          "label": "Item padding"
+        },
+        "item_gap": {
+          "label": "Gap between items"
+        },
+        "margin_top": {
+          "label": "Top margin"
+        },
+        "margin_bottom": {
+          "label": "Bottom margin"
+        },
+        "header_border": "Border",
+        "border_radius": {
+          "label": "Corner radius"
+        },
+        "border_width": {
+          "label": "Border width"
+        },
+        "border_color": {
+          "label": "Border color"
         }
       }
     },
     "usps_list": {
       "name": "Magnifiq USPs",
       "settings": {
+        "header_content": "Content",
         "heading": {
           "label": "Section heading",
           "default": "Key Benefits"
@@ -29,36 +208,57 @@
           "label": "Layout style",
           "options__1": "Bulleted list",
           "options__2": "Numbered list",
-          "options__3": "Icon badges"
-        }
-      }
-    },
-    "ai_description": {
-      "name": "Magnifiq Description",
-      "settings": {
-        "heading": {
-          "label": "Section heading",
-          "default": "About This Product"
+          "options__3": "Icon badges",
+          "options__4": "Compact inline"
         },
-        "show_heading": {
-          "label": "Show heading"
-        }
-      }
-    },
-    "description_summary": {
-      "name": "Magnifiq Summary",
-      "settings": {
-        "heading": {
-          "label": "Section heading",
-          "default": "Quick Overview"
+        "header_colors": "Colors",
+        "heading_color": {
+          "label": "Heading color"
         },
-        "show_heading": {
-          "label": "Show heading"
+        "text_color": {
+          "label": "Text color"
         },
-        "style": {
-          "label": "Display style",
-          "options__1": "Paragraph",
-          "options__2": "Highlighted box"
+        "icon_color": {
+          "label": "Icon color"
+        },
+        "badge_background": {
+          "label": "Badge background"
+        },
+        "badge_border_color": {
+          "label": "Badge border color"
+        },
+        "header_typography": "Typography",
+        "heading_size": {
+          "label": "Heading size"
+        },
+        "text_size": {
+          "label": "Text size"
+        },
+        "line_height": {
+          "label": "Line height"
+        },
+        "header_spacing": "Spacing",
+        "item_gap": {
+          "label": "Gap between items"
+        },
+        "badge_padding_vertical": {
+          "label": "Badge vertical padding"
+        },
+        "badge_padding_horizontal": {
+          "label": "Badge horizontal padding"
+        },
+        "margin_top": {
+          "label": "Top margin"
+        },
+        "margin_bottom": {
+          "label": "Bottom margin"
+        },
+        "header_border": "Border",
+        "badge_radius": {
+          "label": "Badge corner radius"
+        },
+        "badge_border_width": {
+          "label": "Badge border width"
         }
       }
     }

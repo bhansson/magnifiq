@@ -6,57 +6,168 @@
 {%- assign usps_items = product.metafields.magnifiq.usps.value -%}
 
 {%- if usps_items != blank and usps_items.size > 0 -%}
-    <style>
-      .magnifiq-usps { margin: 2rem 0; }
-      .magnifiq-usps__heading { font-size: 1.5rem; font-weight: 600; margin-bottom: 1rem; }
-      .magnifiq-usps__list { padding-left: 1.5rem; display: flex; flex-direction: column; gap: 0.5rem; }
-      .magnifiq-usps__list--bullets { list-style-type: disc; }
-      .magnifiq-usps__list--numbered { list-style-type: decimal; }
-      .magnifiq-usps__item { line-height: 1.6; }
-      .magnifiq-usps__badges { display: flex; flex-wrap: wrap; gap: 0.75rem; }
-      .magnifiq-usps__badge { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 9999px; font-size: 0.875rem; }
-      .magnifiq-usps__badge-icon { color: #16a34a; flex-shrink: 0; }
-    </style>
-    <div class="magnifiq-usps magnifiq-usps--{{ block.settings.layout }}" {{ block.shopify_attributes }}>
-      {%- if block.settings.show_heading -%}
-        <h2 class="magnifiq-usps__heading">{{ block.settings.heading }}</h2>
-      {%- endif -%}
+  <div
+    class="magnifiq-usps magnifiq-usps--{{ block.settings.layout }}"
+    style="
+      --mq-usps-text-color: {{ block.settings.text_color }};
+      --mq-usps-heading-color: {{ block.settings.heading_color }};
+      --mq-usps-icon-color: {{ block.settings.icon_color }};
+      --mq-usps-badge-bg: {{ block.settings.badge_background }};
+      --mq-usps-badge-border-color: {{ block.settings.badge_border_color }};
+      --mq-usps-heading-size: {{ block.settings.heading_size }}px;
+      --mq-usps-text-size: {{ block.settings.text_size }}px;
+      --mq-usps-line-height: {{ block.settings.line_height }};
+      --mq-usps-item-gap: {{ block.settings.item_gap }}px;
+      --mq-usps-badge-padding-y: {{ block.settings.badge_padding_vertical }}px;
+      --mq-usps-badge-padding-x: {{ block.settings.badge_padding_horizontal }}px;
+      --mq-usps-margin-top: {{ block.settings.margin_top }}px;
+      --mq-usps-margin-bottom: {{ block.settings.margin_bottom }}px;
+      --mq-usps-badge-radius: {{ block.settings.badge_radius }}px;
+      --mq-usps-badge-border-width: {{ block.settings.badge_border_width }}px;
+    "
+    {{ block.shopify_attributes }}
+  >
+    {%- if block.settings.show_heading -%}
+      <h2 class="magnifiq-usps__heading">{{ block.settings.heading }}</h2>
+    {%- endif -%}
 
-      {%- case block.settings.layout -%}
-        {%- when 'bullets' -%}
-          <ul class="magnifiq-usps__list magnifiq-usps__list--bullets">
-            {%- for usp in usps_items -%}
-              <li class="magnifiq-usps__item">{{ usp }}</li>
-            {%- endfor -%}
-          </ul>
+    {%- case block.settings.layout -%}
+      {%- when 'bullets' -%}
+        <ul class="magnifiq-usps__list magnifiq-usps__list--bullets">
+          {%- for usp in usps_items -%}
+            <li class="magnifiq-usps__item">{{ usp }}</li>
+          {%- endfor -%}
+        </ul>
 
-        {%- when 'numbered' -%}
-          <ol class="magnifiq-usps__list magnifiq-usps__list--numbered">
-            {%- for usp in usps_items -%}
-              <li class="magnifiq-usps__item">{{ usp }}</li>
-            {%- endfor -%}
-          </ol>
+      {%- when 'numbered' -%}
+        <ol class="magnifiq-usps__list magnifiq-usps__list--numbered">
+          {%- for usp in usps_items -%}
+            <li class="magnifiq-usps__item">{{ usp }}</li>
+          {%- endfor -%}
+        </ol>
 
-        {%- when 'badges' -%}
-          <div class="magnifiq-usps__badges">
-            {%- for usp in usps_items -%}
-              <div class="magnifiq-usps__badge">
-                <svg class="magnifiq-usps__badge-icon" width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M16.667 5L7.5 14.167L3.333 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-                <span>{{ usp }}</span>
-              </div>
-            {%- endfor -%}
-          </div>
-      {%- endcase -%}
-    </div>
+      {%- when 'badges' -%}
+        <div class="magnifiq-usps__badges">
+          {%- for usp in usps_items -%}
+            <div class="magnifiq-usps__badge">
+              <svg class="magnifiq-usps__badge-icon" width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M16.667 5L7.5 14.167L3.333 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <span>{{ usp }}</span>
+            </div>
+          {%- endfor -%}
+        </div>
+
+      {%- when 'compact' -%}
+        <div class="magnifiq-usps__compact">
+          {%- for usp in usps_items -%}
+            <span class="magnifiq-usps__compact-item">
+              <svg class="magnifiq-usps__compact-icon" width="16" height="16" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M16.667 5L7.5 14.167L3.333 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              {{ usp }}
+            </span>
+            {%- unless forloop.last -%}
+              <span class="magnifiq-usps__separator">•</span>
+            {%- endunless -%}
+          {%- endfor -%}
+        </div>
+    {%- endcase -%}
+  </div>
 {%- endif -%}
+
+<style>
+  .magnifiq-usps {
+    margin-top: var(--mq-usps-margin-top);
+    margin-bottom: var(--mq-usps-margin-bottom);
+  }
+
+  .magnifiq-usps__heading {
+    font-size: var(--mq-usps-heading-size);
+    font-weight: 600;
+    margin-bottom: 1rem;
+    color: var(--mq-usps-heading-color);
+  }
+
+  .magnifiq-usps__list {
+    padding-left: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: var(--mq-usps-item-gap);
+  }
+
+  .magnifiq-usps__list--bullets {
+    list-style-type: disc;
+  }
+
+  .magnifiq-usps__list--numbered {
+    list-style-type: decimal;
+  }
+
+  .magnifiq-usps__item {
+    font-size: var(--mq-usps-text-size);
+    line-height: var(--mq-usps-line-height);
+    color: var(--mq-usps-text-color);
+  }
+
+  .magnifiq-usps__badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--mq-usps-item-gap);
+  }
+
+  .magnifiq-usps__badge {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: var(--mq-usps-badge-padding-y) var(--mq-usps-badge-padding-x);
+    background: var(--mq-usps-badge-bg);
+    border: var(--mq-usps-badge-border-width) solid var(--mq-usps-badge-border-color);
+    border-radius: var(--mq-usps-badge-radius);
+    font-size: var(--mq-usps-text-size);
+    color: var(--mq-usps-text-color);
+  }
+
+  .magnifiq-usps__badge-icon {
+    color: var(--mq-usps-icon-color);
+    flex-shrink: 0;
+  }
+
+  .magnifiq-usps__compact {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: var(--mq-usps-text-size);
+    color: var(--mq-usps-text-color);
+  }
+
+  .magnifiq-usps__compact-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+
+  .magnifiq-usps__compact-icon {
+    color: var(--mq-usps-icon-color);
+    flex-shrink: 0;
+  }
+
+  .magnifiq-usps__separator {
+    color: var(--mq-usps-icon-color);
+    opacity: 0.5;
+  }
+</style>
 
 {% schema %}
 {
   "name": "t:blocks.usps_list.name",
   "target": "section",
   "settings": [
+    {
+      "type": "header",
+      "content": "t:blocks.usps_list.settings.header_content"
+    },
     {
       "type": "text",
       "id": "heading",
@@ -76,9 +187,155 @@
       "options": [
         { "value": "bullets", "label": "t:blocks.usps_list.settings.layout.options__1" },
         { "value": "numbered", "label": "t:blocks.usps_list.settings.layout.options__2" },
-        { "value": "badges", "label": "t:blocks.usps_list.settings.layout.options__3" }
+        { "value": "badges", "label": "t:blocks.usps_list.settings.layout.options__3" },
+        { "value": "compact", "label": "t:blocks.usps_list.settings.layout.options__4" }
       ],
       "default": "badges"
+    },
+    {
+      "type": "header",
+      "content": "t:blocks.usps_list.settings.header_colors"
+    },
+    {
+      "type": "color",
+      "id": "heading_color",
+      "label": "t:blocks.usps_list.settings.heading_color.label",
+      "default": "#111827"
+    },
+    {
+      "type": "color",
+      "id": "text_color",
+      "label": "t:blocks.usps_list.settings.text_color.label",
+      "default": "#374151"
+    },
+    {
+      "type": "color",
+      "id": "icon_color",
+      "label": "t:blocks.usps_list.settings.icon_color.label",
+      "default": "#16a34a"
+    },
+    {
+      "type": "color",
+      "id": "badge_background",
+      "label": "t:blocks.usps_list.settings.badge_background.label",
+      "default": "#f0fdf4"
+    },
+    {
+      "type": "color",
+      "id": "badge_border_color",
+      "label": "t:blocks.usps_list.settings.badge_border_color.label",
+      "default": "#bbf7d0"
+    },
+    {
+      "type": "header",
+      "content": "t:blocks.usps_list.settings.header_typography"
+    },
+    {
+      "type": "range",
+      "id": "heading_size",
+      "label": "t:blocks.usps_list.settings.heading_size.label",
+      "min": 16,
+      "max": 48,
+      "step": 2,
+      "unit": "px",
+      "default": 24
+    },
+    {
+      "type": "range",
+      "id": "text_size",
+      "label": "t:blocks.usps_list.settings.text_size.label",
+      "min": 12,
+      "max": 20,
+      "step": 1,
+      "unit": "px",
+      "default": 14
+    },
+    {
+      "type": "range",
+      "id": "line_height",
+      "label": "t:blocks.usps_list.settings.line_height.label",
+      "min": 1,
+      "max": 2,
+      "step": 0.1,
+      "default": 1.6
+    },
+    {
+      "type": "header",
+      "content": "t:blocks.usps_list.settings.header_spacing"
+    },
+    {
+      "type": "range",
+      "id": "item_gap",
+      "label": "t:blocks.usps_list.settings.item_gap.label",
+      "min": 4,
+      "max": 24,
+      "step": 2,
+      "unit": "px",
+      "default": 12
+    },
+    {
+      "type": "range",
+      "id": "badge_padding_vertical",
+      "label": "t:blocks.usps_list.settings.badge_padding_vertical.label",
+      "min": 4,
+      "max": 24,
+      "step": 2,
+      "unit": "px",
+      "default": 8
+    },
+    {
+      "type": "range",
+      "id": "badge_padding_horizontal",
+      "label": "t:blocks.usps_list.settings.badge_padding_horizontal.label",
+      "min": 8,
+      "max": 32,
+      "step": 2,
+      "unit": "px",
+      "default": 16
+    },
+    {
+      "type": "range",
+      "id": "margin_top",
+      "label": "t:blocks.usps_list.settings.margin_top.label",
+      "min": 0,
+      "max": 100,
+      "step": 4,
+      "unit": "px",
+      "default": 32
+    },
+    {
+      "type": "range",
+      "id": "margin_bottom",
+      "label": "t:blocks.usps_list.settings.margin_bottom.label",
+      "min": 0,
+      "max": 100,
+      "step": 4,
+      "unit": "px",
+      "default": 32
+    },
+    {
+      "type": "header",
+      "content": "t:blocks.usps_list.settings.header_border"
+    },
+    {
+      "type": "range",
+      "id": "badge_radius",
+      "label": "t:blocks.usps_list.settings.badge_radius.label",
+      "min": 0,
+      "max": 50,
+      "step": 2,
+      "unit": "px",
+      "default": 50
+    },
+    {
+      "type": "range",
+      "id": "badge_border_width",
+      "label": "t:blocks.usps_list.settings.badge_border_width.label",
+      "min": 0,
+      "max": 4,
+      "step": 1,
+      "unit": "px",
+      "default": 1
     }
   ]
 }
