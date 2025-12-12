@@ -49,15 +49,6 @@ class PushImageToStore implements ShouldQueue
             return;
         }
 
-        if ($generation->isPushedToStore()) {
-            Log::debug('PushImageToStore: Generation already pushed to store', [
-                'generation_id' => $generation->id,
-                'pushed_at' => $generation->pushed_to_store_at,
-            ]);
-
-            return;
-        }
-
         $connection = $generation->getStoreConnection();
 
         if (! $connection) {

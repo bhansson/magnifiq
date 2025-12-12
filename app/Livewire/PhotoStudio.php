@@ -555,12 +555,6 @@ class PhotoStudio extends Component
             return;
         }
 
-        if ($generation->isPushedToStore()) {
-            $this->errorMessage = 'This image has already been pushed to the store.';
-
-            return;
-        }
-
         if (! $generation->canPushToStore()) {
             $this->errorMessage = 'Cannot push this image to the store. Ensure the product has a connected store.';
 

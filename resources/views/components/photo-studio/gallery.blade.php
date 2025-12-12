@@ -248,28 +248,46 @@
                                 </div>
 
                                 {{-- Push to Store Section --}}
-                                @if (! empty($entry['is_pushed_to_store']))
-                                    <div class="mt-3 flex items-center gap-1.5 text-xs">
-                                        <span class="inline-flex items-center gap-1 rounded-full bg-emerald-100 dark:bg-emerald-500/20 px-2 py-0.5 font-medium text-emerald-700 dark:text-emerald-400">
-                                            <svg class="size-3" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
-                                            Synced to store
-                                        </span>
-                                        @if (! empty($entry['pushed_to_store_at']))
-                                            <span class="text-gray-400 dark:text-zinc-500">{{ $entry['pushed_to_store_at'] }}</span>
-                                        @endif
-                                    </div>
-                                @elseif (! empty($entry['can_push_to_store']))
-                                    <div class="mt-3">
+                                @if (! empty($entry['can_push_to_store']))
+                                    <div class="mt-3" x-data="{ pushing: false, queued: false }">
                                         <button
                                             type="button"
-                                            wire:click="pushToStore({{ $entry['id'] }})"
-                                            wire:loading.attr="disabled"
-                                            wire:target="pushToStore"
-                                            class="inline-flex items-center gap-1.5 rounded-full border border-amber-200 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/10 px-2.5 py-1 text-xs font-medium text-amber-700 dark:text-amber-400 transition hover:bg-amber-100 dark:hover:bg-amber-500/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-amber-500/20 disabled:opacity-50"
+                                            x-on:click.prevent="
+                                                if (pushing) return;
+                                                pushing = true;
+                                                queued = false;
+                                                $wire.pushToStore({{ $entry['id'] }}).then(() => {
+                                                    setTimeout(() => {
+                                                        pushing = false;
+                                                        queued = true;
+                                                        setTimeout(() => { queued = false; }, 3000);
+                                                    }, 1500);
+                                                });
+                                            "
+                                            :disabled="pushing"
+                                            :class="queued ? 'border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400' : ''"
+                                            @class([
+                                                'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50',
+                                                'border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 focus-visible:ring-emerald-500/20' => ! empty($entry['is_pushed_to_store']),
+                                                'border-amber-200 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-500/20 focus-visible:ring-amber-500/20' => empty($entry['is_pushed_to_store']),
+                                            ])
+                                            title="{{ ! empty($entry['is_pushed_to_store']) ? 'Added ' . ($entry['pushed_to_store_at'] ?? '') . ' — click to add again' : 'Add image to store' }}"
                                         >
-                                            <svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" /></svg>
-                                            <span wire:loading.remove wire:target="pushToStore({{ $entry['id'] }})">Push to Store</span>
-                                            <span wire:loading wire:target="pushToStore({{ $entry['id'] }})">Pushing...</span>
+                                            {{-- Pushing state --}}
+                                            <span x-show="pushing" class="flex items-center gap-1.5">
+                                                <x-loading-spinner class="size-3.5" />
+                                                <span>Adding...</span>
+                                            </span>
+                                            {{-- Queued success state --}}
+                                            <span x-show="queued && !pushing" x-cloak class="flex items-center gap-1.5">
+                                                <svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                                <span>Queued!</span>
+                                            </span>
+                                            {{-- Default state --}}
+                                            <span x-show="!pushing && !queued" class="flex items-center gap-1.5">
+                                                <svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" /></svg>
+                                                <span>{{ ! empty($entry['is_pushed_to_store']) ? 'Add Again' : 'Add to Store' }}</span>
+                                            </span>
                                         </button>
                                     </div>
                                 @endif
