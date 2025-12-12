@@ -95,4 +95,22 @@ interface StoreAdapterContract
         string $imageUrl,
         ?string $alt = null
     ): ?string;
+
+    /**
+     * Delete a metafield from a product in the store.
+     *
+     * @param  StoreConnection  $connection  The store connection
+     * @param  string  $productId  The external product ID
+     * @param  string  $namespace  The metafield namespace
+     * @param  string  $key  The metafield key
+     * @return bool True if successful (or metafield didn't exist)
+     *
+     * @throws \RuntimeException If the operation fails or is not supported
+     */
+    public function deleteProductMetafield(
+        StoreConnection $connection,
+        string $productId,
+        string $namespace,
+        string $key
+    ): bool;
 }

@@ -264,6 +264,96 @@
             @endif
         </div>
 
+        <!-- Store Sync Jobs Card -->
+        <div class="bg-white dark:bg-zinc-900/50 shadow dark:shadow-none dark:ring-1 dark:ring-zinc-800 overflow-hidden sm:rounded-xl p-6">
+            <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
+                <svg class="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Store Sync Jobs
+            </h3>
+
+            <div class="flex items-baseline gap-2 mb-4">
+                <span class="text-3xl font-bold text-gray-900 dark:text-white">{{ number_format($storeSyncStats['total']) }}</span>
+                <span class="text-sm text-gray-500 dark:text-zinc-400">total syncs</span>
+            </div>
+
+            <div class="grid grid-cols-3 gap-3 mb-4">
+                <div class="bg-green-50 dark:bg-green-500/10 rounded-lg p-3 text-center">
+                    <div class="text-xl font-bold text-green-700 dark:text-green-400">{{ $storeSyncStats['by_status']['completed'] }}</div>
+                    <div class="text-xs text-green-600 dark:text-green-500">Completed</div>
+                </div>
+                <div class="bg-red-50 dark:bg-red-500/10 rounded-lg p-3 text-center">
+                    <div class="text-xl font-bold text-red-700 dark:text-red-400">{{ $storeSyncStats['by_status']['failed'] }}</div>
+                    <div class="text-xs text-red-600 dark:text-red-500">Failed</div>
+                </div>
+                <div class="bg-blue-50 dark:bg-blue-500/10 rounded-lg p-3 text-center">
+                    <div class="text-xl font-bold text-blue-700 dark:text-blue-400">{{ $storeSyncStats['by_status']['processing'] }}</div>
+                    <div class="text-xs text-blue-600 dark:text-blue-500">Processing</div>
+                </div>
+            </div>
+
+            <dl class="space-y-2 mb-4">
+                <div class="flex justify-between text-sm">
+                    <dt class="text-gray-500 dark:text-zinc-400">Syncs today</dt>
+                    <dd class="font-medium text-gray-900 dark:text-zinc-100">{{ $storeSyncStats['synced_today'] }}</dd>
+                </div>
+                <div class="flex justify-between text-sm">
+                    <dt class="text-gray-500 dark:text-zinc-400">Products synced today</dt>
+                    <dd class="font-medium text-gray-900 dark:text-zinc-100">{{ number_format($storeSyncStats['products_synced_today']) }}</dd>
+                </div>
+                <div class="flex justify-between text-sm">
+                    <dt class="text-gray-500 dark:text-zinc-400">Syncs this week</dt>
+                    <dd class="font-medium text-gray-900 dark:text-zinc-100">{{ $storeSyncStats['synced_this_week'] }}</dd>
+                </div>
+            </dl>
+
+            @if ($storeSyncStats['recent_failed']->isNotEmpty())
+                <div class="border-t border-gray-200 dark:border-zinc-800 pt-3 mt-3">
+                    <h4 class="text-xs text-red-500 dark:text-red-400 uppercase tracking-wider mb-2">Recent Failures</h4>
+                    <ul class="space-y-2">
+                        @foreach ($storeSyncStats['recent_failed'] as $job)
+                            <li class="text-sm">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-gray-900 dark:text-zinc-100 truncate">{{ $job->storeConnection?->store_identifier ?? 'Unknown' }}</span>
+                                    <span class="text-gray-500 dark:text-zinc-400 text-xs">{{ $job->created_at->diffForHumans() }}</span>
+                                </div>
+                                @if ($job->error_message)
+                                    <p class="text-xs text-red-500 dark:text-red-400 truncate mt-0.5" title="{{ $job->error_message }}">{{ Str::limit($job->error_message, 60) }}</p>
+                                @endif
+                            </li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
+
+            @if ($storeSyncStats['recent']->isNotEmpty())
+                <div class="border-t border-gray-200 dark:border-zinc-800 pt-3 mt-3">
+                    <h4 class="text-xs text-gray-400 dark:text-zinc-500 uppercase tracking-wider mb-2">Recent Syncs</h4>
+                    <ul class="space-y-1.5 max-h-48 overflow-y-auto">
+                        @foreach ($storeSyncStats['recent'] as $job)
+                            <li class="flex items-center justify-between text-sm py-1">
+                                <div class="flex items-center gap-2 min-w-0">
+                                    @if ($job->status === 'completed')
+                                        <span class="w-2 h-2 bg-green-500 rounded-full flex-shrink-0"></span>
+                                    @elseif ($job->status === 'failed')
+                                        <span class="w-2 h-2 bg-red-500 rounded-full flex-shrink-0"></span>
+                                    @else
+                                        <span class="w-2 h-2 bg-blue-500 rounded-full animate-pulse flex-shrink-0"></span>
+                                    @endif
+                                    <span class="text-gray-900 dark:text-zinc-100 truncate">{{ $job->storeConnection?->store_identifier ?? 'Unknown' }}</span>
+                                </div>
+                                <div class="flex items-center gap-2 text-xs text-gray-500 dark:text-zinc-400 flex-shrink-0">
+                                    <span>{{ $job->products_synced ?? 0 }} products</span>
+                                    <span>{{ $job->created_at->diffForHumans() }}</span>
+                                </div>
+                            </li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
+        </div>
+
         <!-- Photo Studio Statistics Card -->
         <div wire:poll.visible.5s="refreshPhotoStudio" class="bg-white dark:bg-zinc-900/50 shadow dark:shadow-none dark:ring-1 dark:ring-zinc-800 overflow-hidden sm:rounded-xl p-6 lg:col-span-2 xl:col-span-2">
             <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-4 flex items-center gap-2">

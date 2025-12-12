@@ -7,6 +7,7 @@ use App\Services\StoreIntegration\DTO\OAuthCredentials;
 use App\Services\StoreIntegration\DTO\StoreProduct;
 use Generator;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use RuntimeException;
 
 class ShopifyAdapter extends AbstractStoreAdapter
@@ -25,6 +26,8 @@ class ShopifyAdapter extends AbstractStoreAdapter
             'read_inventory',
             'write_products',
             'write_metafields',
+            'read_metafield_definitions',
+            'write_metafield_definitions',
         ];
     }
 
@@ -425,6 +428,81 @@ class ShopifyAdapter extends AbstractStoreAdapter
         return $media['id'] ?? null;
     }
 
+    /**
+     * Delete a metafield from a product in Shopify.
+     *
+     * Uses the metafieldsDelete mutation which accepts owner ID + namespace + key.
+     *
+     * @param  StoreConnection  $connection  The store connection
+     * @param  string  $productId  The Shopify product GID (e.g., gid://shopify/Product/123)
+     * @param  string  $namespace  The metafield namespace
+     * @param  string  $key  The metafield key
+     * @return bool True if successful (or metafield didn't exist)
+     *
+     * @throws RuntimeException If the API call fails
+     */
+    public function deleteProductMetafield(
+        StoreConnection $connection,
+        string $productId,
+        string $namespace,
+        string $key
+    ): bool {
+        $shop = $this->normalizeShopDomain($connection->store_identifier);
+
+        $mutation = <<<'GRAPHQL'
+        mutation metafieldsDelete($metafields: [MetafieldIdentifierInput!]!) {
+            metafieldsDelete(metafields: $metafields) {
+                deletedMetafields {
+                    key
+                    namespace
+                    ownerId
+                }
+                userErrors {
+                    field
+                    message
+                }
+            }
+        }
+        GRAPHQL;
+
+        $variables = [
+            'metafields' => [
+                [
+                    'ownerId' => $productId,
+                    'namespace' => $namespace,
+                    'key' => $key,
+                ],
+            ],
+        ];
+
+        $response = Http::withHeaders([
+            'X-Shopify-Access-Token' => $connection->access_token,
+            'Content-Type' => 'application/json',
+        ])->timeout(30)->post(
+            "https://{$shop}/admin/api/".self::API_VERSION.'/graphql.json',
+            ['query' => $mutation, 'variables' => $variables]
+        );
+
+        if ($response->failed()) {
+            throw new RuntimeException('Shopify API request failed: '.$response->body());
+        }
+
+        $data = $response->json();
+
+        if (isset($data['errors'])) {
+            throw new RuntimeException('Shopify GraphQL error: '.json_encode($data['errors']));
+        }
+
+        $userErrors = $data['data']['metafieldsDelete']['userErrors'] ?? [];
+        if (! empty($userErrors)) {
+            throw new RuntimeException('Shopify mutation error: '.json_encode($userErrors));
+        }
+
+        // Note: deletedMetafields will be [null] if the metafield didn't exist,
+        // which is fine - we consider that a success (nothing to delete)
+        return true;
+    }
+
     private function mapToStoreProduct(array $node, string $shopDomain): StoreProduct
     {
         $variants = collect($node['variants']['edges'] ?? [])
@@ -467,5 +545,234 @@ class ShopifyAdapter extends AbstractStoreAdapter
                 'status' => $node['status'] ?? null,
             ],
         );
+    }
+
+    /**
+     * Ensure all required metafield definitions exist with PUBLIC_READ access.
+     *
+     * Theme app extensions require metafield definitions with storefront access
+     * to read metafield values. This method creates or updates definitions for
+     * all Magnifiq content types.
+     */
+    public function ensureMetafieldDefinitions(StoreConnection $connection): void
+    {
+        $definitions = [
+            [
+                'namespace' => 'magnifiq',
+                'key' => 'faq',
+                'name' => 'Magnifiq FAQ',
+                'description' => 'AI-generated FAQ content from Magnifiq',
+                'type' => 'json',
+            ],
+            [
+                'namespace' => 'magnifiq',
+                'key' => 'usps',
+                'name' => 'Magnifiq USPs',
+                'description' => 'AI-generated Unique Selling Points from Magnifiq',
+                'type' => 'json',
+            ],
+            [
+                'namespace' => 'magnifiq',
+                'key' => 'description',
+                'name' => 'Magnifiq Description',
+                'description' => 'AI-generated product description from Magnifiq',
+                'type' => 'multi_line_text_field',
+            ],
+            [
+                'namespace' => 'magnifiq',
+                'key' => 'description_summary',
+                'name' => 'Magnifiq Summary',
+                'description' => 'AI-generated product summary from Magnifiq',
+                'type' => 'multi_line_text_field',
+            ],
+        ];
+
+        foreach ($definitions as $definition) {
+            $this->ensureSingleMetafieldDefinition($connection, $definition);
+        }
+    }
+
+    /**
+     * Ensure a single metafield definition exists with correct access.
+     *
+     * @param  array{namespace: string, key: string, name: string, description: string, type: string}  $definition
+     */
+    protected function ensureSingleMetafieldDefinition(StoreConnection $connection, array $definition): void
+    {
+        $existing = $this->findMetafieldDefinition(
+            $connection,
+            $definition['namespace'],
+            $definition['key']
+        );
+
+        if ($existing) {
+            // Check if access needs updating
+            if (($existing['access']['storefront'] ?? null) !== 'PUBLIC_READ') {
+                $this->updateMetafieldDefinitionAccess($connection, $existing['id']);
+            }
+        } else {
+            $this->createMetafieldDefinition($connection, $definition);
+        }
+    }
+
+    /**
+     * Find an existing metafield definition by namespace and key.
+     *
+     * @return array{id: string, namespace: string, key: string, access: array{storefront: string}}|null
+     */
+    protected function findMetafieldDefinition(StoreConnection $connection, string $namespace, string $key): ?array
+    {
+        $query = <<<'GRAPHQL'
+        query findMetafieldDefinition($namespace: String!, $key: String!) {
+            metafieldDefinitions(
+                first: 1,
+                ownerType: PRODUCT,
+                namespace: $namespace,
+                key: $key
+            ) {
+                nodes {
+                    id
+                    namespace
+                    key
+                    access {
+                        storefront
+                    }
+                }
+            }
+        }
+        GRAPHQL;
+
+        $response = $this->graphqlRequest($connection, $query, [
+            'namespace' => $namespace,
+            'key' => $key,
+        ]);
+
+        $nodes = $response['data']['metafieldDefinitions']['nodes'] ?? [];
+
+        return $nodes[0] ?? null;
+    }
+
+    /**
+     * Create a new metafield definition with PUBLIC_READ storefront access.
+     *
+     * @param  array{namespace: string, key: string, name: string, description: string, type: string}  $definition
+     */
+    protected function createMetafieldDefinition(StoreConnection $connection, array $definition): void
+    {
+        $mutation = <<<'GRAPHQL'
+        mutation createMetafieldDefinition($definition: MetafieldDefinitionInput!) {
+            metafieldDefinitionCreate(definition: $definition) {
+                createdDefinition {
+                    id
+                    namespace
+                    key
+                }
+                userErrors {
+                    field
+                    message
+                }
+            }
+        }
+        GRAPHQL;
+
+        $response = $this->graphqlRequest($connection, $mutation, [
+            'definition' => [
+                'name' => $definition['name'],
+                'namespace' => $definition['namespace'],
+                'key' => $definition['key'],
+                'description' => $definition['description'],
+                'type' => $definition['type'],
+                'ownerType' => 'PRODUCT',
+                'access' => [
+                    'storefront' => 'PUBLIC_READ',
+                ],
+            ],
+        ]);
+
+        $errors = $response['data']['metafieldDefinitionCreate']['userErrors'] ?? [];
+
+        if (! empty($errors)) {
+            Log::warning('Failed to create metafield definition', [
+                'definition' => $definition,
+                'errors' => $errors,
+            ]);
+        }
+    }
+
+    /**
+     * Update metafield definition to enable PUBLIC_READ storefront access.
+     */
+    protected function updateMetafieldDefinitionAccess(StoreConnection $connection, string $definitionId): void
+    {
+        $mutation = <<<'GRAPHQL'
+        mutation updateMetafieldDefinitionAccess($definition: MetafieldDefinitionUpdateInput!, $id: ID!) {
+            metafieldDefinitionUpdate(definition: $definition, id: $id) {
+                updatedDefinition {
+                    id
+                    access {
+                        storefront
+                    }
+                }
+                userErrors {
+                    field
+                    message
+                }
+            }
+        }
+        GRAPHQL;
+
+        $response = $this->graphqlRequest($connection, $mutation, [
+            'id' => $definitionId,
+            'definition' => [
+                'access' => [
+                    'storefront' => 'PUBLIC_READ',
+                ],
+            ],
+        ]);
+
+        $errors = $response['data']['metafieldDefinitionUpdate']['userErrors'] ?? [];
+
+        if (! empty($errors)) {
+            Log::warning('Failed to update metafield definition access', [
+                'definitionId' => $definitionId,
+                'errors' => $errors,
+            ]);
+        }
+    }
+
+    /**
+     * Make a GraphQL request to Shopify.
+     *
+     * @param  array<string, mixed>  $variables
+     * @return array<string, mixed>
+     *
+     * @throws RuntimeException
+     */
+    protected function graphqlRequest(StoreConnection $connection, string $query, array $variables = []): array
+    {
+        $shop = $this->normalizeShopDomain($connection->store_identifier);
+
+        $response = Http::withHeaders([
+            'X-Shopify-Access-Token' => $connection->access_token,
+            'Content-Type' => 'application/json',
+        ])->timeout(30)->post(
+            "https://{$shop}/admin/api/".self::API_VERSION.'/graphql.json',
+            [
+                'query' => $query,
+                'variables' => $variables,
+            ]
+        );
+
+        if ($response->failed()) {
+            throw new RuntimeException('Shopify API request failed: '.$response->body());
+        }
+
+        $data = $response->json();
+
+        if (isset($data['errors'])) {
+            throw new RuntimeException('Shopify GraphQL error: '.json_encode($data['errors']));
+        }
+
+        return $data;
     }
 }

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Facades\Store;
+use App\Jobs\SetupStoreMetafieldDefinitions;
 use App\Jobs\SyncStoreProducts;
 use App\Models\StoreConnection;
 use Illuminate\Http\RedirectResponse;
@@ -104,6 +105,7 @@ class StoreOAuthController extends Controller
             }
 
             SyncStoreProducts::dispatch($connection);
+            SetupStoreMetafieldDefinitions::dispatch($connection);
 
             Log::info('Store connection established', [
                 'connection_id' => $connection->id,

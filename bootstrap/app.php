@@ -17,6 +17,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->web(append: [
             \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,
             \App\Http\Middleware\DetectPartnerContext::class,
+            \App\Http\Middleware\HandleShopifyInstall::class,
         ]);
 
         $middleware->alias([

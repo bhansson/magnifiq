@@ -1,0 +1,15 @@
+{
+  "name": "magnifiq-shopify-app",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Magnifiq Shopify App - Theme App Extensions",
+  "scripts": {
+    "shopify": "shopify",
+    "dev": "shopify app dev",
+    "deploy": "shopify app deploy",
+    "build": "shopify app build"
+  },
+  "dependencies": {
+    "@shopify/cli": "^3.75.1"
+  }
+}

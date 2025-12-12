@@ -1,0 +1,25 @@
+api_version = "2025-10"
+uid = "2dcfa07d-7a7c-78ed-af10-3c07757005fc4e9a7d60"
+type = "theme"
+name = "Magnifiq AI Content Blocks"
+handle = "magnifiq-theme-blocks"
+
+[[theme_extension.embedded_blocks]]
+template = "product"
+block = "blocks/faq-accordion"
+label = "Magnifiq FAQ"
+
+[[theme_extension.embedded_blocks]]
+template = "product"
+block = "blocks/usps-list"
+label = "Magnifiq USPs"
+
+[[theme_extension.embedded_blocks]]
+template = "product"
+block = "blocks/ai-description"
+label = "Magnifiq Description"
+
+[[theme_extension.embedded_blocks]]
+template = "product"
+block = "blocks/description-summary"
+label = "Magnifiq Summary"

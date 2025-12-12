@@ -52,6 +52,8 @@ return [
                 'read_inventory',
                 'write_products',
                 'write_metafields',
+                'read_metafield_definitions',
+                'write_metafield_definitions',
             ],
         ],
 

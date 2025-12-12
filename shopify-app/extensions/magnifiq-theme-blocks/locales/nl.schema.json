@@ -1,0 +1,66 @@
+{
+  "blocks": {
+    "faq_accordion": {
+      "name": "Magnifiq FAQ",
+      "settings": {
+        "heading": {
+          "label": "Sectiekop",
+          "default": "Veelgestelde vragen"
+        },
+        "show_heading": {
+          "label": "Kop weergeven"
+        },
+        "expand_first": {
+          "label": "Eerste uitklappen"
+        }
+      }
+    },
+    "usps_list": {
+      "name": "Magnifiq Voordelen",
+      "settings": {
+        "heading": {
+          "label": "Sectiekop",
+          "default": "Belangrijkste voordelen"
+        },
+        "show_heading": {
+          "label": "Kop weergeven"
+        },
+        "layout": {
+          "label": "Lay-outstijl",
+          "options__1": "Opsommingslijst",
+          "options__2": "Genummerde lijst",
+          "options__3": "Pictogrambadges"
+        }
+      }
+    },
+    "ai_description": {
+      "name": "Magnifiq Beschrijving",
+      "settings": {
+        "heading": {
+          "label": "Sectiekop",
+          "default": "Over dit product"
+        },
+        "show_heading": {
+          "label": "Kop weergeven"
+        }
+      }
+    },
+    "description_summary": {
+      "name": "Magnifiq Samenvatting",
+      "settings": {
+        "heading": {
+          "label": "Sectiekop",
+          "default": "Snel overzicht"
+        },
+        "show_heading": {
+          "label": "Kop weergeven"
+        },
+        "style": {
+          "label": "Weergavestijl",
+          "options__1": "Alinea",
+          "options__2": "Gemarkeerd vak"
+        }
+      }
+    }
+  }
+}

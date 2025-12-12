@@ -1,0 +1,18 @@
+{
+  "magnifiq": {
+    "blocks": {
+      "faq": {
+        "no_content": "No FAQ content available"
+      },
+      "usps": {
+        "no_content": "No benefits listed"
+      },
+      "description": {
+        "no_content": "No description available"
+      },
+      "summary": {
+        "no_content": "No summary available"
+      }
+    }
+  }
+}

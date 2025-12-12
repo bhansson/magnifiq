@@ -4,6 +4,7 @@ namespace App\Livewire;
 
 use App\Models\PhotoStudioGeneration;
 use App\Models\ProductAiJob;
+use App\Models\StoreSyncJob;
 use App\Models\Team;
 use App\Models\User;
 use Carbon\Carbon;
@@ -33,6 +34,7 @@ class AdminDashboard extends Component
             'userStats' => $this->getUserStats(),
             'teamStats' => $this->getTeamStats(),
             'jobStats' => $this->getJobStats(),
+            'storeSyncStats' => $this->getStoreSyncStats(),
         ]);
     }
 
@@ -127,6 +129,40 @@ class AdminDashboard extends Component
                 ->latest()
                 ->limit(5)
                 ->get(['id', 'job_type', 'last_error', 'created_at']),
+        ];
+    }
+
+    /**
+     * Get store sync job statistics.
+     *
+     * @return array<string, mixed>
+     */
+    private function getStoreSyncStats(): array
+    {
+        $today = Carbon::today();
+        $weekAgo = Carbon::now()->subWeek();
+
+        return [
+            'total' => StoreSyncJob::count(),
+            'by_status' => [
+                'completed' => StoreSyncJob::where('status', StoreSyncJob::STATUS_COMPLETED)->count(),
+                'failed' => StoreSyncJob::where('status', StoreSyncJob::STATUS_FAILED)->count(),
+                'processing' => StoreSyncJob::where('status', StoreSyncJob::STATUS_PROCESSING)->count(),
+            ],
+            'synced_today' => StoreSyncJob::whereDate('created_at', $today)->count(),
+            'synced_this_week' => StoreSyncJob::where('created_at', '>=', $weekAgo)->count(),
+            'products_synced_today' => StoreSyncJob::whereDate('created_at', $today)->sum('products_synced'),
+            'recent' => StoreSyncJob::query()
+                ->with('storeConnection:id,store_identifier,platform')
+                ->latest()
+                ->limit(10)
+                ->get(),
+            'recent_failed' => StoreSyncJob::query()
+                ->with('storeConnection:id,store_identifier,platform')
+                ->where('status', StoreSyncJob::STATUS_FAILED)
+                ->latest()
+                ->limit(5)
+                ->get(),
         ];
     }
 

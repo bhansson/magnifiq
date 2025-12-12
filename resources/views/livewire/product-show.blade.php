@@ -268,6 +268,7 @@
                                                     ->filter()
                                                     ->values();
                                                 $copyableText = $uspItems->map(fn ($usp) => '• ' . $usp)->implode("\n");
+                                                $hasContent = $uspItems->isNotEmpty();
                                             } elseif ($contentType === 'faq') {
                                                 $faqEntries = collect(is_array($latestContent) ? $latestContent : [])
                                                     ->map(function ($entry) {
@@ -289,13 +290,16 @@
                                                     ->filter()
                                                     ->values();
                                                 $copyableText = $faqEntries->map(fn ($faq) => "Q: {$faq['question']}\nA: {$faq['answer']}")->implode("\n\n");
+                                                $hasContent = $faqEntries->isNotEmpty();
                                             } else {
                                                 $textContent = trim(is_string($latestContent) ? $latestContent : '');
                                                 $copyableText = $textContent;
+                                                $hasContent = $textContent !== '';
                                             }
                                         @endphp
 
                                         <div class="space-y-3">
+                                            @if ($hasContent)
                                             <div class="flex items-center justify-between">
                                                 <div class="flex items-center gap-2">
                                                     <h4 class="text-sm font-semibold text-gray-900 dark:text-white">
@@ -343,6 +347,7 @@
                                                     </button>
                                                 @endif
                                             </div>
+                                            @endif
                                             @switch($contentType)
                                                 @case('usps')
                                                     @if ($uspItems->isNotEmpty())
@@ -384,6 +389,7 @@
                                             @endswitch
                                         </div>
 
+                                        @if ($hasContent)
                                         <p class="text-xs text-gray-500 dark:text-zinc-500">
                                             @if ($latestTimestamp)
                                                 Generated {{ $latestTimestamp->diffForHumans() }}
@@ -394,6 +400,7 @@
                                                 ({{ Str::upper($latestModel) }})
                                             @endif
                                         </p>
+                                        @endif
 
                                         @if ($historyItems->isNotEmpty())
                                             <div class="space-y-3">
@@ -531,173 +538,82 @@
                 </div>
 
                 @if ($hasStoreConnection)
+                    @php
+                        $storeIdentifier = $product->feed?->storeConnection?->store_identifier;
+                        $storeName = $storeIdentifier ? Str::before($storeIdentifier, '.myshopify.com') : null;
+                        $themeEditorUrl = $storeName ? "https://admin.shopify.com/store/{$storeName}/themes/current/editor?context=apps" : null;
+                    @endphp
                     <div class="bg-white dark:bg-zinc-900/50 shadow-sm dark:shadow-none dark:ring-1 dark:ring-zinc-800 sm:rounded-xl">
                         <div class="px-6 py-5 border-b border-gray-200 dark:border-zinc-800">
-                            <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Shopify Integration</h2>
+                            <h2 class="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                                <svg class="w-5 h-5 text-green-600 dark:text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                                Theme Integration
+                            </h2>
                             <p class="mt-1 text-sm text-gray-600 dark:text-zinc-400">
-                                Use these Liquid snippets in your Shopify theme to display AI-generated content.
+                                Add Magnifiq blocks to your theme via the Shopify theme editor. No code required!
                             </p>
                         </div>
-                        <div class="px-6 py-6 space-y-6" x-data="{ activeSnippet: null }">
-                            {{-- FAQ Accordion Snippet --}}
-                            <div class="space-y-2">
-                                <div class="flex items-center justify-between">
-                                    <h3 class="text-sm font-medium text-gray-900 dark:text-white">FAQ Accordion</h3>
-                                    <button
-                                        type="button"
-                                        @click="activeSnippet = activeSnippet === 'faq' ? null : 'faq'"
-                                        class="text-xs font-medium text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300"
-                                    >
-                                        <span x-show="activeSnippet !== 'faq'">Show code</span>
-                                        <span x-show="activeSnippet === 'faq'">Hide code</span>
-                                    </button>
+                        <div class="px-6 py-6 space-y-5">
+                            {{-- Steps --}}
+                            <div class="space-y-3">
+                                <div class="flex items-start gap-3 p-3 bg-gray-50 dark:bg-zinc-800/50 rounded-lg">
+                                    <span class="flex-shrink-0 w-6 h-6 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded-full flex items-center justify-center text-sm font-medium">1</span>
+                                    <div>
+                                        <p class="font-medium text-gray-900 dark:text-white">Open Theme Editor</p>
+                                        <p class="text-sm text-gray-600 dark:text-zinc-400">Online Store → Themes → Customize</p>
+                                    </div>
                                 </div>
-                                <div x-show="activeSnippet === 'faq'" x-cloak class="space-y-2">
-                                    @php
-                                        $faqSnippet = <<<'LIQUID'
-{% if product.metafields.magnifiq.faq %}
-  <div class="magnifiq-faq">
-    {% for item in product.metafields.magnifiq.faq.value %}
-      <details>
-        <summary>{{ item.question }}</summary>
-        <div>{{ item.answer }}</div>
-      </details>
-    {% endfor %}
-  </div>
-{% endif %}
-LIQUID;
-                                    @endphp
-                                    <div class="relative">
-                                        <pre class="p-3 pr-10 bg-gray-50 dark:bg-zinc-800 rounded-lg text-xs text-gray-700 dark:text-zinc-300 overflow-x-auto"><code>{{ $faqSnippet }}</code></pre>
-                                        <div class="absolute top-2 right-2">
-                                            <x-copy-button :text="$faqSnippet" class="bg-white dark:bg-zinc-700 shadow-sm rounded p-1.5 hover:bg-gray-100 dark:hover:bg-zinc-600" />
-                                        </div>
+
+                                <div class="flex items-start gap-3 p-3 bg-gray-50 dark:bg-zinc-800/50 rounded-lg">
+                                    <span class="flex-shrink-0 w-6 h-6 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded-full flex items-center justify-center text-sm font-medium">2</span>
+                                    <div>
+                                        <p class="font-medium text-gray-900 dark:text-white">Navigate to Product Page</p>
+                                        <p class="text-sm text-gray-600 dark:text-zinc-400">Select a product template from the dropdown</p>
+                                    </div>
+                                </div>
+
+                                <div class="flex items-start gap-3 p-3 bg-gray-50 dark:bg-zinc-800/50 rounded-lg">
+                                    <span class="flex-shrink-0 w-6 h-6 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded-full flex items-center justify-center text-sm font-medium">3</span>
+                                    <div>
+                                        <p class="font-medium text-gray-900 dark:text-white">Add Magnifiq Blocks</p>
+                                        <p class="text-sm text-gray-600 dark:text-zinc-400">Click "Add block" and find Magnifiq under Apps</p>
                                     </div>
                                 </div>
                             </div>
 
-                            {{-- USPs List Snippet --}}
-                            <div class="space-y-2">
-                                <div class="flex items-center justify-between">
-                                    <h3 class="text-sm font-medium text-gray-900 dark:text-white">Unique Selling Points</h3>
-                                    <button
-                                        type="button"
-                                        @click="activeSnippet = activeSnippet === 'usps' ? null : 'usps'"
-                                        class="text-xs font-medium text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300"
-                                    >
-                                        <span x-show="activeSnippet !== 'usps'">Show code</span>
-                                        <span x-show="activeSnippet === 'usps'">Hide code</span>
-                                    </button>
-                                </div>
-                                <div x-show="activeSnippet === 'usps'" x-cloak class="space-y-2">
-                                    @php
-                                        $uspsSnippet = <<<'LIQUID'
-{% if product.metafields.magnifiq.usps %}
-  <ul class="magnifiq-usps">
-    {% for usp in product.metafields.magnifiq.usps.value %}
-      <li>✓ {{ usp }}</li>
-    {% endfor %}
-  </ul>
-{% endif %}
-LIQUID;
-                                    @endphp
-                                    <div class="relative">
-                                        <pre class="p-3 pr-10 bg-gray-50 dark:bg-zinc-800 rounded-lg text-xs text-gray-700 dark:text-zinc-300 overflow-x-auto"><code>{{ $uspsSnippet }}</code></pre>
-                                        <div class="absolute top-2 right-2">
-                                            <x-copy-button :text="$uspsSnippet" class="bg-white dark:bg-zinc-700 shadow-sm rounded p-1.5 hover:bg-gray-100 dark:hover:bg-zinc-600" />
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {{-- Description Snippet --}}
-                            <div class="space-y-2">
-                                <div class="flex items-center justify-between">
-                                    <h3 class="text-sm font-medium text-gray-900 dark:text-white">AI Description</h3>
-                                    <button
-                                        type="button"
-                                        @click="activeSnippet = activeSnippet === 'description' ? null : 'description'"
-                                        class="text-xs font-medium text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300"
-                                    >
-                                        <span x-show="activeSnippet !== 'description'">Show code</span>
-                                        <span x-show="activeSnippet === 'description'">Hide code</span>
-                                    </button>
-                                </div>
-                                <div x-show="activeSnippet === 'description'" x-cloak class="space-y-2">
-                                    @php
-                                        $descriptionSnippet = <<<'LIQUID'
-{% if product.metafields.magnifiq.description %}
-  <div class="magnifiq-description">
-    {{ product.metafields.magnifiq.description | newline_to_br }}
-  </div>
-{% endif %}
-LIQUID;
-                                    @endphp
-                                    <div class="relative">
-                                        <pre class="p-3 pr-10 bg-gray-50 dark:bg-zinc-800 rounded-lg text-xs text-gray-700 dark:text-zinc-300 overflow-x-auto"><code>{{ $descriptionSnippet }}</code></pre>
-                                        <div class="absolute top-2 right-2">
-                                            <x-copy-button :text="$descriptionSnippet" class="bg-white dark:bg-zinc-700 shadow-sm rounded p-1.5 hover:bg-gray-100 dark:hover:bg-zinc-600" />
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {{-- Description Summary Snippet --}}
-                            <div class="space-y-2">
-                                <div class="flex items-center justify-between">
-                                    <h3 class="text-sm font-medium text-gray-900 dark:text-white">Description Summary</h3>
-                                    <button
-                                        type="button"
-                                        @click="activeSnippet = activeSnippet === 'description_summary' ? null : 'description_summary'"
-                                        class="text-xs font-medium text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300"
-                                    >
-                                        <span x-show="activeSnippet !== 'description_summary'">Show code</span>
-                                        <span x-show="activeSnippet === 'description_summary'">Hide code</span>
-                                    </button>
-                                </div>
-                                <div x-show="activeSnippet === 'description_summary'" x-cloak class="space-y-2">
-                                    @php
-                                        $summarySnippet = <<<'LIQUID'
-{% if product.metafields.magnifiq.description_summary %}
-  <p class="magnifiq-summary">
-    {{ product.metafields.magnifiq.description_summary }}
-  </p>
-{% endif %}
-LIQUID;
-                                    @endphp
-                                    <div class="relative">
-                                        <pre class="p-3 pr-10 bg-gray-50 dark:bg-zinc-800 rounded-lg text-xs text-gray-700 dark:text-zinc-300 overflow-x-auto"><code>{{ $summarySnippet }}</code></pre>
-                                        <div class="absolute top-2 right-2">
-                                            <x-copy-button :text="$summarySnippet" class="bg-white dark:bg-zinc-700 shadow-sm rounded p-1.5 hover:bg-gray-100 dark:hover:bg-zinc-600" />
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            @php
-                                $storeIdentifier = $product->feed?->storeConnection?->store_identifier;
-                                $storeName = $storeIdentifier ? Str::before($storeIdentifier, '.myshopify.com') : null;
-                                $themeEditorUrl = $storeName ? "https://admin.shopify.com/store/{$storeName}/themes" : null;
-                            @endphp
-
-                            <p class="text-xs text-gray-500 dark:text-zinc-500">
-                                Add these snippets to your Shopify theme's product template.
-                            </p>
-                            <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs">
-                                @if ($themeEditorUrl)
-                                    <a href="{{ $themeEditorUrl }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 text-amber-600 dark:text-amber-400 hover:underline">
-                                        <svg class="size-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M9.53 16.122a3 3 0 0 0-5.78 1.128 2.25 2.25 0 0 1-2.4 2.245 4.5 4.5 0 0 0 8.4-2.245c0-.399-.078-.78-.22-1.128Zm0 0a15.998 15.998 0 0 0 3.388-1.62m-5.043-.025a15.994 15.994 0 0 1 1.622-3.395m3.42 3.42a15.995 15.995 0 0 0 4.764-4.648l3.876-5.814a1.151 1.151 0 0 0-1.597-1.597L14.146 6.32a15.996 15.996 0 0 0-4.649 4.763m3.42 3.42a6.776 6.776 0 0 0-3.42-3.42" />
-                                        </svg>
-                                        Theme editor
-                                    </a>
-                                @endif
-                                <a href="https://shopify.dev/docs/storefronts/themes/architecture/templates" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 text-amber-600 dark:text-amber-400 hover:underline">
-                                    <svg class="size-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
+                            {{-- Action buttons --}}
+                            @if ($themeEditorUrl)
+                                <a href="{{ $themeEditorUrl }}"
+                                   target="_blank"
+                                   rel="noopener noreferrer"
+                                   class="inline-flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors text-sm font-medium">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
                                     </svg>
-                                    Docs
+                                    Open Theme Editor
                                 </a>
+                            @endif
+
+                            {{-- Available Blocks --}}
+                            <div class="pt-4 border-t border-gray-200 dark:border-zinc-700">
+                                <h4 class="text-sm font-medium text-gray-700 dark:text-zinc-300 mb-3">Available Blocks</h4>
+                                <div class="grid grid-cols-2 gap-2">
+                                    @foreach([
+                                        ['name' => 'FAQ Accordion', 'icon' => 'M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z', 'key' => 'faq'],
+                                        ['name' => 'USPs List', 'icon' => 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z', 'key' => 'usps'],
+                                        ['name' => 'AI Description', 'icon' => 'M4 6h16M4 12h16M4 18h7', 'key' => 'description'],
+                                        ['name' => 'Summary', 'icon' => 'M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z', 'key' => 'description_summary'],
+                                    ] as $block)
+                                        <div class="flex items-center gap-2 p-2 bg-gray-50 dark:bg-zinc-800/50 rounded-lg text-sm">
+                                            <svg class="w-4 h-4 text-gray-500 dark:text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ $block['icon'] }}"/>
+                                            </svg>
+                                            <span class="text-gray-700 dark:text-zinc-300">{{ $block['name'] }}</span>
+                                        </div>
+                                    @endforeach
+                                </div>
                             </div>
                         </div>
                     </div>

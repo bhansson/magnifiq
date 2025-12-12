@@ -138,10 +138,22 @@ class SyncStoreProducts implements ShouldQueue
 
     protected function ensureProductFeed(): ProductFeed
     {
+        // Check if connection already has a linked feed
         if ($this->storeConnection->product_feed_id && $this->storeConnection->productFeed) {
             return $this->storeConnection->productFeed;
         }
 
+        // Look for an orphaned feed from a previous connection to this store
+        // This handles reconnection scenarios where the old connection was deleted
+        $orphanedFeed = $this->findOrphanedFeed();
+
+        if ($orphanedFeed) {
+            $this->reclaimOrphanedFeed($orphanedFeed);
+
+            return $orphanedFeed;
+        }
+
+        // No existing feed found, create a new one
         $feed = ProductFeed::create([
             'team_id' => $this->storeConnection->team_id,
             'name' => $this->storeConnection->name,
@@ -161,6 +173,51 @@ class SyncStoreProducts implements ShouldQueue
         $this->storeConnection->refresh();
 
         return $feed;
+    }
+
+    /**
+     * Find an orphaned feed from a previous connection to this store.
+     *
+     * When a store connection is deleted and recreated (e.g., after app reinstall),
+     * the original feed may still exist with products and AI generations. We look
+     * for feeds that match by team, source type, and have Shopify external IDs.
+     */
+    protected function findOrphanedFeed(): ?ProductFeed
+    {
+        return ProductFeed::query()
+            ->where('team_id', $this->storeConnection->team_id)
+            ->where('source_type', ProductFeed::SOURCE_TYPE_STORE_CONNECTION)
+            ->where(function ($query) {
+                // Either orphaned (null store_connection_id) or already linked to us
+                $query->whereNull('store_connection_id')
+                    ->orWhere('store_connection_id', $this->storeConnection->id);
+            })
+            ->whereHas('products', function ($query) {
+                // Has products with Shopify external IDs
+                $query->where('external_id', 'like', 'gid://shopify/Product/%');
+            })
+            ->orderByDesc('updated_at')
+            ->first();
+    }
+
+    /**
+     * Reclaim an orphaned feed by linking it to the current store connection.
+     */
+    protected function reclaimOrphanedFeed(ProductFeed $feed): void
+    {
+        $feed->update([
+            'store_connection_id' => $this->storeConnection->id,
+            'name' => $this->storeConnection->name,
+        ]);
+
+        $this->storeConnection->update(['product_feed_id' => $feed->id]);
+        $this->storeConnection->refresh();
+
+        Log::info('Reclaimed orphaned feed for store connection', [
+            'feed_id' => $feed->id,
+            'connection_id' => $this->storeConnection->id,
+            'store' => $this->storeConnection->store_identifier,
+        ]);
     }
 
     /**

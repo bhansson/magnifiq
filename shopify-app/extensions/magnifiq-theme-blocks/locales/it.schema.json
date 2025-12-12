@@ -1,0 +1,66 @@
+{
+  "blocks": {
+    "faq_accordion": {
+      "name": "Magnifiq FAQ",
+      "settings": {
+        "heading": {
+          "label": "Titolo sezione",
+          "default": "Domande frequenti"
+        },
+        "show_heading": {
+          "label": "Mostra titolo"
+        },
+        "expand_first": {
+          "label": "Espandi la prima"
+        }
+      }
+    },
+    "usps_list": {
+      "name": "Magnifiq Vantaggi",
+      "settings": {
+        "heading": {
+          "label": "Titolo sezione",
+          "default": "Vantaggi principali"
+        },
+        "show_heading": {
+          "label": "Mostra titolo"
+        },
+        "layout": {
+          "label": "Stile layout",
+          "options__1": "Elenco puntato",
+          "options__2": "Elenco numerato",
+          "options__3": "Badge con icone"
+        }
+      }
+    },
+    "ai_description": {
+      "name": "Magnifiq Descrizione",
+      "settings": {
+        "heading": {
+          "label": "Titolo sezione",
+          "default": "Informazioni sul prodotto"
+        },
+        "show_heading": {
+          "label": "Mostra titolo"
+        }
+      }
+    },
+    "description_summary": {
+      "name": "Magnifiq Riepilogo",
+      "settings": {
+        "heading": {
+          "label": "Titolo sezione",
+          "default": "Panoramica rapida"
+        },
+        "show_heading": {
+          "label": "Mostra titolo"
+        },
+        "style": {
+          "label": "Stile visualizzazione",
+          "options__1": "Paragrafo",
+          "options__2": "Riquadro evidenziato"
+        }
+      }
+    }
+  }
+}

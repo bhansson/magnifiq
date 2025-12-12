@@ -11,7 +11,6 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
-use RuntimeException;
 use Throwable;
 
 class SyncAiContentToStore implements ShouldQueue
@@ -97,31 +96,43 @@ class SyncAiContentToStore implements ShouldQueue
         $metafieldKey = $this->resolveMetafieldKey($template);
         $metafieldType = $this->resolveMetafieldType($template);
 
-        // If unpublished, sync empty content to hide in store
-        $value = $generation->isUnpublished()
-            ? $this->getEmptyValue($metafieldType)
-            : $generation->content;
-
         try {
             $adapter = Store::forPlatform($connection->platform);
 
-            $adapter->writeProductMetafield(
-                connection: $connection,
-                productId: $externalId,
-                namespace: self::METAFIELD_NAMESPACE,
-                key: $metafieldKey,
-                value: $value,
-                type: $metafieldType,
-            );
+            // If unpublished, delete the metafield to hide content in store
+            if ($generation->isUnpublished()) {
+                $adapter->deleteProductMetafield(
+                    connection: $connection,
+                    productId: $externalId,
+                    namespace: self::METAFIELD_NAMESPACE,
+                    key: $metafieldKey,
+                );
 
-            Log::info('SyncAiContentToStore: Successfully synced content to store', [
-                'generation_id' => $generation->id,
-                'product_id' => $product->id,
-                'external_id' => $externalId,
-                'template_slug' => $template->slug,
-                'metafield_key' => $metafieldKey,
-                'is_unpublished' => $generation->isUnpublished(),
-            ]);
+                Log::info('SyncAiContentToStore: Successfully deleted metafield from store', [
+                    'generation_id' => $generation->id,
+                    'product_id' => $product->id,
+                    'external_id' => $externalId,
+                    'template_slug' => $template->slug,
+                    'metafield_key' => $metafieldKey,
+                ]);
+            } else {
+                $adapter->writeProductMetafield(
+                    connection: $connection,
+                    productId: $externalId,
+                    namespace: self::METAFIELD_NAMESPACE,
+                    key: $metafieldKey,
+                    value: $generation->content,
+                    type: $metafieldType,
+                );
+
+                Log::info('SyncAiContentToStore: Successfully synced content to store', [
+                    'generation_id' => $generation->id,
+                    'product_id' => $product->id,
+                    'external_id' => $externalId,
+                    'template_slug' => $template->slug,
+                    'metafield_key' => $metafieldKey,
+                ]);
+            }
         } catch (Throwable $e) {
             Log::error('SyncAiContentToStore: Failed to sync content to store', [
                 'generation_id' => $generation->id,
@@ -169,17 +180,5 @@ class SyncAiContentToStore implements ShouldQueue
 
         // Text content types (plain text, allow line breaks)
         return 'multi_line_text_field';
-    }
-
-    /**
-     * Get the appropriate empty value for the metafield type.
-     */
-    protected function getEmptyValue(string $metafieldType): string
-    {
-        if ($metafieldType === 'json') {
-            return '[]';
-        }
-
-        return '';
     }
 }

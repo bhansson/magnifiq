@@ -1,0 +1,66 @@
+{
+  "blocks": {
+    "faq_accordion": {
+      "name": "Magnifiq FAQ",
+      "settings": {
+        "heading": {
+          "label": "セクション見出し",
+          "default": "よくある質問"
+        },
+        "show_heading": {
+          "label": "見出しを表示"
+        },
+        "expand_first": {
+          "label": "最初を展開"
+        }
+      }
+    },
+    "usps_list": {
+      "name": "Magnifiq 特長",
+      "settings": {
+        "heading": {
+          "label": "セクション見出し",
+          "default": "主な特長"
+        },
+        "show_heading": {
+          "label": "見出しを表示"
+        },
+        "layout": {
+          "label": "レイアウトスタイル",
+          "options__1": "箇条書きリスト",
+          "options__2": "番号付きリスト",
+          "options__3": "アイコンバッジ"
+        }
+      }
+    },
+    "ai_description": {
+      "name": "Magnifiq 説明",
+      "settings": {
+        "heading": {
+          "label": "セクション見出し",
+          "default": "この商品について"
+        },
+        "show_heading": {
+          "label": "見出しを表示"
+        }
+      }
+    },
+    "description_summary": {
+      "name": "Magnifiq 概要",
+      "settings": {
+        "heading": {
+          "label": "セクション見出し",
+          "default": "クイック概要"
+        },
+        "show_heading": {
+          "label": "見出しを表示"
+        },
+        "style": {
+          "label": "表示スタイル",
+          "options__1": "段落",
+          "options__2": "ハイライトボックス"
+        }
+      }
+    }
+  }
+}

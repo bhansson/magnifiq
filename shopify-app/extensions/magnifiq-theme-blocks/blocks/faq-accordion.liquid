@@ -1,0 +1,68 @@
+{% comment %}
+  Magnifiq FAQ Accordion Block
+  Displays AI-generated FAQ content from product metafields
+{% endcomment %}
+
+{%- assign faq_items = product.metafields.magnifiq.faq.value -%}
+
+{%- if faq_items != blank and faq_items.size > 0 -%}
+    <style>
+      .magnifiq-faq { margin: 2rem 0; }
+      .magnifiq-faq__heading { font-size: 1.5rem; font-weight: 600; margin-bottom: 1rem; }
+      .magnifiq-faq__list { display: flex; flex-direction: column; gap: 0.5rem; }
+      .magnifiq-faq__item { border: 1px solid #e5e7eb; border-radius: 0.5rem; overflow: hidden; }
+      .magnifiq-faq__question { display: flex; justify-content: space-between; align-items: center; padding: 1rem; cursor: pointer; font-weight: 500; background: #f9fafb; list-style: none; }
+      .magnifiq-faq__question::-webkit-details-marker { display: none; }
+      .magnifiq-faq__icon { transition: transform 0.2s ease; flex-shrink: 0; }
+      .magnifiq-faq__item[open] .magnifiq-faq__icon { transform: rotate(180deg); }
+      .magnifiq-faq__answer { padding: 1rem; border-top: 1px solid #e5e7eb; line-height: 1.6; }
+    </style>
+    <div class="magnifiq-faq" {{ block.shopify_attributes }}>
+      {%- if block.settings.show_heading -%}
+        <h2 class="magnifiq-faq__heading">{{ block.settings.heading }}</h2>
+      {%- endif -%}
+
+      <div class="magnifiq-faq__list">
+        {%- for item in faq_items -%}
+          <details class="magnifiq-faq__item" {% if forloop.first and block.settings.expand_first %}open{% endif %}>
+            <summary class="magnifiq-faq__question">
+              <span>{{ item.question }}</span>
+              <svg class="magnifiq-faq__icon" width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M5 7.5L10 12.5L15 7.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </summary>
+            <div class="magnifiq-faq__answer">
+              {{ item.answer }}
+            </div>
+          </details>
+        {%- endfor -%}
+      </div>
+    </div>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "t:blocks.faq_accordion.name",
+  "target": "section",
+  "settings": [
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "t:blocks.faq_accordion.settings.heading.label",
+      "default": "t:blocks.faq_accordion.settings.heading.default"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_heading",
+      "label": "t:blocks.faq_accordion.settings.show_heading.label",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "expand_first",
+      "label": "t:blocks.faq_accordion.settings.expand_first.label",
+      "default": true
+    }
+  ]
+}
+{% endschema %}

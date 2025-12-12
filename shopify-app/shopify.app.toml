@@ -1,0 +1,25 @@
+# Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
+
+client_id = "c8db92cccae727e01d08610d6f03b595"
+name = "Magnifiq"
+application_url = "http://magnifiq.test"
+embedded = false
+
+[webhooks]
+api_version = "2025-10"
+
+[[webhooks.subscriptions]]
+topics = ["app/uninstalled"]
+uri = "https://magnifiq.ai/api/webhooks/shopify/app-uninstalled"
+
+[access_scopes]
+# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
+scopes = "read_locales,read_markets,read_product_reviews,read_products,write_products,unauthenticated_read_product_listings"
+optional_scopes = [ ]
+use_legacy_install_flow = false
+
+[auth]
+redirect_urls = [
+  "https://magnifiq.ai/store/shopify/callback",
+  "http://magnifiq.test/store/shopify/callback"
+]
