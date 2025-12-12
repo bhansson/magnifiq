@@ -570,7 +570,7 @@
                                     <span class="flex-shrink-0 w-6 h-6 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded-full flex items-center justify-center text-sm font-medium">2</span>
                                     <div>
                                         <p class="font-medium text-gray-900 dark:text-white">Navigate to Product Page</p>
-                                        <p class="text-sm text-gray-600 dark:text-zinc-400">Select a product template from the dropdown</p>
+                                        <p class="text-sm text-gray-600 dark:text-zinc-400">Select a product template from the top dropdown: Home → Products </p>
                                     </div>
                                 </div>
 

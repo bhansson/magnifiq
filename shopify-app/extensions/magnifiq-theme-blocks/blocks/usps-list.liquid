@@ -62,14 +62,9 @@
         <div class="magnifiq-usps__compact">
           {%- for usp in usps_items -%}
             <span class="magnifiq-usps__compact-item">
-              <svg class="magnifiq-usps__compact-icon" width="16" height="16" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M16.667 5L7.5 14.167L3.333 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
+              <span class="magnifiq-usps__bullet">•</span>
               {{ usp }}
             </span>
-            {%- unless forloop.last -%}
-              <span class="magnifiq-usps__separator">•</span>
-            {%- endunless -%}
           {%- endfor -%}
         </div>
     {%- endcase -%}
@@ -144,18 +139,12 @@
 
   .magnifiq-usps__compact-item {
     display: inline-flex;
-    align-items: center;
-    gap: 0.25rem;
+    align-items: baseline;
+    gap: 0.35rem;
   }
 
-  .magnifiq-usps__compact-icon {
+  .magnifiq-usps__bullet {
     color: var(--mq-usps-icon-color);
-    flex-shrink: 0;
-  }
-
-  .magnifiq-usps__separator {
-    color: var(--mq-usps-icon-color);
-    opacity: 0.5;
   }
 </style>
 
