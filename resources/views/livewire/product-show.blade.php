@@ -211,6 +211,8 @@
                                     $key = $item['key'];
                                     $latest = $item['latest'];
                                     $historyItems = $item['history'];
+                                    $isUnpublished = $item['is_unpublished'] ?? false;
+                                    $hasStoreConnection = $item['has_store_connection'] ?? false;
                                     $status = $generationStatus[$key] ?? null;
                                     $error = $generationError[$key] ?? null;
                                     $isLoading = $generationLoading[$key] ?? false;
@@ -294,10 +296,51 @@
                                         @endphp
 
                                         <div class="space-y-3">
-                                            <div class="flex items-center gap-2">
-                                                <h4 class="text-sm font-semibold text-gray-900 dark:text-white">Published</h4>
-                                                @if ($copyableText)
-                                                    <x-copy-button :text="$copyableText" />
+                                            <div class="flex items-center justify-between">
+                                                <div class="flex items-center gap-2">
+                                                    <h4 class="text-sm font-semibold text-gray-900 dark:text-white">
+                                                        @if ($isUnpublished)
+                                                            <span class="text-gray-400 dark:text-zinc-600 line-through">Published</span>
+                                                        @else
+                                                            Published
+                                                        @endif
+                                                    </h4>
+                                                    @if ($isUnpublished)
+                                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-zinc-700 text-gray-600 dark:text-zinc-400">
+                                                            Hidden in store
+                                                        </span>
+                                                    @endif
+                                                    @if ($copyableText)
+                                                        <x-copy-button :text="$copyableText" />
+                                                    @endif
+                                                </div>
+                                                @if ($latest && $hasStoreConnection)
+                                                    <button
+                                                        type="button"
+                                                        wire:click="togglePublishState({{ $latest->id }})"
+                                                        wire:loading.attr="disabled"
+                                                        wire:target="togglePublishState"
+                                                        class="inline-flex items-center gap-1.5 border rounded-full px-3 py-1 text-xs font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-amber-500/20 disabled:opacity-50
+                                                            {{ $isUnpublished
+                                                                ? 'border-emerald-200 dark:border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:border-emerald-300 dark:hover:border-emerald-500/50 hover:bg-emerald-50 dark:hover:bg-emerald-500/10'
+                                                                : 'border-gray-200 dark:border-zinc-700 text-gray-500 dark:text-zinc-400 hover:border-gray-300 dark:hover:border-zinc-600 hover:bg-gray-50 dark:hover:bg-zinc-800'
+                                                            }}"
+                                                        title="{{ $isUnpublished ? 'Republish to store' : 'Hide from store' }}"
+                                                    >
+                                                        @if ($isUnpublished)
+                                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                                            </svg>
+                                                            <span wire:loading.remove wire:target="togglePublishState">Republish</span>
+                                                        @else
+                                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"></path>
+                                                            </svg>
+                                                            <span wire:loading.remove wire:target="togglePublishState">Unpublish</span>
+                                                        @endif
+                                                        <span wire:loading wire:target="togglePublishState">...</span>
+                                                    </button>
                                                 @endif
                                             </div>
                                             @switch($contentType)
@@ -486,6 +529,179 @@
                         </div>
                     </div>
                 </div>
+
+                @if ($hasStoreConnection)
+                    <div class="bg-white dark:bg-zinc-900/50 shadow-sm dark:shadow-none dark:ring-1 dark:ring-zinc-800 sm:rounded-xl">
+                        <div class="px-6 py-5 border-b border-gray-200 dark:border-zinc-800">
+                            <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Shopify Integration</h2>
+                            <p class="mt-1 text-sm text-gray-600 dark:text-zinc-400">
+                                Use these Liquid snippets in your Shopify theme to display AI-generated content.
+                            </p>
+                        </div>
+                        <div class="px-6 py-6 space-y-6" x-data="{ activeSnippet: null }">
+                            {{-- FAQ Accordion Snippet --}}
+                            <div class="space-y-2">
+                                <div class="flex items-center justify-between">
+                                    <h3 class="text-sm font-medium text-gray-900 dark:text-white">FAQ Accordion</h3>
+                                    <button
+                                        type="button"
+                                        @click="activeSnippet = activeSnippet === 'faq' ? null : 'faq'"
+                                        class="text-xs font-medium text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300"
+                                    >
+                                        <span x-show="activeSnippet !== 'faq'">Show code</span>
+                                        <span x-show="activeSnippet === 'faq'">Hide code</span>
+                                    </button>
+                                </div>
+                                <div x-show="activeSnippet === 'faq'" x-cloak class="space-y-2">
+                                    @php
+                                        $faqSnippet = <<<'LIQUID'
+{% if product.metafields.magnifiq.faq %}
+  <div class="magnifiq-faq">
+    {% for item in product.metafields.magnifiq.faq.value %}
+      <details>
+        <summary>{{ item.question }}</summary>
+        <div>{{ item.answer }}</div>
+      </details>
+    {% endfor %}
+  </div>
+{% endif %}
+LIQUID;
+                                    @endphp
+                                    <div class="relative">
+                                        <pre class="p-3 pr-10 bg-gray-50 dark:bg-zinc-800 rounded-lg text-xs text-gray-700 dark:text-zinc-300 overflow-x-auto"><code>{{ $faqSnippet }}</code></pre>
+                                        <div class="absolute top-2 right-2">
+                                            <x-copy-button :text="$faqSnippet" class="bg-white dark:bg-zinc-700 shadow-sm rounded p-1.5 hover:bg-gray-100 dark:hover:bg-zinc-600" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {{-- USPs List Snippet --}}
+                            <div class="space-y-2">
+                                <div class="flex items-center justify-between">
+                                    <h3 class="text-sm font-medium text-gray-900 dark:text-white">Unique Selling Points</h3>
+                                    <button
+                                        type="button"
+                                        @click="activeSnippet = activeSnippet === 'usps' ? null : 'usps'"
+                                        class="text-xs font-medium text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300"
+                                    >
+                                        <span x-show="activeSnippet !== 'usps'">Show code</span>
+                                        <span x-show="activeSnippet === 'usps'">Hide code</span>
+                                    </button>
+                                </div>
+                                <div x-show="activeSnippet === 'usps'" x-cloak class="space-y-2">
+                                    @php
+                                        $uspsSnippet = <<<'LIQUID'
+{% if product.metafields.magnifiq.usps %}
+  <ul class="magnifiq-usps">
+    {% for usp in product.metafields.magnifiq.usps.value %}
+      <li>✓ {{ usp }}</li>
+    {% endfor %}
+  </ul>
+{% endif %}
+LIQUID;
+                                    @endphp
+                                    <div class="relative">
+                                        <pre class="p-3 pr-10 bg-gray-50 dark:bg-zinc-800 rounded-lg text-xs text-gray-700 dark:text-zinc-300 overflow-x-auto"><code>{{ $uspsSnippet }}</code></pre>
+                                        <div class="absolute top-2 right-2">
+                                            <x-copy-button :text="$uspsSnippet" class="bg-white dark:bg-zinc-700 shadow-sm rounded p-1.5 hover:bg-gray-100 dark:hover:bg-zinc-600" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {{-- Description Snippet --}}
+                            <div class="space-y-2">
+                                <div class="flex items-center justify-between">
+                                    <h3 class="text-sm font-medium text-gray-900 dark:text-white">AI Description</h3>
+                                    <button
+                                        type="button"
+                                        @click="activeSnippet = activeSnippet === 'description' ? null : 'description'"
+                                        class="text-xs font-medium text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300"
+                                    >
+                                        <span x-show="activeSnippet !== 'description'">Show code</span>
+                                        <span x-show="activeSnippet === 'description'">Hide code</span>
+                                    </button>
+                                </div>
+                                <div x-show="activeSnippet === 'description'" x-cloak class="space-y-2">
+                                    @php
+                                        $descriptionSnippet = <<<'LIQUID'
+{% if product.metafields.magnifiq.description %}
+  <div class="magnifiq-description">
+    {{ product.metafields.magnifiq.description | newline_to_br }}
+  </div>
+{% endif %}
+LIQUID;
+                                    @endphp
+                                    <div class="relative">
+                                        <pre class="p-3 pr-10 bg-gray-50 dark:bg-zinc-800 rounded-lg text-xs text-gray-700 dark:text-zinc-300 overflow-x-auto"><code>{{ $descriptionSnippet }}</code></pre>
+                                        <div class="absolute top-2 right-2">
+                                            <x-copy-button :text="$descriptionSnippet" class="bg-white dark:bg-zinc-700 shadow-sm rounded p-1.5 hover:bg-gray-100 dark:hover:bg-zinc-600" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {{-- Description Summary Snippet --}}
+                            <div class="space-y-2">
+                                <div class="flex items-center justify-between">
+                                    <h3 class="text-sm font-medium text-gray-900 dark:text-white">Description Summary</h3>
+                                    <button
+                                        type="button"
+                                        @click="activeSnippet = activeSnippet === 'description_summary' ? null : 'description_summary'"
+                                        class="text-xs font-medium text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300"
+                                    >
+                                        <span x-show="activeSnippet !== 'description_summary'">Show code</span>
+                                        <span x-show="activeSnippet === 'description_summary'">Hide code</span>
+                                    </button>
+                                </div>
+                                <div x-show="activeSnippet === 'description_summary'" x-cloak class="space-y-2">
+                                    @php
+                                        $summarySnippet = <<<'LIQUID'
+{% if product.metafields.magnifiq.description_summary %}
+  <p class="magnifiq-summary">
+    {{ product.metafields.magnifiq.description_summary }}
+  </p>
+{% endif %}
+LIQUID;
+                                    @endphp
+                                    <div class="relative">
+                                        <pre class="p-3 pr-10 bg-gray-50 dark:bg-zinc-800 rounded-lg text-xs text-gray-700 dark:text-zinc-300 overflow-x-auto"><code>{{ $summarySnippet }}</code></pre>
+                                        <div class="absolute top-2 right-2">
+                                            <x-copy-button :text="$summarySnippet" class="bg-white dark:bg-zinc-700 shadow-sm rounded p-1.5 hover:bg-gray-100 dark:hover:bg-zinc-600" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            @php
+                                $storeIdentifier = $product->feed?->storeConnection?->store_identifier;
+                                $storeName = $storeIdentifier ? Str::before($storeIdentifier, '.myshopify.com') : null;
+                                $themeEditorUrl = $storeName ? "https://admin.shopify.com/store/{$storeName}/themes" : null;
+                            @endphp
+
+                            <p class="text-xs text-gray-500 dark:text-zinc-500">
+                                Add these snippets to your Shopify theme's product template.
+                            </p>
+                            <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs">
+                                @if ($themeEditorUrl)
+                                    <a href="{{ $themeEditorUrl }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 text-amber-600 dark:text-amber-400 hover:underline">
+                                        <svg class="size-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M9.53 16.122a3 3 0 0 0-5.78 1.128 2.25 2.25 0 0 1-2.4 2.245 4.5 4.5 0 0 0 8.4-2.245c0-.399-.078-.78-.22-1.128Zm0 0a15.998 15.998 0 0 0 3.388-1.62m-5.043-.025a15.994 15.994 0 0 1 1.622-3.395m3.42 3.42a15.995 15.995 0 0 0 4.764-4.648l3.876-5.814a1.151 1.151 0 0 0-1.597-1.597L14.146 6.32a15.996 15.996 0 0 0-4.649 4.763m3.42 3.42a6.776 6.776 0 0 0-3.42-3.42" />
+                                        </svg>
+                                        Theme editor
+                                    </a>
+                                @endif
+                                <a href="https://shopify.dev/docs/storefronts/themes/architecture/templates" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 text-amber-600 dark:text-amber-400 hover:underline">
+                                    <svg class="size-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
+                                    </svg>
+                                    Docs
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                @endif
             </aside>
         </div>
     </div>

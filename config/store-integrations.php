@@ -50,6 +50,8 @@ return [
             'scopes' => [
                 'read_products',
                 'read_inventory',
+                'write_products',
+                'write_metafields',
             ],
         ],
 

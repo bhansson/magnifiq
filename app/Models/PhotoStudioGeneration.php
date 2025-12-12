@@ -44,6 +44,7 @@ class PhotoStudioGeneration extends Model
         'response_model',
         'response_metadata',
         'product_ai_job_id',
+        'pushed_to_store_at',
     ];
 
     /**
@@ -53,6 +54,7 @@ class PhotoStudioGeneration extends Model
         'response_metadata' => 'array',
         'source_references' => 'array',
         'estimated_cost' => 'decimal:4',
+        'pushed_to_store_at' => 'datetime',
     ];
 
     public function team(): BelongsTo
@@ -238,5 +240,39 @@ class PhotoStudioGeneration extends Model
     {
         return collect($this->getSourceImageUrls())
             ->contains(fn ($img) => $img['url'] !== null);
+    }
+
+    /**
+     * Check if this generation has been pushed to a store.
+     */
+    public function isPushedToStore(): bool
+    {
+        return $this->pushed_to_store_at !== null;
+    }
+
+    /**
+     * Mark this generation as pushed to a store.
+     */
+    public function markAsPushedToStore(): void
+    {
+        $this->update(['pushed_to_store_at' => now()]);
+    }
+
+    /**
+     * Get the store connection for this generation's product.
+     */
+    public function getStoreConnection(): ?StoreConnection
+    {
+        return $this->product?->feed?->storeConnection;
+    }
+
+    /**
+     * Check if this generation can be pushed to a store.
+     */
+    public function canPushToStore(): bool
+    {
+        $connection = $this->getStoreConnection();
+
+        return $connection !== null && $connection->isConnected() && $this->storage_path !== null;
     }
 }

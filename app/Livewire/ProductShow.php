@@ -4,6 +4,7 @@ namespace App\Livewire;
 
 use App\Facades\AI;
 use App\Jobs\RunProductAiTemplateJob;
+use App\Jobs\SyncAiContentToStore;
 use App\Models\Product;
 use App\Models\ProductAiGeneration;
 use App\Models\ProductAiJob;
@@ -45,6 +46,10 @@ class ProductShow extends Component
         $templatePayload = $this->buildTemplatePayload($product, $templates);
         $languageVersions = $this->languageVersions($product);
 
+        // Check if product has a connected store for Shopify integration features
+        $storeConnection = $product->feed?->storeConnection;
+        $hasStoreConnection = $storeConnection !== null && $storeConnection->isConnected();
+
         return view('livewire.product-show', [
             'product' => $product,
             'templates' => $templates,
@@ -56,6 +61,7 @@ class ProductShow extends Component
             'languageLabels' => ProductFeed::languageOptions(),
             'languageVersions' => $languageVersions,
             'catalogSlug' => $this->catalogSlug,
+            'hasStoreConnection' => $hasStoreConnection,
         ]);
     }
 
@@ -155,6 +161,52 @@ class ProductShow extends Component
         }
     }
 
+    public function togglePublishState(int $generationId): void
+    {
+        $team = Auth::user()->currentTeam;
+        abort_if(! $team, 404);
+
+        /** @var ProductAiGeneration|null $generation */
+        $generation = ProductAiGeneration::query()
+            ->with('template')
+            ->where('id', $generationId)
+            ->where('product_id', $this->productId)
+            ->where('team_id', $team->id)
+            ->first();
+
+        if (! $generation || ! $generation->template) {
+            $templateSlug = 'unknown';
+            $this->generationError[$templateSlug] = 'Unable to find requested generation.';
+
+            return;
+        }
+
+        $key = $generation->template->slug;
+
+        $this->generationError[$key] = null;
+        $this->generationStatus[$key] = null;
+        $this->generationLoading[$key] = true;
+
+        try {
+            if ($generation->isUnpublished()) {
+                $generation->markAsPublished();
+                $this->generationStatus[$key] = 'Republished '.$generation->template->name.'. Syncing to store...';
+            } else {
+                $generation->markAsUnpublished();
+                $this->generationStatus[$key] = 'Unpublished '.$generation->template->name.'. Content will be hidden in store.';
+            }
+
+            // Dispatch sync job to update the store
+            SyncAiContentToStore::dispatch($generation->id);
+
+            $this->dispatch('$refresh')->self();
+        } catch (\Throwable $e) {
+            $this->generationError[$key] = $e->getMessage();
+        } finally {
+            $this->generationLoading[$key] = false;
+        }
+    }
+
     public function getProductProperty(): Product
     {
         $team = Auth::user()->currentTeam;
@@ -168,8 +220,9 @@ class ProductShow extends Component
 
         return Product::query()
             ->with([
-                'feed:id,name,language,product_catalog_id',
+                'feed:id,name,language,product_catalog_id,store_connection_id',
                 'feed.catalog:id,name',
+                'feed.storeConnection',
                 'aiGenerations' => static function ($query) use ($templateIds, $historyLimit, $multiplier) {
                     $query->with('template')
                         ->whereIn('product_ai_template_id', $templateIds)
@@ -235,7 +288,9 @@ class ProductShow extends Component
      *     template: ProductAiTemplate,
      *     latest: ?ProductAiGeneration,
      *     history: \Illuminate\Support\Collection<int, ProductAiGeneration>,
-     *     has_content: bool
+     *     has_content: bool,
+     *     is_unpublished: bool,
+     *     has_store_connection: bool
      * }>
      */
     protected function buildTemplatePayload(Product $product, Collection $templates): array
@@ -243,6 +298,10 @@ class ProductShow extends Component
         $grouped = $product->aiGenerations
             ? $product->aiGenerations->groupBy('product_ai_template_id')
             : collect();
+
+        // Check if product has a connected store
+        $storeConnection = $product->feed?->storeConnection;
+        $hasStoreConnection = $storeConnection !== null && $storeConnection->isConnected();
 
         $payload = [];
 
@@ -268,6 +327,8 @@ class ProductShow extends Component
                 'latest' => $latest,
                 'history' => $history,
                 'has_content' => $this->generationHasContent($latest),
+                'is_unpublished' => $latest?->isUnpublished() ?? false,
+                'has_store_connection' => $hasStoreConnection,
             ];
         }
 

@@ -55,4 +55,44 @@ interface StoreAdapterContract
      * Get the store name from the connection (for display purposes).
      */
     public function getStoreName(StoreConnection $connection): string;
+
+    /**
+     * Write a metafield to a product in the store.
+     *
+     * @param  StoreConnection  $connection  The store connection
+     * @param  string  $productId  The external product ID
+     * @param  string  $namespace  The metafield namespace
+     * @param  string  $key  The metafield key
+     * @param  mixed  $value  The metafield value
+     * @param  string  $type  The metafield type
+     * @return bool True if successful
+     *
+     * @throws \RuntimeException If the operation fails or is not supported
+     */
+    public function writeProductMetafield(
+        StoreConnection $connection,
+        string $productId,
+        string $namespace,
+        string $key,
+        mixed $value,
+        string $type = 'json'
+    ): bool;
+
+    /**
+     * Add an image to a product's media gallery.
+     *
+     * @param  StoreConnection  $connection  The store connection
+     * @param  string  $productId  The external product ID
+     * @param  string  $imageUrl  The publicly accessible URL of the image
+     * @param  string|null  $alt  Alt text for the image
+     * @return string|null The created media ID, or null on failure
+     *
+     * @throws \RuntimeException If the operation fails or is not supported
+     */
+    public function addProductImage(
+        StoreConnection $connection,
+        string $productId,
+        string $imageUrl,
+        ?string $alt = null
+    ): ?string;
 }

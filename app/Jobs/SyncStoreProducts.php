@@ -187,6 +187,7 @@ class SyncStoreProducts implements ShouldQueue
                     'team_id' => $feed->team_id,
                     'product_feed_id' => $feed->id,
                     'sku' => $storeProduct->sku,
+                    'external_id' => $storeProduct->externalId,
                     'title' => $storeProduct->title,
                     'description' => $storeProduct->description,
                     'brand' => $storeProduct->brand,

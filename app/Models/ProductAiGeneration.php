@@ -19,10 +19,12 @@ class ProductAiGeneration extends Model
         'sku',
         'content',
         'meta',
+        'unpublished_at',
     ];
 
     protected $casts = [
         'meta' => 'array',
+        'unpublished_at' => 'datetime',
     ];
 
     protected $touches = ['product'];
@@ -71,5 +73,55 @@ class ProductAiGeneration extends Model
                 return json_encode($value, JSON_UNESCAPED_UNICODE);
             }
         );
+    }
+
+    /**
+     * Check if this generation is published (synced to store).
+     */
+    public function isPublished(): bool
+    {
+        return $this->unpublished_at === null;
+    }
+
+    /**
+     * Check if this generation is unpublished (hidden in store).
+     */
+    public function isUnpublished(): bool
+    {
+        return $this->unpublished_at !== null;
+    }
+
+    /**
+     * Mark this generation as unpublished.
+     */
+    public function markAsUnpublished(): void
+    {
+        $this->update(['unpublished_at' => now()]);
+    }
+
+    /**
+     * Mark this generation as published (re-publish after unpublish).
+     */
+    public function markAsPublished(): void
+    {
+        $this->update(['unpublished_at' => null]);
+    }
+
+    /**
+     * Get the store connection for this generation's product.
+     */
+    public function getStoreConnection(): ?StoreConnection
+    {
+        return $this->product?->feed?->storeConnection;
+    }
+
+    /**
+     * Check if this generation can be synced to a store.
+     */
+    public function canSyncToStore(): bool
+    {
+        $connection = $this->getStoreConnection();
+
+        return $connection !== null && $connection->isConnected();
     }
 }

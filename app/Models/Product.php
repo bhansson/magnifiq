@@ -16,6 +16,7 @@ class Product extends Model
         'product_feed_id',
         'team_id',
         'sku',
+        'external_id',
         'gtin',
         'title',
         'brand',

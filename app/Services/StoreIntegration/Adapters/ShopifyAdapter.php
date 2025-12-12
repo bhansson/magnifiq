@@ -23,6 +23,8 @@ class ShopifyAdapter extends AbstractStoreAdapter
         return [
             'read_products',
             'read_inventory',
+            'write_products',
+            'write_metafields',
         ];
     }
 
@@ -266,6 +268,161 @@ class ShopifyAdapter extends AbstractStoreAdapter
             }
         }
         GRAPHQL;
+    }
+
+    /**
+     * Write a metafield to a product in Shopify.
+     *
+     * @param  StoreConnection  $connection  The store connection
+     * @param  string  $productId  The Shopify product GID (e.g., gid://shopify/Product/123)
+     * @param  string  $namespace  The metafield namespace
+     * @param  string  $key  The metafield key
+     * @param  mixed  $value  The metafield value (will be JSON encoded if array)
+     * @param  string  $type  The metafield type (e.g., 'json', 'multi_line_text_field')
+     * @return bool True if successful
+     *
+     * @throws RuntimeException If the API call fails
+     */
+    public function writeProductMetafield(
+        StoreConnection $connection,
+        string $productId,
+        string $namespace,
+        string $key,
+        mixed $value,
+        string $type = 'json'
+    ): bool {
+        $shop = $this->normalizeShopDomain($connection->store_identifier);
+
+        // Ensure value is a string
+        $stringValue = is_array($value) ? json_encode($value, JSON_UNESCAPED_UNICODE) : (string) $value;
+
+        $mutation = <<<'GRAPHQL'
+        mutation productUpdate($input: ProductInput!) {
+            productUpdate(input: $input) {
+                product {
+                    id
+                }
+                userErrors {
+                    field
+                    message
+                }
+            }
+        }
+        GRAPHQL;
+
+        $variables = [
+            'input' => [
+                'id' => $productId,
+                'metafields' => [
+                    [
+                        'namespace' => $namespace,
+                        'key' => $key,
+                        'value' => $stringValue,
+                        'type' => $type,
+                    ],
+                ],
+            ],
+        ];
+
+        $response = Http::withHeaders([
+            'X-Shopify-Access-Token' => $connection->access_token,
+            'Content-Type' => 'application/json',
+        ])->timeout(30)->post(
+            "https://{$shop}/admin/api/".self::API_VERSION.'/graphql.json',
+            ['query' => $mutation, 'variables' => $variables]
+        );
+
+        if ($response->failed()) {
+            throw new RuntimeException('Shopify API request failed: '.$response->body());
+        }
+
+        $data = $response->json();
+
+        if (isset($data['errors'])) {
+            throw new RuntimeException('Shopify GraphQL error: '.json_encode($data['errors']));
+        }
+
+        $userErrors = $data['data']['productUpdate']['userErrors'] ?? [];
+        if (! empty($userErrors)) {
+            throw new RuntimeException('Shopify mutation error: '.json_encode($userErrors));
+        }
+
+        return true;
+    }
+
+    /**
+     * Add an image to a product's media gallery in Shopify.
+     *
+     * @param  StoreConnection  $connection  The store connection
+     * @param  string  $productId  The Shopify product GID (e.g., gid://shopify/Product/123)
+     * @param  string  $imageUrl  The publicly accessible URL of the image
+     * @param  string|null  $alt  Alt text for the image
+     * @return string|null The created media ID, or null on failure
+     *
+     * @throws RuntimeException If the API call fails
+     */
+    public function addProductImage(
+        StoreConnection $connection,
+        string $productId,
+        string $imageUrl,
+        ?string $alt = null
+    ): ?string {
+        $shop = $this->normalizeShopDomain($connection->store_identifier);
+
+        $mutation = <<<'GRAPHQL'
+        mutation productCreateMedia($productId: ID!, $media: [CreateMediaInput!]!) {
+            productCreateMedia(productId: $productId, media: $media) {
+                media {
+                    ... on MediaImage {
+                        id
+                    }
+                }
+                mediaUserErrors {
+                    code
+                    field
+                    message
+                }
+            }
+        }
+        GRAPHQL;
+
+        $variables = [
+            'productId' => $productId,
+            'media' => [
+                [
+                    'originalSource' => $imageUrl,
+                    'alt' => $alt ?? '',
+                    'mediaContentType' => 'IMAGE',
+                ],
+            ],
+        ];
+
+        $response = Http::withHeaders([
+            'X-Shopify-Access-Token' => $connection->access_token,
+            'Content-Type' => 'application/json',
+        ])->timeout(60)->post(
+            "https://{$shop}/admin/api/".self::API_VERSION.'/graphql.json',
+            ['query' => $mutation, 'variables' => $variables]
+        );
+
+        if ($response->failed()) {
+            throw new RuntimeException('Shopify API request failed: '.$response->body());
+        }
+
+        $data = $response->json();
+
+        if (isset($data['errors'])) {
+            throw new RuntimeException('Shopify GraphQL error: '.json_encode($data['errors']));
+        }
+
+        $mediaErrors = $data['data']['productCreateMedia']['mediaUserErrors'] ?? [];
+        if (! empty($mediaErrors)) {
+            throw new RuntimeException('Shopify media error: '.json_encode($mediaErrors));
+        }
+
+        $media = $data['data']['productCreateMedia']['media'][0] ?? null;
+
+        return $media['id'] ?? null;
     }
 
     private function mapToStoreProduct(array $node, string $shopDomain): StoreProduct

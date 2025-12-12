@@ -158,6 +158,47 @@
                                 <path d="M10 3v8m0 0 3-3m-3 3-3-3M4.5 13.5v1.25A1.25 1.25 0 0 0 5.75 16h8.5a1.25 1.25 0 0 0 1.25-1.25V13.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
                             </svg>
                         </a>
+
+                        {{-- Push to Store Button --}}
+                        <template x-if="selectedEntry && selectedEntry.can_push_to_store">
+                            <div class="relative">
+                                {{-- Already pushed state --}}
+                                <template x-if="selectedEntry.is_pushed_to_store">
+                                    <div
+                                        class="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/10 px-3 py-2 text-emerald-700 dark:text-emerald-400"
+                                        :title="'Synced to store ' + (selectedEntry.pushed_to_store_at || '')"
+                                    >
+                                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                        <span class="text-xs font-medium">Synced</span>
+                                    </div>
+                                </template>
+
+                                {{-- Push button --}}
+                                <template x-if="!selectedEntry.is_pushed_to_store">
+                                    <button
+                                        type="button"
+                                        class="inline-flex items-center gap-1.5 rounded-full border border-indigo-200 dark:border-indigo-500/30 bg-white dark:bg-zinc-800 px-3 py-2 text-indigo-700 dark:text-indigo-400 shadow-sm transition hover:bg-indigo-50 dark:hover:bg-indigo-500/10 hover:border-indigo-300 dark:hover:border-indigo-500/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500 disabled:opacity-60"
+                                        wire:loading.attr="disabled"
+                                        wire:target="pushToStore"
+                                        x-on:click.prevent="$wire.pushToStore(selectedEntry.id)"
+                                    >
+                                        <span wire:loading.remove wire:target="pushToStore" class="flex items-center gap-1.5">
+                                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+                                            </svg>
+                                            <span class="text-xs font-medium">Push to Store</span>
+                                        </span>
+                                        <span wire:loading wire:target="pushToStore" class="flex items-center gap-1.5">
+                                            <x-loading-spinner class="size-4" />
+                                            <span class="text-xs font-medium">Pushing...</span>
+                                        </span>
+                                    </button>
+                                </template>
+                            </div>
+                        </template>
+
                         <button
                             type="button"
                             class="inline-flex size-10 items-center justify-center rounded-full border border-red-200 dark:border-red-500/30 text-red-600 dark:text-red-400 shadow-sm transition hover:bg-red-50 dark:hover:bg-red-500/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500 disabled:opacity-60"
