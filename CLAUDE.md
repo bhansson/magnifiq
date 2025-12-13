@@ -489,6 +489,50 @@ This ensures consistent development experience across the team without IDE lock-
 5. Update product display views in `resources/views/products/`
 6. Add corresponding tests
 
+### Testing Shopify Webhooks Locally
+
+Shopify webhooks require HTTPS endpoints that are publicly accessible. To test webhooks locally:
+
+**1. Start ngrok tunnel:**
+```bash
+ngrok http 80
+```
+This provides a public HTTPS URL like `https://abc123.ngrok-free.app`.
+
+**2. Update webhook configuration in `shopify-app/shopify.app.toml`:**
+```toml
+[[webhooks.subscriptions]]
+topics = ["app/uninstalled"]
+uri = "https://abc123.ngrok-free.app/api/webhooks/shopify/app-uninstalled"
+```
+
+**3. Deploy the updated configuration to Shopify:**
+```bash
+cd shopify-app
+shopify app deploy
+```
+Select "Yes" when prompted to release a new version.
+
+**4. Test the webhook:**
+- Perform the action that triggers the webhook (e.g., uninstall the app from a dev store)
+- Monitor ngrok's web interface at `http://127.0.0.1:4040` to see incoming requests
+- Check Laravel logs: `tail -f storage/logs/laravel.log`
+
+**5. Revert to production URL after testing:**
+```toml
+[[webhooks.subscriptions]]
+topics = ["app/uninstalled"]
+uri = "https://magnifiq.ai/api/webhooks/shopify/app-uninstalled"
+```
+Then run `shopify app deploy` again.
+
+**Important notes:**
+- Shopify CLI v3+ does not auto-create tunnels; you must provide your own via ngrok or similar
+- The `application_url` in TOML can remain as `http://magnifiq.test` for local OAuth flows
+- Webhook URLs must be full HTTPS URLs (relative URIs only work if `application_url` is HTTPS)
+- Webhook handler is at `app/Http/Controllers/ShopifyWebhookController.php`
+- HMAC verification ensures webhooks are authentic Shopify requests
+
 # MCP Setup
 - remember that when using the chrome-devtools mcp or any other request to the test the app, use the specified APP_URL in .env, default port.
 

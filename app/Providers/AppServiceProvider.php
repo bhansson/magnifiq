@@ -6,6 +6,8 @@ use App\Models\TeamActivity;
 use App\Models\User;
 use App\Notifications\ResetPasswordNotification;
 use App\Notifications\VerifyEmailNotification;
+use App\Services\StoreIntegration\Adapters\ShopifyAdapter;
+use App\Services\StoreIntegration\ShopifyLocaleService;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Listeners\SendEmailVerificationNotification;
 use Illuminate\Auth\Notifications\ResetPassword;
@@ -22,7 +24,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->singleton(ShopifyLocaleService::class, function ($app) {
+            return new ShopifyLocaleService(new ShopifyAdapter);
+        });
     }
 
     /**

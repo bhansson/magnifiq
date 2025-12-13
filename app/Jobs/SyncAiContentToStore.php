@@ -5,6 +5,9 @@ namespace App\Jobs;
 use App\Facades\Store;
 use App\Models\ProductAiGeneration;
 use App\Models\ProductAiTemplate;
+use App\Models\StoreConnection;
+use App\Services\StoreIntegration\Adapters\ShopifyAdapter;
+use App\Services\StoreIntegration\ShopifyLocaleService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -37,7 +40,7 @@ class SyncAiContentToStore implements ShouldQueue
         $this->onQueue('ai');
     }
 
-    public function handle(): void
+    public function handle(ShopifyLocaleService $localeService): void
     {
         $generation = ProductAiGeneration::with(['template', 'product.feed.storeConnection'])
             ->find($this->generationId);
@@ -93,13 +96,61 @@ class SyncAiContentToStore implements ShouldQueue
             return;
         }
 
+        // Non-Shopify platforms use simple metafield sync (no translations)
+        if (! $connection->isShopify()) {
+            $this->syncPrimaryContent($generation, $connection);
+
+            return;
+        }
+
+        // Get product language from feed
+        $productLanguage = $product->feed?->language;
+
+        // No language set on feed - treat as primary content
+        if (! $productLanguage) {
+            $this->syncPrimaryContent($generation, $connection);
+            $this->queueSiblingTranslations($generation, $localeService);
+
+            return;
+        }
+
+        // Determine if this is primary language or translation
+        $isPrimary = $localeService->isPrimaryLanguage($connection, $productLanguage);
+
+        if ($isPrimary) {
+            $this->syncPrimaryContent($generation, $connection);
+            $this->queueSiblingTranslations($generation, $localeService);
+        } else {
+            // Check if locale is published in store
+            if (! $localeService->isLocalePublished($connection, $productLanguage)) {
+                Log::info('SyncAiContentToStore: Locale not published in store, skipping', [
+                    'generation_id' => $generation->id,
+                    'language' => $productLanguage,
+                ]);
+
+                return;
+            }
+
+            $this->syncAsTranslation($generation, $connection, $localeService);
+        }
+    }
+
+    /**
+     * Sync content as primary language (to metafield value).
+     */
+    protected function syncPrimaryContent(
+        ProductAiGeneration $generation,
+        StoreConnection $connection
+    ): void {
+        $adapter = Store::forPlatform($connection->platform);
+        $template = $generation->template;
+        $product = $generation->product;
+        $externalId = $product->external_id;
+
         $metafieldKey = $this->resolveMetafieldKey($template);
         $metafieldType = $this->resolveMetafieldType($template);
 
         try {
-            $adapter = Store::forPlatform($connection->platform);
-
-            // If unpublished, delete the metafield to hide content in store
             if ($generation->isUnpublished()) {
                 $adapter->deleteProductMetafield(
                     connection: $connection,
@@ -108,11 +159,10 @@ class SyncAiContentToStore implements ShouldQueue
                     key: $metafieldKey,
                 );
 
-                Log::info('SyncAiContentToStore: Successfully deleted metafield from store', [
+                Log::info('SyncAiContentToStore: Deleted primary metafield', [
                     'generation_id' => $generation->id,
                     'product_id' => $product->id,
                     'external_id' => $externalId,
-                    'template_slug' => $template->slug,
                     'metafield_key' => $metafieldKey,
                 ]);
             } else {
@@ -125,16 +175,15 @@ class SyncAiContentToStore implements ShouldQueue
                     type: $metafieldType,
                 );
 
-                Log::info('SyncAiContentToStore: Successfully synced content to store', [
+                Log::info('SyncAiContentToStore: Synced primary content', [
                     'generation_id' => $generation->id,
                     'product_id' => $product->id,
                     'external_id' => $externalId,
-                    'template_slug' => $template->slug,
                     'metafield_key' => $metafieldKey,
                 ]);
             }
         } catch (Throwable $e) {
-            Log::error('SyncAiContentToStore: Failed to sync content to store', [
+            Log::error('SyncAiContentToStore: Failed to sync primary content', [
                 'generation_id' => $generation->id,
                 'product_id' => $product->id,
                 'external_id' => $externalId,
@@ -142,6 +191,186 @@ class SyncAiContentToStore implements ShouldQueue
             ]);
 
             throw $e;
+        }
+    }
+
+    /**
+     * Sync content as a translation.
+     */
+    protected function syncAsTranslation(
+        ProductAiGeneration $generation,
+        StoreConnection $connection,
+        ShopifyLocaleService $localeService
+    ): void {
+        /** @var ShopifyAdapter $adapter */
+        $adapter = Store::forPlatform($connection->platform);
+        $template = $generation->template;
+        $product = $generation->product;
+        $productLanguage = $product->feed->language;
+
+        $metafieldKey = $this->resolveMetafieldKey($template);
+        $targetLocale = $localeService->resolveShopifyLocale($productLanguage);
+
+        try {
+            if ($generation->isUnpublished()) {
+                // Get the metafield to remove its translation
+                $translatableContent = $adapter->getMetafieldTranslatableContent(
+                    $connection,
+                    $product->external_id,
+                    self::METAFIELD_NAMESPACE,
+                    $metafieldKey
+                );
+
+                if ($translatableContent) {
+                    $adapter->removeTranslation(
+                        $connection,
+                        $translatableContent['metafieldId'],
+                        $targetLocale
+                    );
+
+                    Log::info('SyncAiContentToStore: Removed translation', [
+                        'generation_id' => $generation->id,
+                        'locale' => $targetLocale,
+                        'metafield_key' => $metafieldKey,
+                    ]);
+                }
+            } else {
+                // Get the metafield's translatable content (need digest)
+                $translatableContent = $adapter->getMetafieldTranslatableContent(
+                    $connection,
+                    $product->external_id,
+                    self::METAFIELD_NAMESPACE,
+                    $metafieldKey
+                );
+
+                if (! $translatableContent) {
+                    Log::warning('SyncAiContentToStore: Metafield not found for translation, queuing primary sync', [
+                        'generation_id' => $generation->id,
+                        'product_external_id' => $product->external_id,
+                        'metafield_key' => $metafieldKey,
+                    ]);
+
+                    // Queue a job to sync the primary content first, then retry
+                    $this->handleMissingPrimaryContent($generation, $connection, $localeService);
+
+                    return;
+                }
+
+                $adapter->registerTranslation(
+                    $connection,
+                    $translatableContent['metafieldId'],
+                    $targetLocale,
+                    $generation->content,
+                    $translatableContent['digest']
+                );
+
+                Log::info('SyncAiContentToStore: Registered translation', [
+                    'generation_id' => $generation->id,
+                    'locale' => $targetLocale,
+                    'metafield_key' => $metafieldKey,
+                ]);
+            }
+        } catch (Throwable $e) {
+            Log::error('SyncAiContentToStore: Failed to sync translation', [
+                'generation_id' => $generation->id,
+                'locale' => $targetLocale,
+                'error' => $e->getMessage(),
+            ]);
+
+            throw $e;
+        }
+    }
+
+    /**
+     * Handle case where primary content doesn't exist yet.
+     * Find sibling in primary language and trigger its sync.
+     */
+    protected function handleMissingPrimaryContent(
+        ProductAiGeneration $generation,
+        StoreConnection $connection,
+        ShopifyLocaleService $localeService
+    ): void {
+        $product = $generation->product;
+        $template = $generation->template;
+
+        // Find sibling products (same SKU in same catalog)
+        $siblings = $product->siblingProducts();
+
+        foreach ($siblings as $sibling) {
+            $siblingLanguage = $sibling->feed?->language;
+
+            if ($siblingLanguage && $localeService->isPrimaryLanguage($connection, $siblingLanguage)) {
+                // Find latest generation for this template on sibling
+                $siblingGeneration = $sibling->latestAiGenerationForTemplate($template->slug)->first();
+
+                if ($siblingGeneration && $siblingGeneration->isPublished()) {
+                    // Dispatch sync for primary, then re-queue ourselves
+                    SyncAiContentToStore::dispatch($siblingGeneration->id);
+                    SyncAiContentToStore::dispatch($generation->id)
+                        ->delay(now()->addSeconds(30));
+
+                    Log::info('SyncAiContentToStore: Queued primary sync first', [
+                        'generation_id' => $generation->id,
+                        'primary_generation_id' => $siblingGeneration->id,
+                    ]);
+
+                    return;
+                }
+            }
+        }
+
+        Log::warning('SyncAiContentToStore: No primary language content found', [
+            'generation_id' => $generation->id,
+            'product_id' => $product->id,
+        ]);
+    }
+
+    /**
+     * Queue sync jobs for sibling products with published translations.
+     * Called after primary content is synced so translations can be registered.
+     */
+    protected function queueSiblingTranslations(
+        ProductAiGeneration $generation,
+        ShopifyLocaleService $localeService
+    ): void {
+        // Only auto-sync if enabled (disabled by default to avoid unexpected behavior)
+        if (! config('services.shopify.auto_sync_siblings', false)) {
+            return;
+        }
+
+        $product = $generation->product;
+        $template = $generation->template;
+
+        $connection = $generation->getStoreConnection();
+        if (! $connection) {
+            return;
+        }
+
+        foreach ($product->siblingProducts() as $sibling) {
+            $siblingLanguage = $sibling->feed?->language;
+
+            // Skip primary language siblings (already synced)
+            if (! $siblingLanguage || $localeService->isPrimaryLanguage($connection, $siblingLanguage)) {
+                continue;
+            }
+
+            // Skip if locale not published in store
+            if (! $localeService->isLocalePublished($connection, $siblingLanguage)) {
+                continue;
+            }
+
+            $siblingGeneration = $sibling->latestAiGenerationForTemplate($template->slug)->first();
+
+            if ($siblingGeneration?->isPublished()) {
+                SyncAiContentToStore::dispatch($siblingGeneration->id)
+                    ->delay(now()->addSeconds(5));
+
+                Log::debug('SyncAiContentToStore: Queued sibling translation sync', [
+                    'primary_generation_id' => $generation->id,
+                    'sibling_generation_id' => $siblingGeneration->id,
+                    'sibling_language' => $siblingLanguage,
+                ]);
+            }
         }
     }
 

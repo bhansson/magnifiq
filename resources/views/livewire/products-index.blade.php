@@ -123,17 +123,16 @@
                             @endforeach
                         </select>
                     </div>
-                    <button
+                    <x-button
                         type="button"
                         wire:click="bulkGenerate"
                         wire:loading.attr="disabled"
                         wire:target="bulkGenerate"
-                        @disabled($bulkButtonDisabled)
-                        class="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-amber-400 to-orange-500 px-5 py-2.5 text-sm font-semibold text-black shadow-lg shadow-amber-500/25 hover:from-amber-300 hover:to-orange-400 hover:shadow-amber-500/40 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:ring-offset-2 dark:focus:ring-offset-zinc-900 disabled:cursor-not-allowed disabled:opacity-50 transition-all duration-200"
+                        :disabled="$bulkButtonDisabled"
                     >
-                        <span wire:loading.remove wire:target="bulkGenerate">Queue AI Generation</span>
+                        <span wire:loading.remove wire:target="bulkGenerate">Generate</span>
                         <span wire:loading.inline wire:target="bulkGenerate">Queueing…</span>
-                    </button>
+                    </x-button>
                 </div>
             </div>
             @if ($templates->isEmpty())

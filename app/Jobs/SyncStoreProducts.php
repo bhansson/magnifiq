@@ -4,9 +4,12 @@ namespace App\Jobs;
 
 use App\Facades\Store;
 use App\Models\Product;
+use App\Models\ProductCatalog;
 use App\Models\ProductFeed;
 use App\Models\StoreConnection;
 use App\Models\StoreSyncJob;
+use App\Services\StoreIntegration\Adapters\ShopifyAdapter;
+use App\Services\StoreIntegration\ShopifyLocaleService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -53,34 +56,13 @@ class SyncStoreProducts implements ShouldQueue
                 throw new \RuntimeException('Store connection test failed. Token may be invalid.');
             }
 
-            $feed = $this->ensureProductFeed();
-            $existingSkus = $this->getExistingSkus($feed);
-            $seenSkus = [];
-
-            $counts = [
-                'synced' => 0,
-                'created' => 0,
-                'updated' => 0,
-            ];
-
-            $batch = [];
-            $batchSize = config('store-integrations.sync.batch_size', 100);
-
-            foreach ($adapter->fetchProducts($this->storeConnection) as $storeProduct) {
-                $batch[] = $storeProduct;
-                $seenSkus[] = $storeProduct->sku;
-
-                if (count($batch) >= $batchSize) {
-                    $this->processBatch($feed, $batch, $existingSkus, $counts);
-                    $batch = [];
-                }
+            // Multi-locale sync for Shopify stores
+            if ($this->storeConnection->isShopify() && $adapter instanceof ShopifyAdapter) {
+                $totalCounts = $this->syncMultiLocale($adapter);
+            } else {
+                // Single-locale sync for other platforms
+                $totalCounts = $this->syncSingleLocale($adapter);
             }
-
-            if (count($batch) > 0) {
-                $this->processBatch($feed, $batch, $existingSkus, $counts);
-            }
-
-            $deleted = $this->deleteStaleProducts($feed, $seenSkus);
 
             $this->storeConnection->update([
                 'status' => StoreConnection::STATUS_CONNECTED,
@@ -90,20 +72,20 @@ class SyncStoreProducts implements ShouldQueue
 
             $syncJob->update([
                 'status' => StoreSyncJob::STATUS_COMPLETED,
-                'products_synced' => $counts['synced'],
-                'products_created' => $counts['created'],
-                'products_updated' => $counts['updated'],
-                'products_deleted' => $deleted,
+                'products_synced' => $totalCounts['synced'],
+                'products_created' => $totalCounts['created'],
+                'products_updated' => $totalCounts['updated'],
+                'products_deleted' => $totalCounts['deleted'],
                 'completed_at' => now(),
             ]);
 
             Log::info('Store product sync completed', [
                 'connection_id' => $this->storeConnection->id,
                 'platform' => $this->storeConnection->platform,
-                'synced' => $counts['synced'],
-                'created' => $counts['created'],
-                'updated' => $counts['updated'],
-                'deleted' => $deleted,
+                'synced' => $totalCounts['synced'],
+                'created' => $totalCounts['created'],
+                'updated' => $totalCounts['updated'],
+                'deleted' => $totalCounts['deleted'],
             ]);
 
         } catch (Throwable $e) {
@@ -123,6 +105,103 @@ class SyncStoreProducts implements ShouldQueue
 
             throw $e;
         }
+    }
+
+    /**
+     * Sync products from a multi-locale Shopify store.
+     *
+     * Creates one ProductFeed per published locale, optionally grouped
+     * under a ProductCatalog for multi-language stores.
+     *
+     * @return array{synced: int, created: int, updated: int, deleted: int}
+     */
+    protected function syncMultiLocale(ShopifyAdapter $adapter): array
+    {
+        $localeService = app(ShopifyLocaleService::class);
+        $publishedLocales = $localeService->getPublishedLocales($this->storeConnection);
+
+        // Check if there's an existing catalog for this connection
+        $existingCatalog = ProductCatalog::query()
+            ->whereHas('feeds', function ($query) {
+                $query->where('store_connection_id', $this->storeConnection->id);
+            })
+            ->where('team_id', $this->storeConnection->team_id)
+            ->first();
+
+        // Single-language store with no existing catalog: use legacy sync
+        if (count($publishedLocales) <= 1 && ! $existingCatalog) {
+            return $this->syncSingleLocale($adapter);
+        }
+
+        // Multi-language store OR was multi-language (has catalog): maintain catalog
+        $catalog = $existingCatalog ?? $this->ensureProductCatalog();
+
+        $totalCounts = ['synced' => 0, 'created' => 0, 'updated' => 0, 'deleted' => 0];
+        $syncedLocales = [];
+
+        foreach ($publishedLocales as $localeData) {
+            $feed = $this->ensureProductFeedForLocale($localeData, $catalog);
+            $counts = $this->syncProductsForFeed($feed, $localeData, $adapter, $localeService);
+
+            $totalCounts['synced'] += $counts['synced'];
+            $totalCounts['created'] += $counts['created'];
+            $totalCounts['updated'] += $counts['updated'];
+            $totalCounts['deleted'] += $counts['deleted'];
+
+            $syncedLocales[] = $localeData['locale'];
+        }
+
+        // Cleanup feeds for locales that are no longer published
+        $orphanedDeleted = $this->cleanupOrphanedLocaleFeeds($syncedLocales, $catalog);
+        $totalCounts['deleted'] += $orphanedDeleted;
+
+        Log::info('Multi-locale sync completed', [
+            'connection_id' => $this->storeConnection->id,
+            'locales_synced' => $syncedLocales,
+            'catalog_id' => $catalog->id,
+        ]);
+
+        return $totalCounts;
+    }
+
+    /**
+     * Sync products using single-locale (legacy) approach.
+     *
+     * @return array{synced: int, created: int, updated: int, deleted: int}
+     */
+    protected function syncSingleLocale($adapter): array
+    {
+        $feed = $this->ensureProductFeed();
+        $existingSkus = $this->getExistingSkus($feed);
+        $seenSkus = [];
+
+        $counts = ['synced' => 0, 'created' => 0, 'updated' => 0];
+
+        $batch = [];
+        $batchSize = config('store-integrations.sync.batch_size', 100);
+
+        foreach ($adapter->fetchProducts($this->storeConnection) as $storeProduct) {
+            $batch[] = $storeProduct;
+            $seenSkus[] = $storeProduct->sku;
+
+            if (count($batch) >= $batchSize) {
+                $this->processBatch($feed, $batch, $existingSkus, $counts);
+                $batch = [];
+            }
+        }
+
+        if (count($batch) > 0) {
+            $this->processBatch($feed, $batch, $existingSkus, $counts);
+        }
+
+        $deleted = $this->deleteStaleProducts($feed, $seenSkus);
+
+        return [
+            'synced' => $counts['synced'],
+            'created' => $counts['created'],
+            'updated' => $counts['updated'],
+            'deleted' => $deleted,
+        ];
     }
 
     public function failed(Throwable $exception): void
@@ -218,6 +297,177 @@ class SyncStoreProducts implements ShouldQueue
             'connection_id' => $this->storeConnection->id,
             'store' => $this->storeConnection->store_identifier,
         ]);
+    }
+
+    /**
+     * Ensure a ProductCatalog exists for this multi-language store.
+     */
+    protected function ensureProductCatalog(): ProductCatalog
+    {
+        // Check if any existing feeds for this connection have a catalog
+        $existingCatalog = ProductCatalog::query()
+            ->whereHas('feeds', function ($query) {
+                $query->where('store_connection_id', $this->storeConnection->id);
+            })
+            ->where('team_id', $this->storeConnection->team_id)
+            ->first();
+
+        if ($existingCatalog) {
+            return $existingCatalog;
+        }
+
+        // Create new catalog for this store
+        return ProductCatalog::create([
+            'team_id' => $this->storeConnection->team_id,
+            'name' => $this->storeConnection->name,
+        ]);
+    }
+
+    /**
+     * Ensure a ProductFeed exists for a specific locale.
+     *
+     * @param  array{locale: string, name: string, primary: bool, published: bool}  $localeData
+     */
+    protected function ensureProductFeedForLocale(array $localeData, ProductCatalog $catalog): ProductFeed
+    {
+        $localeService = app(ShopifyLocaleService::class);
+        $magnifiqLanguage = $localeService->mapShopifyLocaleToMagnifiq($localeData['locale']);
+
+        // Look for existing feed with this language for this connection
+        $existingFeed = ProductFeed::query()
+            ->where('store_connection_id', $this->storeConnection->id)
+            ->where('language', $magnifiqLanguage)
+            ->first();
+
+        if ($existingFeed) {
+            // Update catalog association if needed
+            if ($existingFeed->product_catalog_id !== $catalog->id) {
+                $existingFeed->update(['product_catalog_id' => $catalog->id]);
+            }
+
+            return $existingFeed;
+        }
+
+        // Create new feed for this locale
+        $feedName = $localeData['primary']
+            ? $this->storeConnection->name
+            : "{$this->storeConnection->name} ({$localeData['name']})";
+
+        return ProductFeed::create([
+            'team_id' => $this->storeConnection->team_id,
+            'product_catalog_id' => $catalog->id,
+            'store_connection_id' => $this->storeConnection->id,
+            'name' => $feedName,
+            'language' => $magnifiqLanguage,
+            'source_type' => ProductFeed::SOURCE_TYPE_STORE_CONNECTION,
+            'field_mappings' => [
+                'sku' => 'sku',
+                'title' => 'title',
+                'description' => 'description',
+                'url' => 'url',
+                'image_link' => 'image_link',
+            ],
+        ]);
+    }
+
+    /**
+     * Sync products for a specific feed/locale.
+     *
+     * @param  array{locale: string, name: string, primary: bool, published: bool}  $localeData
+     * @return array{synced: int, created: int, updated: int, deleted: int}
+     */
+    protected function syncProductsForFeed(
+        ProductFeed $feed,
+        array $localeData,
+        ShopifyAdapter $adapter,
+        ShopifyLocaleService $localeService
+    ): array {
+        $existingSkus = $this->getExistingSkus($feed);
+        $seenSkus = [];
+        $counts = ['synced' => 0, 'created' => 0, 'updated' => 0];
+
+        $batch = [];
+        $batchSize = config('store-integrations.sync.batch_size', 100);
+
+        // Primary locale: use regular fetch; secondary: fetch with translations
+        $products = $localeData['primary']
+            ? $adapter->fetchProducts($this->storeConnection)
+            : $adapter->fetchProductsForLocale($this->storeConnection, $localeData['locale']);
+
+        foreach ($products as $storeProduct) {
+            $batch[] = $storeProduct;
+            $seenSkus[] = $storeProduct->sku;
+
+            if (count($batch) >= $batchSize) {
+                $this->processBatch($feed, $batch, $existingSkus, $counts);
+                $batch = [];
+            }
+        }
+
+        if (count($batch) > 0) {
+            $this->processBatch($feed, $batch, $existingSkus, $counts);
+        }
+
+        $deleted = $this->deleteStaleProducts($feed, $seenSkus);
+
+        Log::debug('Synced products for locale', [
+            'connection_id' => $this->storeConnection->id,
+            'locale' => $localeData['locale'],
+            'feed_id' => $feed->id,
+            'synced' => $counts['synced'],
+            'created' => $counts['created'],
+            'updated' => $counts['updated'],
+            'deleted' => $deleted,
+        ]);
+
+        return [
+            'synced' => $counts['synced'],
+            'created' => $counts['created'],
+            'updated' => $counts['updated'],
+            'deleted' => $deleted,
+        ];
+    }
+
+    /**
+     * Delete feeds for locales that are no longer published.
+     *
+     * @param  array<string>  $syncedLocales  Shopify locale codes that were synced
+     * @return int Number of products deleted
+     */
+    protected function cleanupOrphanedLocaleFeeds(array $syncedLocales, ProductCatalog $catalog): int
+    {
+        $localeService = app(ShopifyLocaleService::class);
+
+        // Map synced Shopify locales to Magnifiq languages
+        $syncedLanguages = array_map(
+            fn ($locale) => $localeService->mapShopifyLocaleToMagnifiq($locale),
+            $syncedLocales
+        );
+
+        // Find feeds for this connection that aren't in the synced languages
+        $orphanedFeeds = ProductFeed::query()
+            ->where('store_connection_id', $this->storeConnection->id)
+            ->whereNotIn('language', $syncedLanguages)
+            ->get();
+
+        $totalDeleted = 0;
+
+        foreach ($orphanedFeeds as $feed) {
+            $productCount = $feed->products()->count();
+            $feed->products()->delete();
+            $feed->delete();
+
+            $totalDeleted += $productCount;
+
+            Log::info('Deleted orphaned locale feed', [
+                'connection_id' => $this->storeConnection->id,
+                'feed_id' => $feed->id,
+                'language' => $feed->language,
+                'products_deleted' => $productCount,
+            ]);
+        }
+
+        return $totalDeleted;
     }
 
     /**

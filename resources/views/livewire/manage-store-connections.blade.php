@@ -18,11 +18,12 @@
                 Connect your e-commerce stores to automatically sync products.
             </p>
         </div>
-        <div class="flex gap-3">
-            <x-button type="button" wire:click="openConnectModal">
-                Connect store
-            </x-button>
-        </div>
+        <x-button type="button" wire:click="openConnectModal" title="Connect new store">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+            </svg>
+            Add Store
+        </x-button>
     </div>
 
     <div class="space-y-4">
@@ -77,8 +78,8 @@
                     </div>
 
                     <div class="mt-4 flex items-center gap-1 sm:mt-0">
-                        @if (in_array($connection->status, ['connected', 'error']))
-                            {{-- Sync Button --}}
+                        @if ($connection->isConnected() || ($connection->status === 'error' && $connection->access_token))
+                            {{-- Sync Button (only if connected or error with valid token) --}}
                             <button
                                 type="button"
                                 wire:click="sync({{ $connection->id }})"

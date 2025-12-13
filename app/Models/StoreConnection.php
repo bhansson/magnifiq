@@ -63,9 +63,22 @@ class StoreConnection extends Model
         return $this->belongsTo(Team::class);
     }
 
+    /**
+     * Get the primary product feed for this connection.
+     *
+     * @deprecated Use productFeeds() for multi-locale support
+     */
     public function productFeed(): HasOne
     {
         return $this->hasOne(ProductFeed::class);
+    }
+
+    /**
+     * Get all product feeds for this connection (one per locale).
+     */
+    public function productFeeds(): HasMany
+    {
+        return $this->hasMany(ProductFeed::class);
     }
 
     public function syncJobs(): HasMany

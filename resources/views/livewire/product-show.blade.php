@@ -165,7 +165,9 @@
                                     <x-copy-button :text="$product->description" />
                                 @endif
                             </div>
-                            <p class="mt-2 text-gray-700 dark:text-zinc-300 whitespace-pre-line">{{ $product->description ?: 'No description provided.' }}</p>
+                            <div class="mt-2 text-gray-700 dark:text-zinc-300 prose prose-sm dark:prose-invert max-w-none [&>p]:my-2 [&>ul]:my-2 [&>ol]:my-2">
+                                    {!! $product->sanitized_description ?: '<p class="text-gray-500 dark:text-zinc-500">No description provided.</p>' !!}
+                                </div>
                         </div>
                     </div>
                 </div>
@@ -459,10 +461,10 @@
                                                                     wire:click="promoteGeneration({{ $history->id }})"
                                                                     wire:loading.attr="disabled"
                                                                     wire:target="promoteGeneration"
-                                                                    class="inline-flex items-center gap-1 border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 rounded-full px-3 py-1 text-xs font-medium text-gray-500 dark:text-zinc-400 transition hover:border-gray-300 dark:hover:border-zinc-600 hover:text-gray-700 dark:hover:text-zinc-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-amber-500/20 disabled:opacity-50"
+                                                                    class="inline-flex items-center gap-1 border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 rounded-xl px-3 py-1 text-xs font-medium text-gray-500 dark:text-zinc-400 transition hover:border-gray-300 dark:hover:border-zinc-600 hover:text-gray-700 dark:hover:text-zinc-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-amber-500/20 disabled:opacity-50"
                                                                 >
                                                                     <span wire:loading.remove wire:target="promoteGeneration">Publish</span>
-                                                                    <span wire:loading wire:target="promoteGeneration">Publising…</span>
+                                                                    <span wire:loading wire:target="promoteGeneration">Publishing…</span>
                                                                 </button>
                                                             </div>
                                                             <div class="space-y-2">

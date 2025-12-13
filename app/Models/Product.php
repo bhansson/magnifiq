@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -25,6 +26,36 @@ class Product extends Model
         'image_link',
         'additional_image_link',
     ];
+
+    /**
+     * Allowed HTML tags for sanitized description output.
+     */
+    private const ALLOWED_HTML_TAGS = '<p><br><strong><b><em><i><u><ul><ol><li><h1><h2><h3><h4><h5><h6><a><span><div>';
+
+    /**
+     * Get the sanitized description with safe HTML tags preserved.
+     */
+    protected function sanitizedDescription(): Attribute
+    {
+        return Attribute::make(
+            get: function (): ?string {
+                if (! $this->description) {
+                    return null;
+                }
+
+                // Strip all tags except allowed ones, then decode HTML entities
+                $sanitized = strip_tags($this->description, self::ALLOWED_HTML_TAGS);
+
+                // Remove any javascript: or data: URLs from href attributes
+                $sanitized = preg_replace('/href\s*=\s*["\']?(javascript|data):[^"\'>\s]*["\']?/i', 'href="#"', $sanitized);
+
+                // Remove on* event handlers (onclick, onload, etc.)
+                $sanitized = preg_replace('/\s+on\w+\s*=\s*["\'][^"\']*["\']/i', '', $sanitized);
+
+                return $sanitized;
+            }
+        );
+    }
 
     public function feed()
     {

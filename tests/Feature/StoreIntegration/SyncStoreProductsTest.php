@@ -29,6 +29,14 @@ test('sync job creates product feed if none exists', function () {
     Http::fake([
         '*/admin/api/*/graphql.json' => Http::sequence()
             ->push(['data' => ['shop' => ['name' => 'Test Store']]])
+            // Single locale response - triggers single-locale sync path
+            ->push([
+                'data' => [
+                    'shopLocales' => [
+                        ['locale' => 'en', 'name' => 'English', 'primary' => true, 'published' => true],
+                    ],
+                ],
+            ])
             ->push([
                 'data' => [
                     'products' => [
@@ -56,6 +64,13 @@ test('sync job imports products from shopify', function () {
     Http::fake([
         '*/admin/api/*/graphql.json' => Http::sequence()
             ->push(['data' => ['shop' => ['name' => 'Test Store']]])
+            ->push([
+                'data' => [
+                    'shopLocales' => [
+                        ['locale' => 'en', 'name' => 'English', 'primary' => true, 'published' => true],
+                    ],
+                ],
+            ])
             ->push([
                 'data' => [
                     'products' => [
@@ -115,6 +130,13 @@ test('sync job creates sync job record', function () {
             ->push(['data' => ['shop' => ['name' => 'Test Store']]])
             ->push([
                 'data' => [
+                    'shopLocales' => [
+                        ['locale' => 'en', 'name' => 'English', 'primary' => true, 'published' => true],
+                    ],
+                ],
+            ])
+            ->push([
+                'data' => [
                     'products' => [
                         'edges' => [],
                         'pageInfo' => ['hasNextPage' => false],
@@ -142,6 +164,13 @@ test('sync job updates connection status on success', function () {
     Http::fake([
         '*/admin/api/*/graphql.json' => Http::sequence()
             ->push(['data' => ['shop' => ['name' => 'Test Store']]])
+            ->push([
+                'data' => [
+                    'shopLocales' => [
+                        ['locale' => 'en', 'name' => 'English', 'primary' => true, 'published' => true],
+                    ],
+                ],
+            ])
             ->push([
                 'data' => [
                     'products' => [
@@ -203,6 +232,13 @@ test('sync job deletes stale products', function () {
             ->push(['data' => ['shop' => ['name' => 'Test Store']]])
             ->push([
                 'data' => [
+                    'shopLocales' => [
+                        ['locale' => 'en', 'name' => 'English', 'primary' => true, 'published' => true],
+                    ],
+                ],
+            ])
+            ->push([
+                'data' => [
                     'products' => [
                         'edges' => [],
                         'pageInfo' => ['hasNextPage' => false],
@@ -238,6 +274,13 @@ test('sync job updates existing products', function () {
     Http::fake([
         '*/admin/api/*/graphql.json' => Http::sequence()
             ->push(['data' => ['shop' => ['name' => 'Test Store']]])
+            ->push([
+                'data' => [
+                    'shopLocales' => [
+                        ['locale' => 'en', 'name' => 'English', 'primary' => true, 'published' => true],
+                    ],
+                ],
+            ])
             ->push([
                 'data' => [
                     'products' => [
