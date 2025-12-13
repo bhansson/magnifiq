@@ -165,7 +165,9 @@
                                     <x-copy-button :text="$product->description" />
                                 @endif
                             </div>
-                            <p class="mt-2 text-gray-700 dark:text-zinc-300 whitespace-pre-line">{{ $product->description ?: 'No description provided.' }}</p>
+                            <div class="mt-2 text-gray-700 dark:text-zinc-300 prose prose-sm dark:prose-invert max-w-none [&>p]:my-2 [&>ul]:my-2 [&>ol]:my-2">
+                                    {!! $product->sanitized_description ?: '<p class="text-gray-500 dark:text-zinc-500">No description provided.</p>' !!}
+                                </div>
                         </div>
                     </div>
                 </div>
@@ -211,6 +213,8 @@
                                     $key = $item['key'];
                                     $latest = $item['latest'];
                                     $historyItems = $item['history'];
+                                    $isUnpublished = $item['is_unpublished'] ?? false;
+                                    $hasStoreConnection = $item['has_store_connection'] ?? false;
                                     $status = $generationStatus[$key] ?? null;
                                     $error = $generationError[$key] ?? null;
                                     $isLoading = $generationLoading[$key] ?? false;
@@ -266,6 +270,7 @@
                                                     ->filter()
                                                     ->values();
                                                 $copyableText = $uspItems->map(fn ($usp) => '• ' . $usp)->implode("\n");
+                                                $hasContent = $uspItems->isNotEmpty();
                                             } elseif ($contentType === 'faq') {
                                                 $faqEntries = collect(is_array($latestContent) ? $latestContent : [])
                                                     ->map(function ($entry) {
@@ -287,19 +292,64 @@
                                                     ->filter()
                                                     ->values();
                                                 $copyableText = $faqEntries->map(fn ($faq) => "Q: {$faq['question']}\nA: {$faq['answer']}")->implode("\n\n");
+                                                $hasContent = $faqEntries->isNotEmpty();
                                             } else {
                                                 $textContent = trim(is_string($latestContent) ? $latestContent : '');
                                                 $copyableText = $textContent;
+                                                $hasContent = $textContent !== '';
                                             }
                                         @endphp
 
                                         <div class="space-y-3">
-                                            <div class="flex items-center gap-2">
-                                                <h4 class="text-sm font-semibold text-gray-900 dark:text-white">Published</h4>
-                                                @if ($copyableText)
-                                                    <x-copy-button :text="$copyableText" />
+                                            @if ($hasContent)
+                                            <div class="flex items-center justify-between">
+                                                <div class="flex items-center gap-2">
+                                                    <h4 class="text-sm font-semibold text-gray-900 dark:text-white">
+                                                        @if ($isUnpublished)
+                                                            <span class="text-gray-400 dark:text-zinc-600 line-through">Published</span>
+                                                        @else
+                                                            Published
+                                                        @endif
+                                                    </h4>
+                                                    @if ($isUnpublished)
+                                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-zinc-700 text-gray-600 dark:text-zinc-400">
+                                                            Hidden in store
+                                                        </span>
+                                                    @endif
+                                                    @if ($copyableText)
+                                                        <x-copy-button :text="$copyableText" />
+                                                    @endif
+                                                </div>
+                                                @if ($latest && $hasStoreConnection)
+                                                    <button
+                                                        type="button"
+                                                        wire:click="togglePublishState({{ $latest->id }})"
+                                                        wire:loading.attr="disabled"
+                                                        wire:target="togglePublishState"
+                                                        class="inline-flex items-center gap-1.5 border rounded-full px-3 py-1 text-xs font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-amber-500/20 disabled:opacity-50
+                                                            {{ $isUnpublished
+                                                                ? 'border-emerald-200 dark:border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:border-emerald-300 dark:hover:border-emerald-500/50 hover:bg-emerald-50 dark:hover:bg-emerald-500/10'
+                                                                : 'border-gray-200 dark:border-zinc-700 text-gray-500 dark:text-zinc-400 hover:border-gray-300 dark:hover:border-zinc-600 hover:bg-gray-50 dark:hover:bg-zinc-800'
+                                                            }}"
+                                                        title="{{ $isUnpublished ? 'Republish to store' : 'Hide from store' }}"
+                                                    >
+                                                        @if ($isUnpublished)
+                                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                                            </svg>
+                                                            <span wire:loading.remove wire:target="togglePublishState">Republish</span>
+                                                        @else
+                                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"></path>
+                                                            </svg>
+                                                            <span wire:loading.remove wire:target="togglePublishState">Unpublish</span>
+                                                        @endif
+                                                        <span wire:loading wire:target="togglePublishState">...</span>
+                                                    </button>
                                                 @endif
                                             </div>
+                                            @endif
                                             @switch($contentType)
                                                 @case('usps')
                                                     @if ($uspItems->isNotEmpty())
@@ -341,6 +391,7 @@
                                             @endswitch
                                         </div>
 
+                                        @if ($hasContent)
                                         <p class="text-xs text-gray-500 dark:text-zinc-500">
                                             @if ($latestTimestamp)
                                                 Generated {{ $latestTimestamp->diffForHumans() }}
@@ -351,6 +402,7 @@
                                                 ({{ Str::upper($latestModel) }})
                                             @endif
                                         </p>
+                                        @endif
 
                                         @if ($historyItems->isNotEmpty())
                                             <div class="space-y-3">
@@ -409,10 +461,10 @@
                                                                     wire:click="promoteGeneration({{ $history->id }})"
                                                                     wire:loading.attr="disabled"
                                                                     wire:target="promoteGeneration"
-                                                                    class="inline-flex items-center gap-1 border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 rounded-full px-3 py-1 text-xs font-medium text-gray-500 dark:text-zinc-400 transition hover:border-gray-300 dark:hover:border-zinc-600 hover:text-gray-700 dark:hover:text-zinc-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-amber-500/20 disabled:opacity-50"
+                                                                    class="inline-flex items-center gap-1 border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 rounded-xl px-3 py-1 text-xs font-medium text-gray-500 dark:text-zinc-400 transition hover:border-gray-300 dark:hover:border-zinc-600 hover:text-gray-700 dark:hover:text-zinc-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-amber-500/20 disabled:opacity-50"
                                                                 >
                                                                     <span wire:loading.remove wire:target="promoteGeneration">Publish</span>
-                                                                    <span wire:loading wire:target="promoteGeneration">Publising…</span>
+                                                                    <span wire:loading wire:target="promoteGeneration">Publishing…</span>
                                                                 </button>
                                                             </div>
                                                             <div class="space-y-2">
@@ -486,6 +538,88 @@
                         </div>
                     </div>
                 </div>
+
+                @if ($hasStoreConnection)
+                    @php
+                        $storeIdentifier = $product->feed?->storeConnection?->store_identifier;
+                        $storeName = $storeIdentifier ? Str::before($storeIdentifier, '.myshopify.com') : null;
+                        $themeEditorUrl = $storeName ? "https://admin.shopify.com/store/{$storeName}/themes/current/editor?context=apps" : null;
+                    @endphp
+                    <div class="bg-white dark:bg-zinc-900/50 shadow-sm dark:shadow-none dark:ring-1 dark:ring-zinc-800 sm:rounded-xl">
+                        <div class="px-6 py-5 border-b border-gray-200 dark:border-zinc-800">
+                            <h2 class="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                                <svg class="w-5 h-5 text-green-600 dark:text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                                Theme Integration
+                            </h2>
+                            <p class="mt-1 text-sm text-gray-600 dark:text-zinc-400">
+                                Add Magnifiq blocks to your theme via the Shopify theme editor. No code required!
+                            </p>
+                        </div>
+                        <div class="px-6 py-6 space-y-5">
+                            {{-- Steps --}}
+                            <div class="space-y-3">
+                                <div class="flex items-start gap-3 p-3 bg-gray-50 dark:bg-zinc-800/50 rounded-lg">
+                                    <span class="flex-shrink-0 w-6 h-6 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded-full flex items-center justify-center text-sm font-medium">1</span>
+                                    <div>
+                                        <p class="font-medium text-gray-900 dark:text-white">Open Theme Editor</p>
+                                        <p class="text-sm text-gray-600 dark:text-zinc-400">Online Store → Themes → Customize</p>
+                                    </div>
+                                </div>
+
+                                <div class="flex items-start gap-3 p-3 bg-gray-50 dark:bg-zinc-800/50 rounded-lg">
+                                    <span class="flex-shrink-0 w-6 h-6 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded-full flex items-center justify-center text-sm font-medium">2</span>
+                                    <div>
+                                        <p class="font-medium text-gray-900 dark:text-white">Navigate to Product Page</p>
+                                        <p class="text-sm text-gray-600 dark:text-zinc-400">Select a product template from the top dropdown: Home → Products </p>
+                                    </div>
+                                </div>
+
+                                <div class="flex items-start gap-3 p-3 bg-gray-50 dark:bg-zinc-800/50 rounded-lg">
+                                    <span class="flex-shrink-0 w-6 h-6 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded-full flex items-center justify-center text-sm font-medium">3</span>
+                                    <div>
+                                        <p class="font-medium text-gray-900 dark:text-white">Add Magnifiq Blocks</p>
+                                        <p class="text-sm text-gray-600 dark:text-zinc-400">Click "Add block" and find Magnifiq under Apps</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {{-- Action buttons --}}
+                            @if ($themeEditorUrl)
+                                <a href="{{ $themeEditorUrl }}"
+                                   target="_blank"
+                                   rel="noopener noreferrer"
+                                   class="inline-flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors text-sm font-medium">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                                    </svg>
+                                    Open Theme Editor
+                                </a>
+                            @endif
+
+                            {{-- Available Blocks --}}
+                            <div class="pt-4 border-t border-gray-200 dark:border-zinc-700">
+                                <h4 class="text-sm font-medium text-gray-700 dark:text-zinc-300 mb-3">Available Blocks</h4>
+                                <div class="grid grid-cols-2 gap-2">
+                                    @foreach([
+                                        ['name' => 'FAQ Accordion', 'icon' => 'M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z', 'key' => 'faq'],
+                                        ['name' => 'USPs List', 'icon' => 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z', 'key' => 'usps'],
+                                        ['name' => 'AI Description', 'icon' => 'M4 6h16M4 12h16M4 18h7', 'key' => 'description'],
+                                        ['name' => 'Summary', 'icon' => 'M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z', 'key' => 'description_summary'],
+                                    ] as $block)
+                                        <div class="flex items-center gap-2 p-2 bg-gray-50 dark:bg-zinc-800/50 rounded-lg text-sm">
+                                            <svg class="w-4 h-4 text-gray-500 dark:text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ $block['icon'] }}"/>
+                                            </svg>
+                                            <span class="text-gray-700 dark:text-zinc-300">{{ $block['name'] }}</span>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                @endif
             </aside>
         </div>
     </div>

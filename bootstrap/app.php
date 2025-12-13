@@ -17,6 +17,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->web(append: [
             \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,
             \App\Http\Middleware\DetectPartnerContext::class,
+            \App\Http\Middleware\HandleShopifyInstall::class,
         ]);
 
         $middleware->alias([
@@ -25,6 +26,7 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withSchedule(function (Schedule $schedule): void {
         $schedule->command('products:generate-public-json')->everyFiveMinutes();
+        $schedule->command('stores:sync')->everyFifteenMinutes();
     })
     ->withCommands([
         GenerateProductJsonCommand::class,

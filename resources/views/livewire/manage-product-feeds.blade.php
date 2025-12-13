@@ -206,7 +206,7 @@
                 <button
                     type="button"
                     wire:click="toggleCreateCatalog"
-                    class="inline-flex items-center px-4 py-2 text-sm font-medium rounded-xl {{ $showCreateCatalog ? 'bg-gray-100 dark:bg-zinc-800 text-gray-700 dark:text-zinc-300' : 'bg-amber-500 hover:bg-amber-600 text-white' }} transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500/50">
+                    class="inline-flex items-center px-4 py-2 text-sm font-medium rounded-xl {{ $showCreateCatalog ? 'bg-gray-100 dark:bg-zinc-800 text-gray-700 dark:text-zinc-300' : 'bg-amber-500 hover:bg-amber-600 text-black' }} transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500/50">
                     @if ($showCreateCatalog)
                         <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -290,7 +290,7 @@
                                             </svg>
                                             <span class="font-semibold text-gray-800 dark:text-white">{{ $catalog->name }}</span>
                                             <span class="text-xs px-2 py-0.5 rounded-full bg-gray-200 dark:bg-zinc-700 text-gray-600 dark:text-zinc-400">
-                                                {{ $catalog->feeds_count }} {{ Str::plural('feed', $catalog->feeds_count) }}
+                                                {{ $catalog->feeds_count ?? 0 }} {{ Str::plural('feed', $catalog->feeds_count ?? 0) }}
                                             </span>
                                             @if ($catalog->feeds->isNotEmpty())
                                                 <div class="flex items-center gap-1 ml-2">

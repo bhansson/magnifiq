@@ -541,6 +541,41 @@ class PhotoStudio extends Component
         $this->refreshProductGallery();
     }
 
+    public function pushToStore(int $generationId): void
+    {
+        $team = $this->getTeam();
+
+        $generation = PhotoStudioGeneration::query()
+            ->where('team_id', $team->id)
+            ->find($generationId);
+
+        if (! $generation) {
+            $this->errorMessage = 'Generation not found.';
+
+            return;
+        }
+
+        if (! $generation->canPushToStore()) {
+            $this->errorMessage = 'Cannot push this image to the store. Ensure the product has a connected store.';
+
+            return;
+        }
+
+        try {
+            \App\Jobs\PushImageToStore::dispatch($generation->id);
+
+            $this->generationStatus = 'Image queued for upload to store. This may take a moment.';
+            $this->refreshProductGallery();
+        } catch (Throwable $e) {
+            Log::error('Failed to dispatch PushImageToStore job', [
+                'generation_id' => $generationId,
+                'error' => $e->getMessage(),
+            ]);
+
+            $this->errorMessage = 'Failed to queue image for store upload.';
+        }
+    }
+
     public function openEditModal(int $generationId): void
     {
         $team = $this->getTeam();
@@ -1665,7 +1700,13 @@ class PhotoStudio extends Component
         }
 
         $generations = $query
-            ->with(['product:id,title,sku,brand', 'parent', 'children'])
+            ->with([
+                'product:id,title,sku,brand,product_feed_id',
+                'product.feed:id,store_connection_id',
+                'product.feed.storeConnection',
+                'parent',
+                'children',
+            ])
             ->latest()
             ->get();
 
@@ -1733,6 +1774,9 @@ class PhotoStudio extends Component
                     'source_references' => $generation->source_references,
                     'source_images' => $generation->getSourceImageUrls(),
                     'has_viewable_sources' => $generation->hasViewableSourceImages(),
+                    'is_pushed_to_store' => $generation->isPushedToStore(),
+                    'pushed_to_store_at' => optional($generation->pushed_to_store_at)->diffForHumans(),
+                    'can_push_to_store' => $generation->canPushToStore(),
                 ];
             })
             ->toArray();

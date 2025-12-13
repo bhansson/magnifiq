@@ -11,6 +11,12 @@ class ProductFeed extends Model
 {
     use HasFactory;
 
+    public const SOURCE_TYPE_URL = 'url';
+
+    public const SOURCE_TYPE_UPLOAD = 'upload';
+
+    public const SOURCE_TYPE_STORE_CONNECTION = 'store_connection';
+
     public const LANGUAGE_OPTIONS = [
         'bg' => 'Bulgarian',
         'cs' => 'Czech',
@@ -43,9 +49,11 @@ class ProductFeed extends Model
     protected $fillable = [
         'team_id',
         'product_catalog_id',
+        'store_connection_id',
         'name',
         'feed_url',
         'language',
+        'source_type',
         'field_mappings',
     ];
 
@@ -71,6 +79,11 @@ class ProductFeed extends Model
     public function catalog(): BelongsTo
     {
         return $this->belongsTo(ProductCatalog::class, 'product_catalog_id');
+    }
+
+    public function storeConnection(): BelongsTo
+    {
+        return $this->belongsTo(StoreConnection::class);
     }
 
     public function products(): HasMany

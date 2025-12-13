@@ -1,0 +1,18 @@
+{
+  "magnifiq": {
+    "blocks": {
+      "faq": {
+        "no_content": "FAQコンテンツがありません"
+      },
+      "usps": {
+        "no_content": "特典がありません"
+      },
+      "description": {
+        "no_content": "説明がありません"
+      },
+      "summary": {
+        "no_content": "要約がありません"
+      }
+    }
+  }
+}

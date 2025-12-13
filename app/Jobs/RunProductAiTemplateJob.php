@@ -116,6 +116,9 @@ class RunProductAiTemplateJob implements ShouldQueue
                 ],
             ]);
 
+            // Dispatch store sync job (will silently skip if no store connection)
+            SyncAiContentToStore::dispatch($record->id);
+
             $this->trimHistory($template, $product->id, max($template->historyLimit(), 1));
 
             $jobRecord->markCompleted([

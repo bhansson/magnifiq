@@ -90,6 +90,11 @@ class Team extends JetstreamTeam
         return $this->hasMany(Product::class);
     }
 
+    public function storeConnections()
+    {
+        return $this->hasMany(StoreConnection::class);
+    }
+
     public function isPartner(): bool
     {
         return $this->type === 'partner';

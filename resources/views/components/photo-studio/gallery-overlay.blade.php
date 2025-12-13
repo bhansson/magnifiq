@@ -124,57 +124,182 @@
                     </div>
 
                     {{-- Action Buttons --}}
-                    <div class="flex flex-wrap gap-3 pt-1">
-                        <button
-                            type="button"
-                            class="inline-flex size-10 items-center justify-center rounded-full border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-gray-700 dark:text-zinc-300 shadow-sm transition hover:border-gray-300 dark:hover:border-zinc-600 hover:text-gray-900 dark:hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-500"
-                            x-on:click.prevent="if (!selectedEntry) { return; } $wire.openEditModal(selectedEntry.id); closeOverlay();"
-                            title="Edit this image"
-                        >
-                            <span class="sr-only">Edit image</span>
-                            <svg class="h-5 w-5" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-                                <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
-                            </svg>
-                        </button>
-                        <a
-                            :href="selectedEntry ? selectedEntry.url : '#'"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            class="inline-flex size-10 items-center justify-center rounded-full border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-gray-700 dark:text-zinc-300 shadow-sm transition hover:border-gray-300 dark:hover:border-zinc-600 hover:text-gray-900 dark:hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-500"
-                        >
-                            <span class="sr-only">View full size</span>
-                            <svg class="h-5 w-5" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-                                <path d="M18 10s-3-4-8-4-8 4-8 4 3 4 8 4 8-4 8-4Z" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
-                                <path d="M10 8a2 2 0 1 1 0 4 2 2 0 0 1 0-4Z" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
-                            </svg>
-                        </a>
-                        <a
-                            :href="selectedEntry ? selectedEntry.download_url : '#'"
-                            download
-                            class="inline-flex size-10 items-center justify-center rounded-full bg-gradient-to-r from-amber-400 to-orange-500 text-black shadow-sm transition hover:from-amber-300 hover:to-orange-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-500"
-                        >
-                            <span class="sr-only">Download image</span>
-                            <svg class="h-5 w-5" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-                                <path d="M10 3v8m0 0 3-3m-3 3-3-3M4.5 13.5v1.25A1.25 1.25 0 0 0 5.75 16h8.5a1.25 1.25 0 0 0 1.25-1.25V13.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
-                            </svg>
-                        </a>
-                        <button
-                            type="button"
-                            class="inline-flex size-10 items-center justify-center rounded-full border border-red-200 dark:border-red-500/30 text-red-600 dark:text-red-400 shadow-sm transition hover:bg-red-50 dark:hover:bg-red-500/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500 disabled:opacity-60"
-                            wire:loading.attr="disabled"
-                            wire:target="deleteGeneration"
-                            x-on:click.prevent="if (!selectedEntry) { return; } if (!confirm('Delete this image from the gallery?')) { return; } $wire.deleteGeneration(selectedEntry.id).then(() => { closeOverlay(); });"
-                        >
-                            <span class="sr-only">Delete image</span>
-                            <span class="flex items-center justify-center" wire:loading.remove wire:target="deleteGeneration">
+                    <div class="flex flex-wrap gap-2 pt-1">
+                        {{-- Edit Button --}}
+                        <div x-data="{ showTooltip: false }" class="relative">
+                            <button
+                                type="button"
+                                class="inline-flex size-10 items-center justify-center rounded-full border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-gray-700 dark:text-zinc-300 shadow-sm transition hover:border-gray-300 dark:hover:border-zinc-600 hover:text-gray-900 dark:hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-500"
+                                x-on:click.prevent="if (!selectedEntry) { return; } $wire.openEditModal(selectedEntry.id); closeOverlay();"
+                                @mouseenter="showTooltip = true"
+                                @mouseleave="showTooltip = false"
+                            >
+                                <span class="sr-only">Edit image</span>
                                 <svg class="h-5 w-5" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-                                    <path d="m7 5 .867-1.3A1 1 0 0 1 8.7 3h2.6a1 1 0 0 1 .833.7L13 5m4 0H3m1 0 .588 11.18A1 1 0 0 0 5.587 17h8.826a1 1 0 0 0 .999-.82L16 5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+                                    <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
                                 </svg>
-                            </span>
-                            <span class="flex items-center justify-center" wire:loading.flex wire:target="deleteGeneration">
-                                <x-loading-spinner class="size-4" />
-                            </span>
-                        </button>
+                            </button>
+                            <div
+                                x-show="showTooltip"
+                                x-transition:enter="transition ease-out duration-150"
+                                x-transition:enter-start="opacity-0 translate-y-1"
+                                x-transition:enter-end="opacity-100 translate-y-0"
+                                x-cloak
+                                class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1.5 text-xs font-medium text-white bg-gray-900 dark:bg-zinc-700 rounded-lg shadow-lg whitespace-nowrap pointer-events-none"
+                            >
+                                Edit image
+                                <div class="absolute top-full left-1/2 -translate-x-1/2 -mt-px border-4 border-transparent border-t-gray-900 dark:border-t-zinc-700"></div>
+                            </div>
+                        </div>
+
+                        {{-- View Full Size Button --}}
+                        <div x-data="{ showTooltip: false }" class="relative">
+                            <a
+                                :href="selectedEntry ? selectedEntry.url : '#'"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                class="inline-flex size-10 items-center justify-center rounded-full border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-gray-700 dark:text-zinc-300 shadow-sm transition hover:border-gray-300 dark:hover:border-zinc-600 hover:text-gray-900 dark:hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-500"
+                                @mouseenter="showTooltip = true"
+                                @mouseleave="showTooltip = false"
+                            >
+                                <span class="sr-only">View full size</span>
+                                <svg class="h-5 w-5" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                                    <path d="M18 10s-3-4-8-4-8 4-8 4 3 4 8 4 8-4 8-4Z" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+                                    <path d="M10 8a2 2 0 1 1 0 4 2 2 0 0 1 0-4Z" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+                                </svg>
+                            </a>
+                            <div
+                                x-show="showTooltip"
+                                x-transition:enter="transition ease-out duration-150"
+                                x-transition:enter-start="opacity-0 translate-y-1"
+                                x-transition:enter-end="opacity-100 translate-y-0"
+                                x-cloak
+                                class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1.5 text-xs font-medium text-white bg-gray-900 dark:bg-zinc-700 rounded-lg shadow-lg whitespace-nowrap pointer-events-none"
+                            >
+                                View full size
+                                <div class="absolute top-full left-1/2 -translate-x-1/2 -mt-px border-4 border-transparent border-t-gray-900 dark:border-t-zinc-700"></div>
+                            </div>
+                        </div>
+
+                        {{-- Download Button --}}
+                        <div x-data="{ showTooltip: false }" class="relative">
+                            <a
+                                :href="selectedEntry ? selectedEntry.download_url : '#'"
+                                download
+                                class="inline-flex size-10 items-center justify-center rounded-full bg-gradient-to-r from-amber-400 to-orange-500 text-black shadow-sm transition hover:from-amber-300 hover:to-orange-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-500"
+                                @mouseenter="showTooltip = true"
+                                @mouseleave="showTooltip = false"
+                            >
+                                <span class="sr-only">Download image</span>
+                                <svg class="h-5 w-5" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                                    <path d="M10 3v8m0 0 3-3m-3 3-3-3M4.5 13.5v1.25A1.25 1.25 0 0 0 5.75 16h8.5a1.25 1.25 0 0 0 1.25-1.25V13.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+                                </svg>
+                            </a>
+                            <div
+                                x-show="showTooltip"
+                                x-transition:enter="transition ease-out duration-150"
+                                x-transition:enter-start="opacity-0 translate-y-1"
+                                x-transition:enter-end="opacity-100 translate-y-0"
+                                x-cloak
+                                class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1.5 text-xs font-medium text-white bg-gray-900 dark:bg-zinc-700 rounded-lg shadow-lg whitespace-nowrap pointer-events-none"
+                            >
+                                Download
+                                <div class="absolute top-full left-1/2 -translate-x-1/2 -mt-px border-4 border-transparent border-t-gray-900 dark:border-t-zinc-700"></div>
+                            </div>
+                        </div>
+
+                        {{-- Push to Store Button --}}
+                        <template x-if="selectedEntry && selectedEntry.can_push_to_store">
+                            <div x-data="{ pushing: false, queued: false, showTooltip: false }" class="relative">
+                                <button
+                                    type="button"
+                                    :class="[
+                                        queued ? 'border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400' :
+                                        selectedEntry.is_pushed_to_store ? 'border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-500/20' :
+                                        'border-indigo-200 dark:border-indigo-500/30 bg-white dark:bg-zinc-800 text-indigo-700 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10'
+                                    ]"
+                                    class="inline-flex size-10 items-center justify-center rounded-full border shadow-sm transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500 disabled:opacity-60"
+                                    :disabled="pushing"
+                                    x-on:click.prevent="
+                                        if (pushing) return;
+                                        pushing = true;
+                                        queued = false;
+                                        $wire.pushToStore(selectedEntry.id).then(() => {
+                                            setTimeout(() => {
+                                                pushing = false;
+                                                queued = true;
+                                                setTimeout(() => { queued = false; }, 3000);
+                                            }, 1500);
+                                        });
+                                    "
+                                    @mouseenter="showTooltip = true"
+                                    @mouseleave="showTooltip = false"
+                                >
+                                    <span class="sr-only" x-text="selectedEntry.is_pushed_to_store ? 'Add again to store' : 'Add to store'"></span>
+                                    {{-- Pushing state --}}
+                                    <span x-show="pushing" class="flex items-center justify-center">
+                                        <x-loading-spinner class="size-5" />
+                                    </span>
+                                    {{-- Queued success state --}}
+                                    <span x-show="queued && !pushing" x-cloak class="flex items-center justify-center">
+                                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                    </span>
+                                    {{-- Default state --}}
+                                    <span x-show="!pushing && !queued" class="flex items-center justify-center">
+                                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+                                        </svg>
+                                    </span>
+                                </button>
+                                <div
+                                    x-show="showTooltip && !pushing"
+                                    x-transition:enter="transition ease-out duration-150"
+                                    x-transition:enter-start="opacity-0 translate-y-1"
+                                    x-transition:enter-end="opacity-100 translate-y-0"
+                                    x-cloak
+                                    class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1.5 text-xs font-medium text-white bg-gray-900 dark:bg-zinc-700 rounded-lg shadow-lg whitespace-nowrap pointer-events-none"
+                                >
+                                    <span x-text="queued ? 'Queued!' : (selectedEntry.is_pushed_to_store ? 'Add again' : 'Add to store')"></span>
+                                    <div class="absolute top-full left-1/2 -translate-x-1/2 -mt-px border-4 border-transparent border-t-gray-900 dark:border-t-zinc-700"></div>
+                                </div>
+                            </div>
+                        </template>
+
+                        {{-- Delete Button --}}
+                        <div x-data="{ showTooltip: false }" class="relative">
+                            <button
+                                type="button"
+                                class="inline-flex size-10 items-center justify-center rounded-full border border-red-200 dark:border-red-500/30 text-red-600 dark:text-red-400 shadow-sm transition hover:bg-red-50 dark:hover:bg-red-500/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500 disabled:opacity-60"
+                                wire:loading.attr="disabled"
+                                wire:target="deleteGeneration"
+                                x-on:click.prevent="if (!selectedEntry) { return; } if (!confirm('Delete this image from the gallery?')) { return; } $wire.deleteGeneration(selectedEntry.id).then(() => { closeOverlay(); });"
+                                @mouseenter="showTooltip = true"
+                                @mouseleave="showTooltip = false"
+                            >
+                                <span class="sr-only">Delete image</span>
+                                <span class="flex items-center justify-center" wire:loading.remove wire:target="deleteGeneration">
+                                    <svg class="h-5 w-5" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                                        <path d="m7 5 .867-1.3A1 1 0 0 1 8.7 3h2.6a1 1 0 0 1 .833.7L13 5m4 0H3m1 0 .588 11.18A1 1 0 0 0 5.587 17h8.826a1 1 0 0 0 .999-.82L16 5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+                                    </svg>
+                                </span>
+                                <span class="flex items-center justify-center" wire:loading.flex wire:target="deleteGeneration">
+                                    <x-loading-spinner class="size-4" />
+                                </span>
+                            </button>
+                            <div
+                                x-show="showTooltip"
+                                x-transition:enter="transition ease-out duration-150"
+                                x-transition:enter-start="opacity-0 translate-y-1"
+                                x-transition:enter-end="opacity-100 translate-y-0"
+                                x-cloak
+                                class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1.5 text-xs font-medium text-white bg-gray-900 dark:bg-zinc-700 rounded-lg shadow-lg whitespace-nowrap pointer-events-none"
+                            >
+                                Delete
+                                <div class="absolute top-full left-1/2 -translate-x-1/2 -mt-px border-4 border-transparent border-t-gray-900 dark:border-t-zinc-700"></div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

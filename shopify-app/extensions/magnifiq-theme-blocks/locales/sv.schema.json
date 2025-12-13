@@ -1,0 +1,66 @@
+{
+  "blocks": {
+    "faq_accordion": {
+      "name": "Magnifiq FAQ",
+      "settings": {
+        "heading": {
+          "label": "Avsnittsrubrik",
+          "default": "Vanliga frågor"
+        },
+        "show_heading": {
+          "label": "Visa rubrik"
+        },
+        "expand_first": {
+          "label": "Expandera första"
+        }
+      }
+    },
+    "usps_list": {
+      "name": "Magnifiq Fördelar",
+      "settings": {
+        "heading": {
+          "label": "Avsnittsrubrik",
+          "default": "Viktiga fördelar"
+        },
+        "show_heading": {
+          "label": "Visa rubrik"
+        },
+        "layout": {
+          "label": "Layoutstil",
+          "options__1": "Punktlista",
+          "options__2": "Numrerad lista",
+          "options__3": "Ikonbadgar"
+        }
+      }
+    },
+    "ai_description": {
+      "name": "Magnifiq Beskrivning",
+      "settings": {
+        "heading": {
+          "label": "Avsnittsrubrik",
+          "default": "Om denna produkt"
+        },
+        "show_heading": {
+          "label": "Visa rubrik"
+        }
+      }
+    },
+    "description_summary": {
+      "name": "Magnifiq Sammanfattning",
+      "settings": {
+        "heading": {
+          "label": "Avsnittsrubrik",
+          "default": "Snabb översikt"
+        },
+        "show_heading": {
+          "label": "Visa rubrik"
+        },
+        "style": {
+          "label": "Visningsstil",
+          "options__1": "Stycke",
+          "options__2": "Markerad ruta"
+        }
+      }
+    }
+  }
+}

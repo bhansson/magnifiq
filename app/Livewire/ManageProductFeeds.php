@@ -831,7 +831,7 @@ class ManageProductFeeds extends Component
 
         $rowCount = 0;
 
-        while (($data = fgetcsv($handle, 0, $delimiter)) !== false) {
+        while (($data = fgetcsv($handle, 0, $delimiter, '"', '')) !== false) {
             if (empty(array_filter($data, fn ($value) => $value !== null && trim((string) $value) !== ''))) {
                 continue;
             }
